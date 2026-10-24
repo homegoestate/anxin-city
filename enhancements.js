@@ -1,7 +1,7 @@
 import { calculateLoan } from './loan.js';
 import { policyTopics, policySources, policyReviewedAt } from './policy-data.js';
 
-export const SITE_VERSION='2.0.0';
+export const SITE_VERSION='2.0.1';
 const FEEDBACK_URL='https://hongguo-anxin-feedback-20261024.yang-ceo.chatgpt.site/api/feedback';
 const people={
  'first-home':{name:'首購小安',role:'第一次成家',scene:'buy',color:'#d77a5c',initial:'安',line:'我第一次買房，現在的新青安怎麼看？',intro:'和小安一起把政策條件、自備款與每月生活開銷分開想清楚。',topics:[['firstHome','新青安／青安政策'],['firstHomeBank','申請前先確認']],loan:{principalWan:800,annualRate:2.3,years:30,income:80000,otherDebt:0}},
@@ -53,4 +53,5 @@ export function createEnhancements({getScene,selectScene,getCurrentScene,openJou
  function decorateJourney(id){const panel=$('#detail-panel');if(!panel||panel.hidden)return;const ids=Object.keys(people).filter(key=>people[key].scene===id);const row=document.createElement('div');row.className='meet-neighbors';row.innerHTML=`<span>遇見這裡的居民</span>${ids.map(key=>`<button data-meet="${key}" style="--person-color:${people[key].color}"><i></i>${people[key].name} ↗</button>`).join('')}`;panel.querySelector('.panel-subtitle')?.after(row);row.querySelectorAll('[data-meet]').forEach(b=>b.onclick=()=>showPersona(b.dataset.meet));}
  return {showPersona,decorateJourney,clearPersonaState(){currentPersona=null;},openFeedback};
 }
+
 

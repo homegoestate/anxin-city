@@ -1,5 +1,5 @@
-import { createCity } from './city.js';
-import { createEnhancements } from './enhancements.js';
+import { createCity } from './city.js?v=2.0.1';
+import { createEnhancements } from './enhancements.js?v=2.0.1';
 let enhancements;
 
 const journeys = {
@@ -34,5 +34,6 @@ function failCity(){const load=$('#loading');load.hidden=false;load.classList.re
 enhancements=createEnhancements({getScene:()=>scene,selectScene,getCurrentScene:()=>currentId,openJourneyChecklist:(id)=>{selectScene(id);currentTab='ready';renderPanel();},toast});
 try{scene=createCity({onPersona:(id)=>enhancements.showPersona(id),canvas:$('#city'),onSelect:selectScene,onReady:()=>{const load=$('#loading');load.classList.add('loaded');setTimeout(()=>load.hidden=true,650);},onError:failCity});updatePaused();}catch(error){console.error('City initialization failed',error);failCity();}
 updateCount();
+
 
 

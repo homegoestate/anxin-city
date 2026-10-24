@@ -1,6 +1,25 @@
 import * as THREE from 'three';
 import { OrbitControls } from './vendor/OrbitControls.js';
 
+// RAF timestamps belong to the frame's clock. Do not seed this clock with performance.now():
+// the first callback can carry an earlier timestamp after expensive scene initialization.
+export function cityFrameDelta(now, previous) {
+  if (!Number.isFinite(now) || !Number.isFinite(previous)) return 0;
+  return Math.max(0, Math.min((now - previous) / 1000, 0.05));
+}
+
+export function cityMotionPhase(offset, elapsed, speed, length = 1) {
+  const start = Number.isFinite(offset) ? offset : 0;
+  let phase = start;
+  if (Number.isFinite(elapsed) && Number.isFinite(speed) && Number.isFinite(length) && length > 0) {
+    const travelled = elapsed * speed / length;
+    if (Number.isFinite(travelled) && Number.isFinite(start + travelled)) phase += travelled;
+  }
+  // JavaScript remainder keeps the dividend's sign; Three's arc-length lookup requires [0, 1].
+  const remainder = phase % 1;
+  return remainder < 0 ? (remainder + 1) % 1 : remainder === 0 ? 0 : remainder;
+}
+
 /* Original, procedural miniature. No downloaded models or image assets. */
 export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, onReady = () => {}, onError = () => {} }) {
   let renderer;
@@ -264,7 +283,7 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
     const animation = { root, body, arms, legs, knees, height: h, route, offset, speed, seated, dog: null, phase: offset * Math.PI * 2 };
     citizenAnimations.push(animation);
     root.traverse((part) => { if (part.isMesh && !part.userData.hitVolume) part.userData.citizenPart = true; });
-    if (route) { const start = route.getPointAt(offset); root.position.x = start.x; root.position.z = start.z; }
+    if (route) { const start = route.getPointAt(cityMotionPhase(offset, 0, speed, route.getLength())); root.position.x = start.x; root.position.z = start.z; }
     return animation;
   }
 
@@ -685,7 +704,7 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
 
   let disposed = false, frame = 0, ready = false, nightTarget = 0, nightMix = 0, paused = false, motionTime = 0;
   let selectedId = null, selectedPersonaId = null, hoveredId = null, hoveredPersonaId = null;
-  let transition = null, previousTime = performance.now(), pendingZoom = null;
+  let transition = null, previousTime = null, pendingZoom = null;
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const dayColor = new THREE.Color('#F4F1E7'), nightColor = new THREE.Color('#152D35');
   const waterDay = new THREE.Color(palette.water), waterNight = new THREE.Color('#284F59');
@@ -880,7 +899,8 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
   function animate(now) {
     if (disposed) return;
     frame = requestAnimationFrame(animate);
-    const delta = Math.min((now - previousTime) / 1000, 0.05); previousTime = now;
+    const delta = cityFrameDelta(now, previousTime);
+    if (Number.isFinite(now)) previousTime = now;
     if (!paused && !reducedMotion.matches) motionTime += delta;
     if (transition) {
       const progress = Math.min((now - transition.start) / 1000, 1), ease = 1 - Math.pow(1 - progress, 3);
@@ -896,7 +916,7 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
     controls.update();
     for (const actor of citizenAnimations) {
       if (actor.route) {
-        const t = (actor.offset + motionTime * actor.speed / actor.route.getLength()) % 1;
+        const t = cityMotionPhase(actor.offset, motionTime, actor.speed, actor.route.getLength());
         actor.route.getPointAt(t, citizenPoint); actor.route.getTangentAt(t, citizenTangent);
         actor.root.position.x = citizenPoint.x; actor.root.position.z = citizenPoint.z;
         actor.root.rotation.y = Math.atan2(citizenTangent.x, citizenTangent.z);
@@ -927,7 +947,7 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
     }
     updatePersonaLabels(now);
     for (const animation of carAnimations) {
-      const t = (motionTime * animation.speed + animation.offset) % 1;
+      const t = cityMotionPhase(animation.offset, motionTime, animation.speed);
       const point = carPath.getPointAt(t), tangent = carPath.getTangentAt(t);
       animation.object.position.x = point.x; animation.object.position.z = point.z;
       animation.object.rotation.y = Math.atan2(tangent.x, tangent.z);
