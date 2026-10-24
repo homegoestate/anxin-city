@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#194f49"><meta name="description" content="走進宏國・易丞不動產安心城，探索買房、賣房與家族傳承的下一步。">
+  <title>宏國・易丞｜不動產安心城</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23194f49'/%3E%3Cpath d='M14 32L32 17L50 32V49H37V36H27V49H14Z' fill='%23f7f1e3'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./style.css"><link rel="stylesheet" href="./enhancements.css">
+  <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
+</head>
+<body>
+  <main id="experience">
+    <div id="city-stage" aria-label="可旋轉縮放的立體不動產城市">
+      <canvas id="city" aria-label="立體城市；也可使用下方買房、賣房、傳承按鈕探索"></canvas>
+    </div>
+    <div class="scene-vignette" aria-hidden="true"></div>
+    <header class="masthead">
+      <button class="brand" id="brand-home" aria-label="宏國易丞，回到城市全景"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M5 20 20 7l15 13v15H24V23h-8v12H5Z"/><path d="M11 14V8h5"/></svg></span><span><strong>宏國・易丞</strong><small>不動產安心城 <span class="brand-divider">/</span> ANXIN CITY</small></span></button>
+      <nav class="header-nav" aria-label="主要功能"><span class="preview-tag">體驗版 02</span><button id="open-checklist" class="text-button">我的準備清單 <span id="check-count">0</span></button><button id="help-button" class="icon-button" aria-label="操作說明">?</button></nav>
+    </header>
+    <section class="intro" id="intro" aria-labelledby="hero-title">
+      <div class="eyebrow"><span></span> 從台南出發，陪您走向下一步</div>
+      <h1 id="hero-title">關於家的事，<br>一起<span class="serif-accent">安心</span>前行。</h1>
+      <p>一座小城市，三段人生旅程。<br>買一個家、換一種生活，<br>把珍惜的，好好傳下去。</p>
+      <button class="primary-button" id="start-explore">開始我的旅程 <span aria-hidden="true">↗</span></button>
+      <div class="intro-note"><span class="compass" aria-hidden="true">✧</span><span>點選建築或有名字的居民<br><b>聽見故事，找到您的下一步</b></span></div>
+    </section>
+    <div class="world-caption" aria-hidden="true"><span>TAINAN, TAIWAN</span><span>22°59′ N · 120°12′ E</span></div>
+    <div class="scene-tools" role="toolbar" aria-label="城市視角控制">
+      <button id="reset-view" class="icon-button" title="回到全景" aria-label="回到全景"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5M8 12l4-4 4 4-4 4Z"/></svg></button>
+      <span class="tool-divider"></span><button id="zoom-in" class="icon-button" aria-label="放大城市">＋</button><button id="zoom-out" class="icon-button" aria-label="縮小城市">−</button>
+      <span class="tool-divider"></span><button id="night-toggle" class="icon-button" aria-label="切換夜景" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M20 15.5A8.5 8.5 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5Z"/></svg></button><button id="pause-toggle" class="icon-button" aria-label="暫停城市動畫" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></svg></button>
+    </div>
+    <aside id="detail-panel" class="detail-panel" aria-label="場景服務導覽" hidden></aside>
+    <footer class="journey-dock">
+      <div class="dock-heading"><span>選一段旅程，開始探索</span><span class="interaction-hint">拖曳旋轉 <i>·</i> 滾輪縮放</span></div>
+      <div class="journey-options" role="group" aria-label="選擇服務場景">
+        <button class="journey-card" data-scene="buy" aria-pressed="false"><span class="journey-number">01</span><span class="journey-icon"><svg viewBox="0 0 36 36"><path d="m6 17 12-10 12 10v14H6ZM14 31V21h8v10M3 18l15-13 15 13"/></svg></span><span class="journey-copy"><strong>安心買房</strong><small>讓理想，成為日常</small></span><span class="journey-arrow">↗</span></button>
+        <button class="journey-card" data-scene="sell" aria-pressed="false"><span class="journey-number">02</span><span class="journey-icon"><svg viewBox="0 0 36 36"><path d="M7 31V8h16v23M12 13h6M12 18h6M12 23h6M23 17h6v14M4 31h28"/></svg></span><span class="journey-copy"><strong>從容賣房</strong><small>為下一站，好好準備</small></span><span class="journey-arrow">↗</span></button>
+        <button class="journey-card" data-scene="legacy" aria-pressed="false"><span class="journey-number">03</span><span class="journey-icon"><svg viewBox="0 0 36 36"><path d="M18 30V18m0 5-7-5m7 1 6-4M12 31h12"/><path d="M11 21a7 7 0 0 1-1-13 8 8 0 0 1 15 1 6 6 0 0 1 0 12"/></svg></span><span class="journey-copy"><strong>好好傳承</strong><small>把珍惜，留給在乎的人</small></span><span class="journey-arrow">↗</span></button>
+      </div>
+    </footer>
+    <div id="loading" class="loading-screen"><div class="loader-house"><span></span><span></span><span></span></div><strong>為您準備一座安心城市</strong><small>正在佈置街道、家宅與庭園…</small></div>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </main>
+  <dialog id="checklist-dialog" class="sheet-dialog"><div class="dialog-top"><div><span class="eyebrow">YOUR NEXT STEP</span><h2>我的準備清單</h2></div><button class="icon-button" data-close-dialog aria-label="關閉準備清單">×</button></div><p class="dialog-lead">把準備好的勾起來，帶著清楚的問題開始諮詢。</p><div id="all-checklists"></div><div class="dialog-footer"><p>勾選僅儲存在這台裝置；摘要下載到本機。</p><button class="primary-button" id="download-summary">下載諮詢準備摘要 <span>↓</span></button></div></dialog>
+  <dialog id="help-dialog" class="sheet-dialog help-dialog"><div class="dialog-top"><div><span class="eyebrow">WELCOME TO ANXIN CITY</span><h2>用自己的步調，逛一座城。</h2></div><button class="icon-button" data-close-dialog aria-label="關閉操作說明">×</button></div><div class="help-grid"><div><b>01</b><h3>挑一段旅程</h3><p>點選城市建築，或下方「買房、賣房、傳承」進入場景。</p></div><div><b>02</b><h3>換個角度看看</h3><p>拖曳旋轉、滾輪縮放。手機可單指旋轉、雙指縮放。</p></div><div><b>03</b><h3>帶走下一步</h3><p>瀏覽流程、勾選準備資料，再下載您的諮詢準備摘要。</p></div></div><div class="experience-note"><strong>關於這個體驗版本</strong><p>本版提供居民情境、政策說明、每月負擔試算與準備清單。使用回饋會保存供後續改善；未串接正式案件、LINE 或預約。實際政策與辦理條件依個案確認。</p></div><p class="keyboard-hint">鍵盤操作：1 買房 · 2 賣房 · 3 傳承 · Esc 返回全景／關閉視窗</p></dialog>
+  <script type="module" src="./app.js"></script>
+</body></html>
