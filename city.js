@@ -21,7 +21,7 @@ export function cityMotionPhase(offset, elapsed, speed, length = 1) {
 }
 
 /* Original, procedural miniature. No downloaded models or image assets. */
-export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, onReady = () => {}, onError = () => {} }) {
+export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, onDistrict = () => {}, onReady = () => {}, onError = () => {} }) {
   let renderer;
   try {
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
@@ -171,6 +171,14 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
   };
   const carAnimations = [], boatAnimations = [], cloudAnimations = [], labels = [];
   const citizenAnimations = [], citizenBatches = [], personaLabels = [], personaPickTargets = [];
+  const regionLabels = [];
+  // Landscape vignettes for a Tainan stroll, not administrative boundaries or a geographic map.
+  const regions = {
+    coast: { id: 'coast', name: '海線', center: new THREE.Vector3(-11, 0, 8.6), host: 'buy', color: '#598F96', rotation: -0.28 },
+    city: { id: 'city', name: '府城', center: new THREE.Vector3(11.3, 0, -0.4), host: 'sell', color: palette.coralDark, rotation: 0.1 },
+    plains: { id: 'plains', name: '平原', center: new THREE.Vector3(-5.8, 0, -11.6), host: 'legacy', color: '#79935F', rotation: -0.15 },
+    hills: { id: 'hills', name: '山城', center: new THREE.Vector3(4.9, 0, -12), host: 'legacy', color: palette.ochre, rotation: 0.18 },
+  };
   const personas = {
     'first-home': { id: 'first-home', districtId: 'buy', name: '首購小安', color: palette.coral },
     'move-home': { id: 'move-home', districtId: 'buy', name: '換屋阿成', color: palette.teal },
@@ -698,25 +706,155 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
     cloudAnimations.push({ object: cloud, x, z, offset: i * 3.2 });
   }
 
+  const LANDSCAPE_Y = 0.77;
+  const landscapeShape = roundedRectangle(4.1, 3.2, 1.0);
+  const landscapeBase = addGeo(new THREE.ExtrudeGeometry(landscapeShape, { depth: 0.35, bevelEnabled: true, bevelSize: 0.12, bevelThickness: 0.12, bevelSegments: 2, curveSegments: 8 }));
+  const landscapeTop = addGeo(new THREE.ShapeGeometry(roundedRectangle(3.94, 3.04, 0.94), 8));
+  const landscapeShore = addGeo(new THREE.ShapeGeometry(roundedRectangle(4.55, 3.65, 1.2), 8));
+  const brickArch = addGeo(new THREE.TorusGeometry(0.57, 0.14, 4, 14, Math.PI));
+  const lotusPetal = material('lotusPetal', '#D6AAA4');
+
+  function landscapeLabel(region) {
+    const c = document.createElement('canvas'); c.width = 320; c.height = 168;
+    const ctx = c.getContext('2d'); if (!ctx) return;
+    ctx.fillStyle = '#FFF9EB'; ctx.beginPath(); ctx.roundRect(5, 5, 310, 151, 25); ctx.fill();
+    ctx.strokeStyle = region.color; ctx.lineWidth = 4; ctx.stroke();
+    ctx.fillStyle = region.color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = '500 28px "Noto Sans TC", "Microsoft JhengHei", sans-serif'; ctx.fillText('台南散步', 160, 40);
+    ctx.font = '700 66px "Noto Sans TC", "Microsoft JhengHei", sans-serif'; ctx.fillText(`${region.name}  ›`, 160, 105);
+    const texture = new THREE.CanvasTexture(c); texture.colorSpace = THREE.SRGBColorSpace; textures.add(texture);
+    const labelMaterial = new THREE.SpriteMaterial({ map: texture, depthTest: false, depthWrite: false }); materials.set(`region-label-${region.id}`, labelMaterial);
+    const label = new THREE.Sprite(labelMaterial); label.userData.regionId = region.id; label.renderOrder = 23;
+    label.position.copy(region.center); label.position.y = region.id === 'hills' ? 3.2 : 2.3;
+    label.scale.set(2.3, 2.3 * 168 / 320, 1); scene.add(label); region.label = label; regionLabels.push(label);
+    const geometry = addGeo(new THREE.BufferGeometry()); geometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, 0], 3));
+    const leaderMaterial = new THREE.LineBasicMaterial({ color: region.color, transparent: true, opacity: 0.45, depthTest: false, depthWrite: false }); materials.set(`region-leader-${region.id}`, leaderMaterial);
+    const leader = new THREE.Line(geometry, leaderMaterial); leader.frustumCulled = false; leader.renderOrder = 22; scene.add(leader); region.leader = leader;
+  }
+  function shoreBird(parent, x, z, rotation = 0) {
+    const bird = group(parent, x, LANDSCAPE_Y + 0.06, z, rotation);
+    for (const side of [-1, 1]) box(bird, side * 0.035, 0.13, 0, 0.018, 0.26, 0.018, mat.navy, false);
+    mesh(bird, roundGeo, mat.white, [0, 0.31, 0], [0.11, 0.12, 0.2], false);
+    cylinder(bird, 0, 0.46, 0.11, 0.035, 0.23, mat.white, false);
+    mesh(bird, roundGeo, mat.white, [0, 0.58, 0.12], [0.07, 0.065, 0.07], false);
+    box(bird, 0, 0.57, 0.24, 0.045, 0.025, 0.2, mat.navy, false);
+  }
+  function saltLandscape(root) {
+    for (let row = 0; row < 2; row++) for (let col = 0; col < 2; col++) {
+      const x = -1.14 + col * 1.13, z = -0.62 + row * 0.83;
+      box(root, x, LANDSCAPE_Y + 0.025, z, 1.06, 0.05, 0.77, mat.white, false);
+      box(root, x, LANDSCAPE_Y + 0.055, z, 0.91, 0.025, 0.62, row === col ? mat.waterShallow : mat.sand, false);
+      for (let i = 0; i < 4; i++) box(root, x - 0.31 + i * 0.21, LANDSCAPE_Y + 0.073, z, 0.025, 0.01, 0.58, mat.white, false);
+    }
+    mesh(root, coneGeo, mat.white, [1.1, LANDSCAPE_Y + 0.49, -0.45], [0.57, 0.98, 0.57]);
+    mesh(root, coneGeo, mat.white, [0.9, LANDSCAPE_Y + 0.27, 0.65], [0.4, 0.54, 0.4]);
+    mesh(root, coneGeo, mat.sand, [1.47, LANDSCAPE_Y + 0.17, 0.44], [0.28, 0.34, 0.28]);
+    const wetland = disk(root, -0.94, LANDSCAPE_Y + 0.02, 1.03, 0.67, mat.pond); wetland.scale.y *= 0.56;
+    shoreBird(root, -1.23, 1.08, -0.4); shoreBird(root, -0.72, 1.03, 0.35);
+    for (const x of [-1.6, -0.35]) for (let i = 0; i < 3; i++) box(root, x + i * 0.07, LANDSCAPE_Y + 0.18, 1.19, 0.023, 0.36 + i * 0.03, 0.025, mat.foliageMid, false);
+  }
+  function cityLandscape(root) {
+    box(root, 0, LANDSCAPE_Y + 0.018, 0, 3.55, 0.035, 2.5, mat.path, false);
+    const gate = group(root, 0.57, LANDSCAPE_Y, -0.45);
+    for (const x of [-0.56, 0.56]) {
+      box(gate, x, 0.37, 0, 0.29, 0.74, 0.42, mat.coralDark);
+      for (let y = 0.12; y < 0.71; y += 0.2) box(gate, x, y, 0.215, 0.28, 0.023, 0.015, mat.sand, false);
+      box(gate, x, 0.08, 0, 0.39, 0.16, 0.5, mat.limestone, false);
+    }
+    mesh(gate, brickArch, mat.coralDark, [0, 0.7, 0]);
+    box(gate, 0, 1.43, 0, 1.63, 0.15, 0.48, mat.coralDark);
+    for (const x of [-0.58, 0, 0.58]) box(gate, x, 1.58, 0, 0.29, 0.2, 0.47, mat.coral);
+    const warehouse = group(root, -1.04, LANDSCAPE_Y, -0.55);
+    box(warehouse, 0, 0.43, 0, 0.95, 0.86, 1.12, mat.coral);
+    mesh(warehouse, roofGeo, mat.coralDark, [0, 0.86, 0], [1.12, 0.62, 1.28]);
+    box(warehouse, 0, 0.3, 0.57, 0.31, 0.56, 0.025, mat.teal, false);
+    for (const x of [-0.3, 0.3]) box(warehouse, x, 0.64, 0.57, 0.16, 0.19, 0.025, mat.window, false);
+    for (let i = 0; i < 5; i++) box(root, -1.44 + i * 0.59, LANDSCAPE_Y + 0.05, 0.53, 0.42, 0.04, 0.33, mat.sand, false);
+    box(root, 0.49, LANDSCAPE_Y + 0.08, 1.05, 2.08, 0.16, 0.48, mat.ochre);
+    for (let i = 0; i < 9; i++) box(root, -0.43 + i * 0.23, LANDSCAPE_Y + 0.17, 1.05, 0.025, 0.018, 0.49, mat.sand, false);
+    for (const x of [-0.42, 1.4]) cylinder(root, x, LANDSCAPE_Y + 0.27, 1.1, 0.055, 0.54, mat.bark, false);
+    for (const [x, z] of [[-1.35, 0.99], [-1.04, 1.13]]) box(root, x, LANDSCAPE_Y + 0.16, z, 0.26, 0.32, 0.26, mat.ochre, false);
+  }
+  function plainsLandscape(root) {
+    for (let row = 0; row < 2; row++) for (let col = 0; col < 2; col++) {
+      const x = -1.09 + col * 1.13, z = -0.62 + row * 0.92;
+      box(root, x, LANDSCAPE_Y + 0.02, z, 1.07, 0.04, 0.86, mat.ochre, false);
+      box(root, x, LANDSCAPE_Y + 0.045, z, 0.94, 0.03, 0.73, row === col ? mat.green : mat.greenLight, false);
+      for (let i = 0; i < 5; i++) {
+        box(root, x - 0.36 + i * 0.18, LANDSCAPE_Y + 0.14, z, 0.045, 0.2, 0.64, mat.foliageMid, false);
+        box(root, x - 0.36 + i * 0.18, LANDSCAPE_Y + 0.25, z, 0.055, 0.055, 0.64, mat.gold, false);
+      }
+    }
+    const barn = group(root, 1.17, LANDSCAPE_Y, -0.57);
+    box(barn, 0, 0.4, 0, 0.86, 0.8, 0.95, mat.cream);
+    mesh(barn, roofGeo, mat.coral, [0, 0.8, 0], [1.05, 0.65, 1.14]);
+    box(barn, 0, 0.27, 0.49, 0.34, 0.53, 0.025, mat.bark, false);
+    for (const x of [-0.33, 0.33]) mesh(barn, roundGeo, mat.sand, [x, 0.17, 0.65], [0.16, 0.2, 0.14], false);
+    disk(root, 1.03, LANDSCAPE_Y + 0.03, 0.85, 0.59, mat.pond);
+    for (const [x, z] of [[0.79, 0.68], [1.16, 1.06], [1.28, 0.66]]) {
+      disk(root, x, LANDSCAPE_Y + 0.055, z, 0.17, mat.jade);
+      for (let i = 0; i < 5; i++) {
+        const a = i * Math.PI * 2 / 5;
+        mesh(root, roundGeo, lotusPetal, [x + Math.cos(a) * 0.045, LANDSCAPE_Y + 0.104, z + Math.sin(a) * 0.045], [0.048, 0.045, 0.048], false);
+      }
+    }
+  }
+  function hillsLandscape(root) {
+    for (const [x, z, sx, sy, sz] of [[-0.85, -0.45, 0.9, 0.42, 0.8], [0.43, -0.5, 0.8, 0.55, 0.8]]) {
+      mesh(root, roundGeo, mat.green, [x, LANDSCAPE_Y - 0.04, z], [sx, sy, sz], false);
+    }
+    for (const [index, values] of [[-0.98, -0.47, 0.33], [0.38, -0.56, 0.46], [-0.85, 0.58, 0.02]].entries()) {
+      const [x, z, rise] = values; const mango = tree(root, x, z, 0.73, 0, index + 5); mango.position.y = LANDSCAPE_Y + rise;
+      for (let i = 0; i < 5; i++) {
+        const a = i * Math.PI * 2 / 5 + index;
+        mesh(mango, roundGeo, i % 2 ? mat.ochre : mat.coral, [Math.cos(a) * 0.31, 0.91 + Math.sin(i * 2) * 0.14, Math.sin(a) * 0.31], [0.068, 0.1, 0.06], false);
+      }
+    }
+    const stall = group(root, 0.87, LANDSCAPE_Y, 0.85);
+    box(stall, 0, 0.4, 0, 1.12, 0.12, 0.63, mat.ochre);
+    for (const x of [-0.49, 0.49]) {
+      box(stall, x, 0.2, 0, 0.075, 0.4, 0.52, mat.bark, false);
+      cylinder(stall, x, 0.62, -0.21, 0.025, 1.24, mat.bark, false);
+    }
+    for (let i = 0; i < 5; i++) box(stall, -0.53 + i * 0.265, 1.22, 0, 0.265, 0.075, 0.78, i % 2 ? mat.cream : mat.coral, false);
+    for (let i = 0; i < 8; i++) mesh(stall, roundGeo, i % 3 ? mat.ochre : mat.coral, [-0.39 + (i % 4) * 0.25, 0.53, -0.14 + Math.floor(i / 4) * 0.27], [0.085, 0.065, 0.09], false);
+    box(root, -0.06, LANDSCAPE_Y + 0.14, 1.05, 0.35, 0.28, 0.38, mat.ochre, false);
+  }
+  for (const region of Object.values(regions)) {
+    const root = group(scene, region.center.x, 0, region.center.z, region.rotation); root.userData.regionId = region.id; region.root = root;
+    const base = mesh(root, landscapeBase, [mat.sand, mat.limestone], [0, 0.3, 0]); base.rotation.x = -Math.PI / 2;
+    const top = mesh(root, landscapeTop, region.id === 'coast' ? mat.sand : region.id === 'city' ? mat.path : mat.greenLight, [0, LANDSCAPE_Y, 0], null, false); top.rotation.x = -Math.PI / 2;
+    const shore = mesh(root, landscapeShore, mat.waterShallow, [0, 0.013, 0], null, false); shore.rotation.x = -Math.PI / 2;
+    ({ coast: saltLandscape, city: cityLandscape, plains: plainsLandscape, hills: hillsLandscape })[region.id](root);
+    const host = districts[region.host].center, direction = region.center.clone().sub(host); direction.y = 0; direction.normalize();
+    for (let i = 0; i < 3; i++) {
+      const point = host.clone().addScaledVector(direction, 5.25 + i * 0.35);
+      const step = box(scene, point.x, 0.94 - i * 0.07, point.z, 0.82, 0.13, 0.42, mat.limestone, false);
+      step.rotation.y = Math.atan2(direction.x, direction.z); step.userData.regionId = region.id;
+    }
+    landscapeLabel(region);
+  }
+
   // Repeated static details are instanced by geometry/material/district to keep draw calls modest.
   function batchStatics() {
     scene.updateMatrixWorld(true);
     const batches = new Map();
     scene.traverse((object) => {
       if (!object.isMesh || Array.isArray(object.material)) return;
-      let ancestor = object, dynamic = false, districtId = null;
-      while (ancestor) { dynamic ||= Boolean(ancestor.userData.dynamic); districtId ||= ancestor.userData.districtId; ancestor = ancestor.parent; }
+      let ancestor = object, dynamic = false, districtId = null, regionId = null;
+      while (ancestor) { dynamic ||= Boolean(ancestor.userData.dynamic); districtId ||= ancestor.userData.districtId; regionId ||= ancestor.userData.regionId; ancestor = ancestor.parent; }
       if (dynamic) return;
-      const key = `${object.geometry.uuid}:${object.material.uuid}:${object.castShadow}:${object.receiveShadow}:${districtId || ''}`;
-      if (!batches.has(key)) batches.set(key, { objects: [], districtId });
+      const key = `${object.geometry.uuid}:${object.material.uuid}:${object.castShadow}:${object.receiveShadow}:${districtId || ''}:${regionId || ''}`;
+      if (!batches.has(key)) batches.set(key, { objects: [], districtId, regionId });
       batches.get(key).objects.push(object);
     });
-    for (const { objects, districtId } of batches.values()) {
+    for (const { objects, districtId, regionId } of batches.values()) {
       if (objects.length < 3) continue;
       const source = objects[0];
       const instance = new THREE.InstancedMesh(source.geometry, source.material, objects.length);
       instance.castShadow = source.castShadow; instance.receiveShadow = source.receiveShadow;
       instance.userData.districtId = districtId;
+      instance.userData.regionId = regionId;
       objects.forEach((object, i) => { instance.setMatrixAt(i, object.matrixWorld); object.removeFromParent(); });
       instance.instanceMatrix.needsUpdate = true; instance.computeBoundingSphere(); scene.add(instance);
     }
@@ -725,7 +863,7 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
   batchCitizens();
 
   let disposed = false, frame = 0, ready = false, nightTarget = 0, nightMix = 0, paused = false, motionTime = 0;
-  let selectedId = null, selectedPersonaId = null, hoveredId = null, hoveredPersonaId = null;
+  let selectedId = null, selectedPersonaId = null, hoveredId = null, hoveredPersonaId = null, hoveredRegionId = null;
   let transition = null, previousTime = null, pendingZoom = null;
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const dayColor = new THREE.Color('#F4F1E7'), nightColor = new THREE.Color('#152D35');
@@ -796,11 +934,76 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
         for (const previous of occupied) if (Math.abs(x - previous.x) < pixelsWide + 8 && Math.abs(y - previous.y) < pixelsHigh + 7) score += 10000;
         if (!best || score < best.score) best = { x, y, score };
       }
-      occupied.push(best);
+      occupied.push({ ...best, width: pixelsWide, height: pixelsHigh });
       labelWorld.set(best.x / width * 2 - 1, -(best.y / height * 2 - 1), personaProjection.z).unproject(camera);
       persona.label.position.copy(labelWorld); persona.label.scale.set(pixelsWide * unitsPerPixel, pixelsHigh * unitsPerPixel, 1);
       leaderEnd.set(best.x / width * 2 - 1, -((best.y + pixelsHigh * 0.33) / height * 2 - 1), personaProjection.z).unproject(camera);
       const attribute = persona.leader.geometry.attributes.position;
+      attribute.setXYZ(0, citizenWorld.x, citizenWorld.y, citizenWorld.z); attribute.setXYZ(1, leaderEnd.x, leaderEnd.y, leaderEnd.z); attribute.needsUpdate = true;
+    }
+    // On phones, reserve the existing scene labels as well as all persona hit areas.
+    if (width < 740) for (const label of labels) {
+      if (!label.visible) continue;
+      personaProjection.copy(label.position).project(camera);
+      occupied.push({ x: (personaProjection.x * 0.5 + 0.5) * width, y: (-personaProjection.y * 0.5 + 0.5) * height,
+        width: label.scale.x / unitsPerPixel, height: label.scale.y / unitsPerPixel });
+    }
+    // Small regional invitations remain an overview layer, leaving focused tasks uncluttered.
+    for (const region of Object.values(regions)) {
+      if (!region.label) continue;
+      const visible = !selectedId && !selectedPersonaId;
+      region.label.visible = visible; region.leader.visible = visible;
+      if (!visible) continue;
+      const regionWidth = width < 740 ? 78 : 88, regionHeight = regionWidth * 168 / 320;
+      citizenWorld.copy(region.center); citizenWorld.y = region.id === 'hills' ? 2.6 : region.id === 'city' ? 2 : 1.35;
+      personaProjection.copy(citizenWorld).project(camera);
+      const idealX = (personaProjection.x * 0.5 + 0.5) * width, idealY = (-personaProjection.y * 0.5 + 0.5) * height - 27;
+      let best = null;
+      if (width < 740) {
+        const minX = labelBounds.left + regionWidth / 2, maxX = labelBounds.right - regionWidth / 2;
+        const minY = labelBounds.top + regionHeight / 2, maxY = labelBounds.bottom - regionHeight / 2;
+        if (minX <= maxX && minY <= maxY) {
+          const candidates = [[clamp(idealX, minX, maxX), clamp(idealY, minY, maxY)]];
+          if (region.mobileLabelPosition) candidates.push([region.mobileLabelPosition.x, region.mobileLabelPosition.y, true]);
+          // Search the complete safe area, including the space below the miniature city.
+          // Obstacle edges catch narrow free slots that a regular grid could skip.
+          const xs = new Set([minX, maxX, clamp(idealX, minX, maxX)]);
+          const ys = new Set([minY, maxY, clamp(idealY, minY, maxY)]);
+          for (let x = minX; x <= maxX; x += 18) xs.add(x);
+          for (let y = maxY; y >= minY; y -= 18) ys.add(y);
+          for (const previous of occupied) for (const side of [-1, 1]) {
+            xs.add(clamp(previous.x + side * ((regionWidth + previous.width) / 2 + 10), minX, maxX));
+            ys.add(clamp(previous.y + side * ((regionHeight + previous.height) / 2 + 10), minY, maxY));
+          }
+          for (const x of xs) for (const y of ys) candidates.push([x, y]);
+          for (const [x, y, stable] of candidates) {
+            if (x < minX || x > maxX || y < minY || y > maxY) continue;
+            const blocked = occupied.some((previous) => Math.abs(x - previous.x) < (regionWidth + previous.width) / 2 + 9 && Math.abs(y - previous.y) < (regionHeight + previous.height) / 2 + 9);
+            if (blocked) continue;
+            const score = Math.hypot(x - idealX, y - idealY) + (y < idealY ? 4 : 0) - (stable ? 16 : 0);
+            if (!best || score < best.score) best = { x, y, score };
+          }
+        }
+        if (!best) {
+          region.label.visible = false; region.leader.visible = false; region.mobileLabelPosition = null;
+          continue; // The landscape itself and the app's stroll entry remain clickable.
+        }
+        region.mobileLabelPosition = { x: best.x, y: best.y };
+      } else {
+        for (const [dx, dy] of [[0, 0], [0, -52], [0, 52], [-105, 0], [105, 0], [-105, -52], [105, 52], [0, -104], [0, 104]]) {
+          const x = clamp(idealX + dx, labelBounds.left + regionWidth / 2, labelBounds.right - regionWidth / 2);
+          const y = clamp(idealY + dy, labelBounds.top + regionHeight / 2, labelBounds.bottom - regionHeight / 2);
+          let score = Math.hypot(x - idealX, y - idealY);
+          for (const previous of occupied) if (Math.abs(x - previous.x) < (regionWidth + previous.width) / 2 + 7 && Math.abs(y - previous.y) < (regionHeight + previous.height) / 2 + 7) score += 10000;
+          if (!best || score < best.score) best = { x, y, score };
+        }
+      }
+      occupied.push({ ...best, width: regionWidth, height: regionHeight });
+      labelWorld.set(best.x / width * 2 - 1, -(best.y / height * 2 - 1), personaProjection.z).unproject(camera);
+      region.label.position.copy(labelWorld); region.label.scale.set(regionWidth * unitsPerPixel, regionHeight * unitsPerPixel, 1);
+      region.label.material.color.set(hoveredRegionId === region.id ? '#FFE6BA' : '#FFFFFF');
+      leaderEnd.set(best.x / width * 2 - 1, -((best.y + regionHeight * 0.4) / height * 2 - 1), personaProjection.z).unproject(camera);
+      const attribute = region.leader.geometry.attributes.position;
       attribute.setXYZ(0, citizenWorld.x, citizenWorld.y, citizenWorld.z); attribute.setXYZ(1, leaderEnd.x, leaderEnd.y, leaderEnd.z); attribute.needsUpdate = true;
     }
   }
@@ -863,6 +1066,10 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
     else transition = { start: performance.now(), fromTarget: controls.target.clone(), toTarget: destination.target, fromPosition: camera.position.clone(), toPosition: destination.target.clone().add(cameraOffset), fromZoom: camera.zoom, toZoom: 1 };
   }
   function getSceneAnchor(id) {
+    if (Object.hasOwn(regions, id) && regions[id].label) {
+      const label = regions[id].label; projected.copy(label.position).project(camera);
+      return { x: (projected.x * 0.5 + 0.5) * width, y: (-projected.y * 0.5 + 0.5) * height, visible: label.visible && projected.z >= -1 && projected.z <= 1, type: 'region' };
+    }
     if (personas[id]?.label) {
       const label = personas[id].label; projected.copy(label.position).project(camera);
       return { x: (projected.x * 0.5 + 0.5) * width, y: (-projected.y * 0.5 + 0.5) * height, visible: label.visible && projected.z >= -1 && projected.z <= 1, type: 'persona' };
@@ -879,12 +1086,15 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
     const personHits = raycaster.intersectObjects(personaLabels.filter((label) => label.visible), false)
       .concat(raycaster.intersectObjects(personaPickTargets, false));
     for (const hit of personHits) if (hit.object.userData.personaId) return { type: 'persona', id: hit.object.userData.personaId };
+    const regionHits = raycaster.intersectObjects(regionLabels.filter((label) => label.visible), false);
+    for (const hit of regionHits) if (hit.object.userData.regionId) return { type: 'region', id: hit.object.userData.regionId };
     const hits = raycaster.intersectObjects(labels.filter((label) => label.visible), false).concat(raycaster.intersectObjects(scene.children, true));
     for (const hit of hits) {
       if ((hit.object.isSprite && !hit.object.visible) || hit.object.userData.citizenPart || hit.object.userData.citizenBatch || hit.object.isLine) continue;
       let object = hit.object;
       while (object) {
         if (object.userData.personaId) return { type: 'persona', id: object.userData.personaId };
+        if (object.userData.regionId) return { type: 'region', id: object.userData.regionId };
         if (object.userData.districtId) return { type: 'district', id: object.userData.districtId };
         object = object.parent;
       }
@@ -905,17 +1115,19 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
     if (Math.hypot(event.clientX - down.x, event.clientY - down.y) > 6 || performance.now() - down.time > 700) return;
     const hit = pick(event);
     if (hit?.type === 'persona') { focusPersona(hit.id); onPersona(hit.id); }
+    else if (hit?.type === 'region') onDistrict(hit.id);
     else if (hit) { select(hit.id); onSelect(hit.id); }
   }
   function onPointerMove(event) {
     if (pointerDown || event.pointerType === 'touch' || performance.now() - lastHoverTime < 70) return;
     lastHoverTime = performance.now(); const hit = pick(event);
     hoveredPersonaId = hit?.type === 'persona' ? hit.id : null;
-    hoveredId = hoveredPersonaId ? personas[hoveredPersonaId].districtId : hit?.id || null;
+    hoveredRegionId = hit?.type === 'region' ? hit.id : null;
+    hoveredId = hoveredPersonaId ? personas[hoveredPersonaId].districtId : hit?.type === 'district' ? hit.id : null;
     canvas.style.cursor = hit ? 'pointer' : 'grab';
   }
   function onPointerCancel(event) { pointers.delete(event.pointerId); pointerDown = null; }
-  function onPointerLeave() { hoveredId = null; hoveredPersonaId = null; canvas.style.cursor = 'grab'; }
+  function onPointerLeave() { hoveredId = null; hoveredPersonaId = null; hoveredRegionId = null; canvas.style.cursor = 'grab'; }
   function onControlStart() { transition = null; pendingZoom = null; }
   function onContextLost(event) { event.preventDefault(); onError(new Error('WebGL context lost. Please reload to restore the city.')); }
   canvas.addEventListener('pointerdown', onPointerDown);

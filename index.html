@@ -2,10 +2,10 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#194f49"><meta name="description" content="走進宏國・易丞不動產安心城，探索買房、賣房與家族傳承的下一步。">
+  <meta name="theme-color" content="#194f49"><meta name="description" content="走進宏國・易丞不動產安心城，陪居民走過人生選擇，也在台南37區散步集章，認識地方特色、四季風物與生活。">
   <title>宏國・易丞｜不動產安心城</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23194f49'/%3E%3Cpath d='M14 32L32 17L50 32V49H37V36H27V49H14Z' fill='%23f7f1e3'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="./style.css"><link rel="stylesheet" href="./enhancements.css?v=3.0.0"><link rel="stylesheet" href="./game.css?v=3.0.0">
+  <link rel="stylesheet" href="./style.css"><link rel="stylesheet" href="./enhancements.css?v=4.0.0"><link rel="stylesheet" href="./game.css?v=4.0.0"><link rel="stylesheet" href="./tainan.css?v=4.0.0">
   <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
 </head>
 <body>
@@ -16,13 +16,14 @@
     <div class="scene-vignette" aria-hidden="true"></div>
     <header class="masthead">
       <button class="brand" id="brand-home" aria-label="宏國易丞，回到城市全景"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M5 20 20 7l15 13v15H24V23h-8v12H5Z"/><path d="M11 14V8h5"/></svg></span><span><strong>宏國・易丞</strong><small>不動產安心城 <span class="brand-divider">/</span> ANXIN CITY</small></span></button>
-      <nav class="header-nav" aria-label="主要功能"><span class="preview-tag">人生任務 03</span><button id="open-checklist" class="text-button">我的準備清單 <span id="check-count">0</span></button><button id="help-button" class="icon-button" aria-label="操作說明">?</button></nav>
+      <nav class="header-nav" aria-label="主要功能"><span class="preview-tag">台南散步 04</span><button id="open-checklist" class="text-button">我的準備清單 <span id="check-count">0</span></button><button id="help-button" class="icon-button" aria-label="操作說明">?</button></nav>
     </header>
     <section class="intro" id="intro" aria-labelledby="hero-title">
       <div class="eyebrow"><span></span> 從台南出發，陪您走向下一步</div>
       <h1 id="hero-title">關於家的事，<br>一起<span class="serif-accent">安心</span>前行。</h1>
       <p>如果人生，可以先練習一次。<br>陪居民買一個家、換一種生活，<br>每個選擇，都有下一段故事。</p>
       <button class="primary-button" id="start-explore">選一位居民，開始玩 <span aria-hidden="true">↗</span></button>
+      <button class="tainan-hero-button" id="start-tainan">也想認識台南？一起散步集章 →</button>
       <div class="intro-note"><span class="compass" aria-hidden="true">✧</span><span>四個選擇，看見不同結局<br><b>也可以點選城市中有名字的居民</b></span></div>
     </section>
     <div class="world-caption" aria-hidden="true"><span>TAINAN, TAIWAN</span><span>22°59′ N · 120°12′ E</span></div>
@@ -44,7 +45,7 @@
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
   </main>
   <dialog id="checklist-dialog" class="sheet-dialog"><div class="dialog-top"><div><span class="eyebrow">YOUR NEXT STEP</span><h2>我的準備清單</h2></div><button class="icon-button" data-close-dialog aria-label="關閉準備清單">×</button></div><p class="dialog-lead">把準備好的勾起來，帶著清楚的問題開始諮詢。</p><div id="all-checklists"></div><div class="dialog-footer"><p>勾選僅儲存在這台裝置；摘要下載到本機。</p><button class="primary-button" id="download-summary">下載諮詢準備摘要 <span>↓</span></button></div></dialog>
-  <dialog id="help-dialog" class="sheet-dialog help-dialog"><div class="dialog-top"><div><span class="eyebrow">WELCOME TO ANXIN CITY</span><h2>用自己的步調，逛一座城。</h2></div><button class="icon-button" data-close-dialog aria-label="關閉操作說明">×</button></div><div class="help-grid"><div><b>01</b><h3>挑一段旅程</h3><p>點「人生任務」或城市中有名字的居民，陪他完成四個選擇。</p></div><div><b>02</b><h3>換個角度看看</h3><p>拖曳旋轉、滾輪縮放。手機可單指旋轉、雙指縮放。</p></div><div><b>03</b><h3>帶走下一步</h3><p>試試不同結局、重選比較，再把想問的問題帶到官方 LINE。</p></div></div><div class="experience-note"><strong>關於這個體驗版本</strong><p>陪居民走過四個選擇，看見不同結局、月付金與時間安排。可帶著摘要前往官方 LINE，由您確認送出；使用回饋會保存供後續改善。未串接正式案件或預約。</p></div><p class="keyboard-hint">鍵盤操作：1 買房 · 2 賣房 · 3 傳承 · Esc 返回全景／關閉視窗</p></dialog>
-  <script type="module" src="./app.js?v=3.0.0"></script>
+  <dialog id="help-dialog" class="sheet-dialog help-dialog"><div class="dialog-top"><div><span class="eyebrow">WELCOME TO ANXIN CITY</span><h2>用自己的步調，逛一座城。</h2></div><button class="icon-button" data-close-dialog aria-label="關閉操作說明">×</button></div><div class="help-grid"><div><b>01</b><h3>挑一段旅程</h3><p>點「人生任務」或城市中有名字的居民，陪他完成四個選擇。</p></div><div><b>02</b><h3>換個角度看看</h3><p>拖曳旋轉、滾輪縮放。手機可單指旋轉、雙指縮放。</p></div><div><b>03</b><h3>帶走下一步</h3><p>試試不同結局、重選比較，再把想問的問題帶到官方 LINE。</p></div></div><div class="experience-note"><strong>關於這個體驗版本</strong><p>陪居民走過四個選擇，也能到台南37區散步集章、認識四季風物與地方發展。可帶著摘要前往官方 LINE，由您確認送出；使用回饋會保存供後續改善。未串接正式案件或預約。</p></div><p class="keyboard-hint">鍵盤操作：1 買房 · 2 賣房 · 3 傳承 · Esc 返回全景／關閉視窗</p></dialog>
+  <script type="module" src="./app.js?v=4.0.0"></script>
 </body></html>
 

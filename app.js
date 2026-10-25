@@ -1,6 +1,7 @@
-import { createCity } from './city.js?v=3.0.0';
-import { createEnhancements } from './enhancements.js?v=3.0.0';
-let enhancements;
+import { createCity } from './city.js?v=4.0.0';
+import { createEnhancements } from './enhancements.js?v=4.0.0';
+import { createTainanExplorer } from './tainan-ui.js?v=4.0.0';
+let enhancements,tainanExplorer;
 
 const journeys = {
   buy: { no:'01', english:'A HOME TO BEGIN', name:'安心買房', title:'把理想，安放成家。', subtitle:'從看見喜歡的房子，到拿到鑰匙。把每個重要步驟，先想清楚。', steps:[['先整理購屋條件','釐清購屋目的、自備款與每月可負擔金額，留下生活預備金。'],['看懂物件與交易條件','確認土地、建物及使用現況，整理契約、付款與點交的待確認事項。'],['安排貸款與簽約','向銀行確認鑑價、申貸條件與時程，再協調付款與交屋安排。'],['完成過戶與交屋','依個案辦理稅費、登記、撥款與點交，逐項確認交付內容。']],checks:[['購屋預算與自備款範圍','先列出可運用資金與希望保留的預備金。'],['物件基本資料','整理地址、坪數、用途及手邊的物件資料。'],['貸款需求與財力資料','先盤點收入及既有負債；實際申貸文件依銀行要求。'],['預計簽約與交屋時間','列出希望完成時間及需要配合的安排。']],question:'除了房價，我還需要準備哪些支出？如果銀行鑑價與預期不同，付款安排要怎麼調整？'},
@@ -31,8 +32,10 @@ $('#pause-toggle').onclick=()=>{paused=!paused;updatePaused();};$('#open-checkli
 $('#download-summary').onclick=()=>{const lines=['宏國・易丞｜不動產安心城','我的諮詢準備摘要','',`整理日期：${new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}`,''];Object.entries(journeys).forEach(([id,data])=>{lines.push(`${data.no} ${data.name}`,...data.checks.map(([title],i)=>`${saved[`${id}-${i}`]===true?'[已準備]':'[待整理]'} ${title}`),`可討論的問題：${data.question}`,'');});lines.push('本摘要由您在體驗版的勾選產生，僅供諮詢準備。','未提交預約或傳送任何案件資料。實際文件與辦理方式依個案確認。');const blob=new Blob(['\uFEFF'+lines.join('\r\n')],{type:'text/plain;charset=utf-8'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='宏國易丞_諮詢準備摘要.txt';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);toast('已開始下載您的諮詢準備摘要');};
 document.addEventListener('keydown',event=>{if(document.querySelector('dialog[open]'))return;if(['INPUT','TEXTAREA','SELECT'].includes(event.target.tagName))return;const id={'1':'buy','2':'sell','3':'legacy'}[event.key];if(id)selectScene(id);if(event.key==='Escape')resetView();});
 function failCity(){const load=$('#loading');load.hidden=false;load.classList.remove('loaded');load.innerHTML='<strong>這個瀏覽器暫時無法開啟立體城市</strong><small>您仍可使用下方三個場景與準備清單。</small><button class="primary-button" id="continue-text" style="margin-top:24px">繼續服務導覽 ↗</button>';$('#continue-text').onclick=()=>{load.classList.add('loaded');setTimeout(()=>load.hidden=true,650);};}
-enhancements=createEnhancements({getScene:()=>scene,selectScene,getCurrentScene:()=>currentId,openJourneyChecklist:(id)=>{selectScene(id);currentTab='ready';renderPanel();},toast});
-try{scene=createCity({onPersona:(id)=>enhancements.showPersona(id),canvas:$('#city'),onSelect:selectScene,onReady:()=>{const load=$('#loading');load.classList.add('loaded');setTimeout(()=>load.hidden=true,650);},onError:failCity});updatePaused();}catch(error){console.error('City initialization failed',error);failCity();}
+enhancements=createEnhancements({onExploreTainan:()=>tainanExplorer?.open(),getScene:()=>scene,selectScene,getCurrentScene:()=>currentId,openJourneyChecklist:(id)=>{selectScene(id);currentTab='ready';renderPanel();},toast});
+tainanExplorer=createTainanExplorer({onStartMission:(id)=>enhancements.showPersona(id),onFeedback:context=>enhancements.openFeedback(context),toast});
+$('#start-tainan').onclick=()=>tainanExplorer.open();
+try{scene=createCity({onDistrict:region=>tainanExplorer.open(region),onPersona:(id)=>enhancements.showPersona(id),canvas:$('#city'),onSelect:selectScene,onReady:()=>{const load=$('#loading');load.classList.add('loaded');setTimeout(()=>load.hidden=true,650);},onError:failCity});updatePaused();}catch(error){console.error('City initialization failed',error);failCity();}
 updateCount();
 
 
