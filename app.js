@@ -1,5 +1,5 @@
-import { createCity } from './city.js?v=2.0.1';
-import { createEnhancements } from './enhancements.js?v=2.0.1';
+import { createCity } from './city.js?v=3.0.0';
+import { createEnhancements } from './enhancements.js?v=3.0.0';
 let enhancements;
 
 const journeys = {
@@ -24,7 +24,7 @@ function selectScene(id){if(!journeys[id])return;enhancements?.clearPersonaState
 function resetView(){enhancements?.clearPersonaState();currentId=null;$('#detail-panel').hidden=true;document.body.classList.remove('scene-selected');document.getElementById("intro").inert=false;document.getElementById("intro").removeAttribute('aria-hidden');$$('[data-scene]').forEach(button=>button.setAttribute('aria-pressed','false'));scene?.reset();}
 function openChecklist(){const container=$('#all-checklists');container.innerHTML=Object.entries(journeys).map(([id,data])=>`<section class="checklist-group"><h3>${data.no} · ${data.name}</h3>${checklistHtml(id)}</section>`).join('');attachChecks(container);$('#checklist-dialog').showModal();}
 $$('[data-scene]').forEach(button=>button.onclick=()=>selectScene(button.dataset.scene));
-$('#start-explore').onclick=()=>selectScene('buy');$('#brand-home').onclick=resetView;$('#reset-view').onclick=resetView;$('#zoom-in').onclick=()=>scene?.zoom(0.2);$('#zoom-out').onclick=()=>scene?.zoom(-0.2);
+$('#start-explore').onclick=()=>enhancements?.openPeople();$('#brand-home').onclick=resetView;$('#reset-view').onclick=resetView;$('#zoom-in').onclick=()=>scene?.zoom(0.2);$('#zoom-out').onclick=()=>scene?.zoom(-0.2);
 $('#night-toggle').onclick=()=>{night=!night;document.body.classList.toggle('night-mode',night);$('#night-toggle').setAttribute('aria-pressed',String(night));$('#night-toggle').setAttribute('aria-label',night?'切換日景':'切換夜景');scene?.setNight(night);};
 function updatePaused(){const button=$('#pause-toggle');button.setAttribute('aria-pressed',String(paused));button.setAttribute('aria-label',paused?'播放城市動畫':'暫停城市動畫');button.innerHTML=paused?'<svg viewBox="0 0 24 24"><path d="m9 5 10 7-10 7Z"/></svg>':'<svg viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></svg>';scene?.setPaused(paused);}
 $('#pause-toggle').onclick=()=>{paused=!paused;updatePaused();};$('#open-checklist').onclick=openChecklist;$('#help-button').onclick=()=>$('#help-dialog').showModal();$$('[data-close-dialog]').forEach(button=>button.onclick=()=>button.closest('dialog').close());$$('dialog').forEach(dialog=>dialog.addEventListener('click',event=>{if(event.target===dialog){const r=dialog.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)dialog.close();}}));

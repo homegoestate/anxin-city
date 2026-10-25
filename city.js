@@ -27,7 +27,7 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
   } catch (error) {
     onError(error);
-    return { select() {}, focusPersona() {}, reset() {}, setNight() {}, setPaused() {}, zoom() {}, resize() {}, dispose() {}, getSceneAnchor() { return null; } };
+    return { select() {}, focusPersona() {}, setMissionMood() { return false; }, reset() {}, setNight() {}, setPaused() {}, zoom() {}, resize() {}, dispose() {}, getSceneAnchor() { return null; } };
   }
 
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
@@ -177,6 +177,14 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
     seller: { id: 'seller', districtId: 'sell', name: '賣屋美玲', color: palette.ochre },
     'legacy-family': { id: 'legacy-family', districtId: 'legacy', name: '傳承一家', color: palette.jade },
   };
+  // These are conversational reactions, not financial or eligibility indicators.
+  const missionMoods = {
+    neutral: { tint: '#FFFFFF' },
+    thinking: { halo: '#6D959C', tint: '#EDF5F5' },
+    steady: { halo: '#598B76', tint: '#EDF5E9' },
+    caution: { halo: '#C39A56', tint: '#FFF2D9' },
+    celebrate: { halo: '#D79A63', tint: '#FFF2DD' },
+  };
   const dynamicRoots = [];
   const markDynamic = (object) => { object.userData.dynamic = true; dynamicRoots.push(object); return object; };
 
@@ -241,6 +249,20 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
     cylinder(body, 0, h * 0.775, 0, h * 0.047, h * 0.08, skin, false);
     mesh(body, roundGeo, skin, [0, h * 0.88, 0.014], [h * 0.13, h * 0.15, h * 0.12], false);
     mesh(body, roundGeo, hair, [0, h * 0.963, -h * 0.025], [h * 0.14, h * 0.09, h * 0.125], false);
+    // Small flat features remain readable at miniature scale and join the existing GPU batches.
+    for (const side of [-1, 1]) box(body, side * h * 0.047, h * 0.903, 0.014 + h * 0.116, h * 0.027, h * 0.032, h * 0.018, mat.hair, false);
+    box(body, 0, h * 0.873, 0.014 + h * 0.132, h * 0.035, h * 0.045, h * 0.045, skin, false);
+    box(body, 0, h * 0.836, 0.014 + h * 0.109, h * 0.061, h * 0.012, h * 0.015, mat.hairBrown, false);
+    const fringe = box(body, -h * 0.022, h * 0.969, 0.014 + h * 0.065, h * 0.19, h * 0.055, h * 0.07, hair, false);
+    fringe.rotation.z = 0.12;
+    if (personaId) {
+      for (const side of [-1, 1]) {
+        mesh(body, roundGeo, skin, [side * h * 0.127, h * 0.883, 0.012], [h * 0.031, h * 0.047, h * 0.035], false);
+        const collar = box(body, side * h * 0.052, h * 0.727, h * 0.103, h * 0.075, h * 0.06, h * 0.018, mat.cream, false);
+        collar.rotation.z = side * 0.35;
+      }
+      box(body, -h * 0.08, h * 0.626, h * 0.106, h * 0.065, h * 0.014, h * 0.018, mat.cream, false);
+    }
     if (style === 'bob') box(body, 0, h * 0.88, -h * 0.08, h * 0.27, h * 0.21, h * 0.13, hair, false);
     if (style === 'bun') mesh(body, roundGeo, hair, [0, h * 0.99, -h * 0.115], [h * 0.09, h * 0.085, h * 0.09], false);
     if (style === 'cap') {
@@ -755,6 +777,13 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
       const visible = selectedPersonaId ? selectedPersonaId === persona.id : !selectedId || selectedId === persona.districtId;
       persona.label.visible = visible; persona.leader.visible = visible;
       persona.ring.material.opacity = selectedPersonaId === persona.id ? 0.86 : hoveredPersonaId === persona.id ? 0.72 : 0.34;
+      const moodName = selectedPersonaId === persona.id ? persona.mood || 'neutral' : 'neutral';
+      const mood = missionMoods[moodName];
+      persona.label.material.color.set(mood.tint);
+      persona.ring.material.color.set(mood.halo || persona.color);
+      persona.leader.material.color.set(mood.halo || persona.color);
+      const pulse = moodName === 'celebrate' ? Math.sin(motionTime * 2.2) * 0.065 : 0;
+      persona.ring.scale.setScalar(moodName === 'neutral' ? 1 : 1.62 + pulse);
       if (!visible) continue;
       persona.actor.root.getWorldPosition(citizenWorld); citizenWorld.y += persona.actor.height + 0.1;
       personaProjection.copy(citizenWorld).project(camera);
@@ -821,6 +850,11 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
     if (disposed || !personas[id]) return;
     selectedPersonaId = id; selectedId = personas[id].districtId;
     pendingZoom = null; labelBoundsTime = -Infinity; moveCamera(selectedId);
+  }
+  function setMissionMood(personaId, mood = 'neutral') {
+    if (disposed || !Object.hasOwn(personas, personaId) || !Object.hasOwn(missionMoods, mood)) return false;
+    personas[personaId].mood = mood;
+    return true;
   }
   function reset() {
     selectedId = null; selectedPersonaId = null; pendingZoom = null; labelBoundsTime = -Infinity;
@@ -928,6 +962,7 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
       }
       const walking = actor.route || actor.follow;
       const gait = Math.sin(motionTime * 5.7 + actor.phase), lift = Math.cos(motionTime * 5.7 + actor.phase);
+      actor.arms[0].rotation.z = 0; actor.arms[1].rotation.z = 0;
       if (walking) {
         actor.legs[0].rotation.x = gait * 0.48; actor.legs[1].rotation.x = -gait * 0.48;
         actor.knees[0].rotation.x = Math.max(0, -gait) * 0.46; actor.knees[1].rotation.x = Math.max(0, gait) * 0.46;
@@ -935,6 +970,20 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
         actor.body.position.y = Math.abs(lift) * actor.height * 0.018;
         actor.body.rotation.z = gait * 0.018;
       } else if (actor.seated) actor.arms[0].rotation.x = -0.65 + Math.sin(motionTime * 0.7 + actor.phase) * 0.055;
+      const personaId = actor.root.userData.personaId;
+      const mood = personaId && selectedPersonaId === personaId ? personas[personaId].mood || 'neutral' : 'neutral';
+      if (mood === 'thinking') {
+        actor.arms[1].rotation.x = -1.95; actor.arms[1].rotation.z = -0.4;
+      } else if (mood === 'steady') {
+        actor.arms[0].rotation.x = -1.1; actor.arms[0].rotation.z = 0.24;
+      } else if (mood === 'caution') {
+        actor.arms[0].rotation.x = -0.8; actor.arms[1].rotation.x = -0.8;
+        actor.arms[0].rotation.z = -0.18; actor.arms[1].rotation.z = 0.18;
+      } else if (mood === 'celebrate') {
+        const gesture = Math.sin(motionTime * 2.2) * 0.07;
+        actor.arms[0].rotation.x = -2.25 + gesture; actor.arms[1].rotation.x = -2.25 - gesture;
+        actor.arms[0].rotation.z = -0.2; actor.arms[1].rotation.z = 0.2;
+      }
       if (actor.dog) {
         actor.dog.paws.forEach((paw, i) => { paw.rotation.x = Math.sin(motionTime * 7.8 + (i % 2 ? Math.PI : 0)) * 0.44; });
         actor.dog.tail.rotation.z = Math.sin(motionTime * 6) * 0.25;
@@ -994,7 +1043,7 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
     renderer.dispose(); scene.clear();
   }
   return {
-    select, focusPersona, reset, resize, dispose, getSceneAnchor,
+    select, focusPersona, setMissionMood, reset, resize, dispose, getSceneAnchor,
     setNight(value) { nightTarget = value ? 1 : 0; },
     setPaused(value) { paused = Boolean(value); },
     zoom(delta) { transition = null; pendingZoom = THREE.MathUtils.clamp((pendingZoom ?? camera.zoom) + Number(delta || 0), controls.minZoom, controls.maxZoom); },
