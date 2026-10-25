@@ -1,4 +1,4 @@
-import {residents,residentEvents,residentEventSources,residentReviewedAt,eventStatus,taipeiDay} from './resident-data.js?v=8.0.0';
+import {residents,residentEvents,residentEventSources,residentReviewedAt,eventStatus,taipeiDay} from './resident-data.js?v=10.0.0';
 import {createConversation,chooseReply,currentNode} from './resident-state.js?v=8.0.0';
 import {readingButtonHtml} from './service-hub.js?v=8.0.0';
 

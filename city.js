@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from './vendor/OrbitControls.js';
-import { residents } from './resident-data.js?v=8.0.0';
+import { residents } from './resident-data.js?v=10.0.0';
 
 // RAF timestamps belong to the frame's clock. Do not seed this clock with performance.now():
 // the first callback can carry an earlier timestamp after expensive scene initialization.

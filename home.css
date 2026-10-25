@@ -55,3 +55,8 @@ body.city-first.night-mode .dock-heading,body.city-first.night-mode .interaction
 }
 @media(max-width:760px) and (max-height:680px){.city-first .intro{padding:9px 11px}.city-first .entry-top{display:none}.city-first .detail-panel{max-height:calc(100dvh - 278px)}}
 @media(prefers-reduced-motion:reduce){.city-first .intro{transition:none}}
+
+/* Cultural walks enter through Tainan, keeping the city overview uncluttered. */
+.tn-tabs [data-open-culture]{background:#e7ead9;color:#214c45;font-weight:700;border-radius:8px;white-space:nowrap}
+.tn-culture-invite{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;background:#f2eadb;border:1px solid #d4c2a3;border-radius:12px;padding:20px;margin:22px 0;color:#294d41}
+.tn-culture-invite>div{flex:1 1 250px}.tn-culture-invite strong{font-size:var(--reading-body,16px)}.tn-culture-invite p{font-size:var(--reading-small,14px);line-height:1.8;margin:6px 0 0}.tn-culture-invite button{border:1px solid #315b4e;background:#315b4e;color:#fffdf6;font-size:16px;min-height:44px;padding:10px 14px;border-radius:8px}
