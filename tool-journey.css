@@ -1,0 +1,17 @@
+/* v6: contextual tools, kept separate from scenario and tax engines. */
+.next-services{margin:24px 0 30px;padding:26px;border:1px solid #cbdad8;border-radius:18px;background:linear-gradient(125deg,#edf5f2,#fffdfa);color:#132c3c}
+.next-services .mission-kicker{color:#0f766e;letter-spacing:.09em;font-size:12px}
+.next-services h3{margin:8px 0 10px;color:#082f49;line-height:1.5;font-size:var(--reading-title)}
+.next-services .tool-intro{font-size:var(--reading-body);line-height:1.8;margin:0 0 18px;color:#425c68}
+.tool-primary,.tool-secondary{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:52px;padding:14px 18px;text-decoration:none;border-radius:10px;font-size:var(--reading-body);font-weight:700;line-height:1.65}
+.tool-primary{color:white!important;background:#082f49;border:1px solid #082f49}
+.tool-secondary{margin-top:10px;color:#0f766e!important;background:#fffdfa;border:1px solid #bbd1ca}
+.tool-primary:hover{background:#0f766e}.tool-primary:focus-visible,.tool-secondary:focus-visible,.tool-shelf a:focus-visible{outline:3px solid #c6a15b;outline-offset:3px}
+.tool-prepare{margin:18px 0;padding:16px 18px;background:#ffffffa6;border-radius:10px;border:1px solid #dce5e8}
+.tool-prepare b{font-size:var(--reading-small);color:#082f49}.tool-prepare ul{margin:8px 0 0;padding-left:20px;font-size:var(--reading-small);color:#526875;line-height:1.8}
+.tool-boundary{font-size:var(--reading-small);line-height:1.75;color:#526875;margin:16px 0 0}
+.tool-more{margin-top:17px;border-top:1px solid #d0ded6;padding-top:15px}.tool-more summary{cursor:pointer;min-height:44px;font-size:var(--reading-small);display:list-item;line-height:1.7;color:#425c68}
+.tool-more .service-links{margin-top:10px}.tool-more .service-links a{font-size:var(--reading-small);min-height:44px;line-height:1.7}
+.tool-shelf{margin-top:28px;border-top:1px solid #dce5e8;padding-top:26px}.tool-shelf>h3{font-size:var(--reading-title);line-height:1.5;margin:8px 0;color:#082f49}.tool-shelf>p{font-size:var(--reading-body);line-height:1.8;color:#526875}
+.tool-shelf-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.tool-shelf-grid>a{display:flex;flex-direction:column;gap:10px;padding:21px 18px;text-decoration:none;border:1px solid #d0ded6;border-radius:13px;background:#fffdfa;color:#132c3c}.tool-shelf-grid>a:hover{border-color:#0f766e;background:#edf5f2}.tool-shelf-grid small{font-size:13px;color:#0f766e}.tool-shelf-grid h4{font-size:20px;line-height:1.6;margin:0;color:#082f49}.tool-shelf-grid p{font-size:var(--reading-small);line-height:1.8;margin:0;color:#526875}.tool-shelf-grid b{margin-top:auto;padding-top:12px;font-size:15px;color:#0f766e}
+@media(max-width:760px){.next-services{padding:19px 16px;margin:22px 0}.tool-primary,.tool-secondary{padding:13px 14px}.tool-shelf-grid{grid-template-columns:1fr}.tool-shelf-grid>a{padding:18px}.tool-prepare{padding:14px}.tool-primary span,.tool-secondary span{flex:0 0 auto}}

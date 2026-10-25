@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from './vendor/OrbitControls.js';
+import { residents } from './resident-data.js?v=8.0.0';
 
 // RAF timestamps belong to the frame's clock. Do not seed this clock with performance.now():
 // the first callback can carry an earlier timestamp after expensive scene initialization.
@@ -21,13 +22,13 @@ export function cityMotionPhase(offset, elapsed, speed, length = 1) {
 }
 
 /* Original, procedural miniature. No downloaded models or image assets. */
-export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, onDistrict = () => {}, onReady = () => {}, onError = () => {} }) {
+export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, onResident = () => {}, onDistrict = () => {}, onReady = () => {}, onError = () => {} }) {
   let renderer;
   try {
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
   } catch (error) {
     onError(error);
-    return { select() {}, focusPersona() {}, setMissionMood() { return false; }, reset() {}, setNight() {}, setPaused() {}, zoom() {}, resize() {}, dispose() {}, getSceneAnchor() { return null; } };
+    return { select() {}, focusPersona() {}, focusResident() { return false; }, setMissionMood() { return false; }, reset() {}, setNight() {}, setPaused() {}, zoom() {}, resize() {}, dispose() {}, getSceneAnchor() { return null; } };
   }
 
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
@@ -171,6 +172,8 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
   };
   const carAnimations = [], boatAnimations = [], cloudAnimations = [], labels = [];
   const citizenAnimations = [], citizenBatches = [], personaLabels = [], personaPickTargets = [];
+  const residentLabels = [], residentPickTargets = [], residentCharacters = new Map();
+  const residentData = new Map(residents.map((resident) => [resident.id, resident]));
   const regionLabels = [];
   // Landscape vignettes for a Tainan stroll, not administrative boundaries or a geographic map.
   const regions = {
@@ -249,7 +252,7 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
   function citizen(parent, options = {}) {
     const { height: h = 0.65, shirt = mat.jade, hair = mat.hair, skin = mat.skinWarm,
       route = null, offset = 0, speed = 0.24, x = 0, z = 0, rotation = 0,
-      personaId = null, style = '', seated = false } = options;
+      personaId = null, residentId = null, style = '', seated = false } = options;
     const root = markDynamic(group(parent, x, Y + 0.045, z, rotation));
     const body = group(root);
     const trousers = style === 'elder' ? mat.limestoneDark : mat.denim;
@@ -303,12 +306,15 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
       knees.forEach((knee) => { knee.rotation.x = Math.PI / 2; });
       arms.forEach((arm) => { arm.rotation.x = -0.6; });
     }
-    if (personaId) {
-      root.userData.personaId = personaId;
+    if (personaId || residentId) {
+      const identity = personaId ? { personaId } : { residentId };
+      Object.assign(root.userData, identity);
       // An invisible hit volume makes small people practical to select on touch screens.
       const hitMat = materials.get('person-hit') || new THREE.MeshBasicMaterial({ visible: false }); materials.set('person-hit', hitMat);
-      const hit = mesh(root, roundGeo, hitMat, [0, h * 0.55, 0], [h * 0.42, h * 0.66, h * 0.42], false);
-      hit.userData.personaId = personaId; hit.userData.hitVolume = true; personaPickTargets.push(hit);
+      const radius = personaId ? h * 0.42 : Math.max(0.28, h * 0.44);
+      const hit = mesh(root, roundGeo, hitMat, [0, h * 0.55, 0], [radius, h * 0.66, radius], false);
+      Object.assign(hit.userData, identity, { hitVolume: true });
+      (personaId ? personaPickTargets : residentPickTargets).push(hit);
     }
     const animation = { root, body, arms, legs, knees, height: h, route, offset, speed, seated, dog: null, phase: offset * Math.PI * 2 };
     citizenAnimations.push(animation);
@@ -330,7 +336,7 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
     ctx.fillStyle = '#214C45'; ctx.font = '700 65px "Noto Sans TC", "Microsoft JhengHei", sans-serif'; ctx.textBaseline = 'middle'; ctx.fillText(persona.name, 132, 81);
     ctx.fillStyle = persona.color; ctx.beginPath(); ctx.moveTo(272, 148); ctx.lineTo(288, 169); ctx.lineTo(304, 148); ctx.fill();
     const texture = new THREE.CanvasTexture(c); texture.colorSpace = THREE.SRGBColorSpace; textures.add(texture);
-    const sm = new THREE.SpriteMaterial({ map: texture, depthTest: false, depthWrite: false }); materials.set(`persona-label-${persona.id}`, sm);
+    const sm = new THREE.SpriteMaterial({ map: texture, depthTest: false, depthWrite: false, fog: false, toneMapped: false }); materials.set(`persona-label-${persona.id}`, sm);
     const sprite = new THREE.Sprite(sm); sprite.userData.personaId = persona.id; sprite.renderOrder = 26;
     sprite.scale.set(3, 3 * 184 / 576, 1); scene.add(sprite); persona.label = sprite; personaLabels.push(sprite);
     const leaderGeometry = addGeo(new THREE.BufferGeometry()); leaderGeometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, 0], 3));
@@ -338,6 +344,40 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
     const leader = new THREE.Line(leaderGeometry, leaderMaterial); leader.renderOrder = 25; leader.frustumCulled = false; scene.add(leader); persona.leader = leader;
     const ringMaterial = new THREE.MeshBasicMaterial({ color: persona.color, transparent: true, opacity: 0.4, depthWrite: false, side: THREE.DoubleSide }); materials.set(`persona-ring-${persona.id}`, ringMaterial);
     const ring = mesh(actor.root, addGeo(new THREE.RingGeometry(0.27, 0.34, 36)), ringMaterial, [0, 0.005, 0], null, false); ring.rotation.x = -Math.PI / 2; persona.ring = ring;
+  }
+
+  function residentLabel(resident, actor, districtId) {
+    const c = document.createElement('canvas'); c.width = 640; c.height = 210;
+    const ctx = c.getContext('2d'); if (!ctx) return;
+    const texture = new THREE.CanvasTexture(c); texture.colorSpace = THREE.SRGBColorSpace; textures.add(texture);
+    const sm = new THREE.SpriteMaterial({ map: texture, depthTest: false, depthWrite: false, fog: false, toneMapped: false }); materials.set(`resident-label-${resident.id}`, sm);
+    const label = new THREE.Sprite(sm); label.userData.residentId = resident.id; label.userData.residentBubble = true; label.renderOrder = 28; label.visible = false;
+    scene.add(label); residentLabels.push(label);
+    const leaderGeometry = addGeo(new THREE.BufferGeometry()); leaderGeometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, 0], 3));
+    const leaderMaterial = new THREE.LineBasicMaterial({ color: resident.color, transparent: true, opacity: 0.48, depthTest: false, depthWrite: false }); materials.set(`resident-leader-${resident.id}`, leaderMaterial);
+    const leader = new THREE.Line(leaderGeometry, leaderMaterial); leader.renderOrder = 27; leader.frustumCulled = false; leader.visible = false; scene.add(leader);
+    const ringMaterial = new THREE.MeshBasicMaterial({ color: resident.color, transparent: true, opacity: 0.25, depthWrite: false, side: THREE.DoubleSide }); materials.set(`resident-ring-${resident.id}`, ringMaterial);
+    const ring = mesh(actor.root, addGeo(new THREE.RingGeometry(0.22, 0.27, 28)), ringMaterial, [0, 0.007, 0], null, false);
+    ring.rotation.x = -Math.PI / 2; ring.userData.residentId = resident.id;
+    const character = { resident, actor, districtId, label, leader, ring, canvas: c, ctx, texture, ambientIndex: -1 };
+    residentCharacters.set(resident.id, character); paintResidentBubble(character, 0);
+  }
+
+  function paintResidentBubble(character, ambientIndex) {
+    if (character.ambientIndex === ambientIndex) return;
+    character.ambientIndex = ambientIndex;
+    const { resident, ctx, canvas: c } = character;
+    const ambient = String(resident.ambient?.length ? resident.ambient[ambientIndex % resident.ambient.length] : resident.teaser || '');
+    const characters = Array.from(ambient), excerpt = characters.length > 12 ? `${characters.slice(0, 11).join('')}…` : ambient;
+    ctx.clearRect(0, 0, c.width, c.height);
+    ctx.shadowColor = 'rgba(17,57,47,.16)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 4;
+    ctx.fillStyle = '#FFFDF5'; ctx.beginPath(); ctx.roundRect(8, 8, 624, 174, 28); ctx.fill();
+    ctx.shadowColor = 'transparent'; ctx.strokeStyle = resident.color; ctx.lineWidth = 4; ctx.stroke();
+    ctx.fillStyle = '#214C45'; ctx.font = '700 48px "Noto Sans TC", "Microsoft JhengHei", sans-serif'; ctx.textBaseline = 'middle';
+    ctx.fillText(resident.name, 30, 58);
+    ctx.font = '500 46px "Noto Sans TC", "Microsoft JhengHei", sans-serif'; ctx.fillText(excerpt, 30, 130);
+    ctx.fillStyle = resident.color; ctx.beginPath(); ctx.moveTo(306, 182); ctx.lineTo(320, 201); ctx.lineTo(334, 182); ctx.fill();
+    character.texture.needsUpdate = true;
   }
 
   function dogWalker(parent, route) {
@@ -556,15 +596,17 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
     ctx.fillStyle = '#FFFCF1'; ctx.beginPath(); ctx.roundRect(14, 16, 610, 126, 63); ctx.fill();
     ctx.shadowColor = 'transparent'; ctx.strokeStyle = '#D7DFCC'; ctx.lineWidth = 2; ctx.stroke();
     ctx.fillStyle = district.color; ctx.beginPath(); ctx.arc(85, 79, 21, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#214C45'; ctx.font = '600 63px "Noto Sans TC", "Microsoft JhengHei", sans-serif'; ctx.textBaseline = 'middle'; ctx.fillText(district.name, 133, 83);
+    ctx.fillStyle = '#214C45'; ctx.font = '700 62px "Noto Sans TC", "Microsoft JhengHei", sans-serif'; ctx.textBaseline = 'middle'; ctx.fillText(district.name, 133, 83);
     ctx.strokeStyle = '#8EA494'; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(555, 66); ctx.lineTo(568, 79); ctx.lineTo(555, 92); ctx.stroke();
     const texture = new THREE.CanvasTexture(c); texture.colorSpace = THREE.SRGBColorSpace; textures.add(texture);
-    const sm = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false, depthWrite: false }); materials.set(`label-${district.id}`, sm);
+    const sm = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false, depthWrite: false, fog: false, toneMapped: false }); materials.set(`label-${district.id}`, sm);
     const sprite = new THREE.Sprite(sm); sprite.scale.set(4.5, 1.125, 1); sprite.position.copy(district.center);
     sprite.position.y = district.id === 'buy' ? 6.65 : district.id === 'legacy' ? 5.9 : 5.2;
     sprite.userData.districtId = district.id; sprite.renderOrder = 20; scene.add(sprite); labels.push(sprite); district.label = sprite;
-    const stemMat = material(`stem-${district.id}`, '#FDF9EE', { transparent: true, opacity: 0.75 });
-    cylinder(scene, district.center.x, sprite.position.y - 1.05, district.center.z, 0.014, 1.1, stemMat, false);
+    district.labelAnchor = sprite.position.clone(); district.leaderAnchor = sprite.position.clone(); district.leaderAnchor.y -= 1.1;
+    const geometry = addGeo(new THREE.BufferGeometry()); geometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, 0], 3));
+    const leaderMaterial = new THREE.LineBasicMaterial({ color: district.color, transparent: true, opacity: 0.5, depthTest: false, depthWrite: false }); materials.set(`district-leader-${district.id}`, leaderMaterial);
+    const leader = new THREE.Line(geometry, leaderMaterial); leader.renderOrder = 19; leader.frustumCulled = false; scene.add(leader); district.leader = leader;
   }
 
   Object.values(districts).forEach((district, index) => {
@@ -620,20 +662,27 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
   ]) box(districts[districtId].root, x, Y + 0.032, z, w, 0.035, d, mat.path, false);
   const clothing = [mat.jade, mat.coral, mat.ochre, mat.cream, mat.lilac, mat.teal];
   const hairstyles = ['', 'bob', 'cap', 'glasses', 'elder', 'backpack'];
-  function populate(districtId, route, count, seed) {
+  function populate(districtId, route, count, seed, residentIds = []) {
     for (let i = 0; i < count; i++) {
       const variant = (i + seed) % 6;
-      citizen(districts[districtId].root, {
+      const resident = residentData.get(residentIds[i]);
+      const actor = citizen(districts[districtId].root, {
         route, offset: (i / count + rand(seed + i) * 0.07) % 1,
         speed: 0.21, height: variant === 2 ? 0.5 : 0.6 + rand(i + seed * 2) * 0.1,
         shirt: clothing[variant], style: hairstyles[variant], hair: variant === 4 ? mat.hairSilver : variant % 2 ? mat.hairBrown : mat.hair,
         skin: [mat.skinWarm, mat.skinLight, mat.skinDeep][(i + seed) % 3],
+        residentId: resident?.id,
       });
+      if (resident) residentLabel(resident, actor, districtId);
     }
   }
-  populate('buy', buyNorthWalk, 3, 2); populate('buy', buySouthWalk, 3, 11); populate('buy', buyGardenWalk, 2, 19);
-  populate('sell', sellFrontWalk, 3, 31); populate('sell', sellGardenWalk, 3, 41);
-  populate('legacy', heritageCourtWalk, 4, 51);
+  // Name eight existing neighbours without adding models or changing their walking loops.
+  populate('buy', buyNorthWalk, 3, 2, [null, 'commuter-he', 'mango-uncle']);
+  populate('buy', buySouthWalk, 3, 11, ['student-qing', 'dad-zhe']);
+  populate('buy', buyGardenWalk, 2, 19, ['salt-auntie']);
+  populate('sell', sellFrontWalk, 3, 31, [null, null, 'photo-bai']);
+  populate('sell', sellGardenWalk, 3, 41, ['birder-wei']);
+  populate('legacy', heritageCourtWalk, 4, 51, [null, null, null, 'walker-you']);
   const firstHome = citizen(districts.buy.root, { route: buyNorthWalk, offset: 0.23, speed: 0.21, height: 0.83, shirt: mat.coral, skin: mat.skinLight, style: 'backpack', personaId: 'first-home' });
   const moveHome = citizen(districts.buy.root, { route: buyGardenWalk, offset: 0.63, speed: 0.21, height: 0.86, shirt: mat.teal, style: 'glasses', personaId: 'move-home' });
   const seller = citizen(districts.sell.root, { route: sellGardenWalk, offset: 0.27, speed: 0.21, height: 0.83, shirt: mat.ochre, skin: mat.skinLight, style: 'bun', personaId: 'seller' });
@@ -715,18 +764,17 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
   const lotusPetal = material('lotusPetal', '#D6AAA4');
 
   function landscapeLabel(region) {
-    const c = document.createElement('canvas'); c.width = 320; c.height = 168;
+    const c = document.createElement('canvas'); c.width = 400; c.height = 160;
     const ctx = c.getContext('2d'); if (!ctx) return;
-    ctx.fillStyle = '#FFF9EB'; ctx.beginPath(); ctx.roundRect(5, 5, 310, 151, 25); ctx.fill();
+    ctx.fillStyle = '#FFFDF5'; ctx.beginPath(); ctx.roundRect(5, 5, 390, 150, 28); ctx.fill();
     ctx.strokeStyle = region.color; ctx.lineWidth = 4; ctx.stroke();
-    ctx.fillStyle = region.color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.font = '500 28px "Noto Sans TC", "Microsoft JhengHei", sans-serif'; ctx.fillText('台南散步', 160, 40);
-    ctx.font = '700 66px "Noto Sans TC", "Microsoft JhengHei", sans-serif'; ctx.fillText(`${region.name}  ›`, 160, 105);
+    ctx.fillStyle = '#214C45'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = '700 64px "Noto Sans TC", "Microsoft JhengHei", sans-serif'; ctx.fillText(`${region.name}  ›`, 200, 82);
     const texture = new THREE.CanvasTexture(c); texture.colorSpace = THREE.SRGBColorSpace; textures.add(texture);
-    const labelMaterial = new THREE.SpriteMaterial({ map: texture, depthTest: false, depthWrite: false }); materials.set(`region-label-${region.id}`, labelMaterial);
+    const labelMaterial = new THREE.SpriteMaterial({ map: texture, depthTest: false, depthWrite: false, fog: false, toneMapped: false }); materials.set(`region-label-${region.id}`, labelMaterial);
     const label = new THREE.Sprite(labelMaterial); label.userData.regionId = region.id; label.renderOrder = 23;
     label.position.copy(region.center); label.position.y = region.id === 'hills' ? 3.2 : 2.3;
-    label.scale.set(2.3, 2.3 * 168 / 320, 1); scene.add(label); region.label = label; regionLabels.push(label);
+    label.scale.set(2.3, 2.3 * 160 / 400, 1); scene.add(label); region.label = label; regionLabels.push(label);
     const geometry = addGeo(new THREE.BufferGeometry()); geometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, 0], 3));
     const leaderMaterial = new THREE.LineBasicMaterial({ color: region.color, transparent: true, opacity: 0.45, depthTest: false, depthWrite: false }); materials.set(`region-leader-${region.id}`, leaderMaterial);
     const leader = new THREE.Line(geometry, leaderMaterial); leader.frustumCulled = false; leader.renderOrder = 22; scene.add(leader); region.leader = leader;
@@ -863,7 +911,7 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
   batchCitizens();
 
   let disposed = false, frame = 0, ready = false, nightTarget = 0, nightMix = 0, paused = false, motionTime = 0;
-  let selectedId = null, selectedPersonaId = null, hoveredId = null, hoveredPersonaId = null, hoveredRegionId = null;
+  let selectedId = null, selectedPersonaId = null, selectedResidentId = null, hoveredId = null, hoveredPersonaId = null, hoveredResidentId = null, hoveredRegionId = null;
   let transition = null, previousTime = null, pendingZoom = null;
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const dayColor = new THREE.Color('#F4F1E7'), nightColor = new THREE.Color('#152D35');
@@ -880,18 +928,18 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
   function refreshLabelBounds(now) {
     if (labelBounds && now - labelBoundsTime < 250) return;
     labelBoundsTime = now;
-    const canvasRect = canvas.getBoundingClientRect();
-    const bounds = { left: 18, right: width - 18, top: 94, bottom: height - 142 };
+    const canvasRect = canvas.getBoundingClientRect(), cityFirst = document.body.classList.contains('city-first');
+    const bounds = { left: 18, right: width - 18, top: cityFirst ? 18 : 94, bottom: height - (cityFirst ? 18 : 142), obstacles: [] };
     const visibleRect = (selector) => {
       const element = document.querySelector(selector); if (!element || element.hidden) return null;
       const style = getComputedStyle(element); if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) < 0.1) return null;
-      const r = element.getBoundingClientRect();
+      const r = element.getBoundingClientRect(); if (!r.width || !r.height) return null;
       return { left: r.left - canvasRect.left, right: r.right - canvasRect.left, top: r.top - canvasRect.top, bottom: r.bottom - canvasRect.top };
     };
     const header = visibleRect('.masthead'), dock = visibleRect('.journey-dock'), intro = visibleRect('#intro'), detail = visibleRect('#detail-panel');
     if (header) bounds.top = Math.max(bounds.top, header.bottom + 8);
     if (dock) bounds.bottom = Math.min(bounds.bottom, dock.top - 12);
-    if (intro && !selectedId) {
+    if (intro && !selectedId && !cityFirst) {
       if (width < 740) bounds.top = Math.max(bounds.top, intro.bottom + 10);
       else bounds.left = Math.max(bounds.left, intro.right + 10);
     }
@@ -899,112 +947,144 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
       if (width < 740) bounds.bottom = Math.min(bounds.bottom, detail.top - 10);
       else bounds.right = Math.min(bounds.right, detail.left - 12);
     }
-    if (bounds.right - bounds.left < 140) bounds.left = Math.max(16, bounds.right - 145);
-    if (bounds.bottom - bounds.top < 70) bounds.top = Math.max(header?.bottom + 8 || 90, bounds.bottom - 80);
+    // The compact introduction reserves its actual rectangle, not an entire side of the city.
+    for (const rect of [header, dock, intro, detail, visibleRect('.scene-tools')]) {
+      if (!rect || rect.right <= 0 || rect.left >= width || rect.bottom <= 0 || rect.top >= height) continue;
+      bounds.obstacles.push({ x: (rect.left + rect.right) / 2, y: (rect.top + rect.bottom) / 2,
+        width: rect.right - rect.left, height: rect.bottom - rect.top });
+    }
     labelBounds = bounds;
   }
+
+  function findLabelPosition(idealX, idealY, pixelsWide, pixelsHigh, occupied, previous) {
+    const minX = labelBounds.left + pixelsWide / 2, maxX = labelBounds.right - pixelsWide / 2;
+    const minY = labelBounds.top + pixelsHigh / 2, maxY = labelBounds.bottom - pixelsHigh / 2;
+    if (minX > maxX || minY > maxY) return null;
+    const clamp = THREE.MathUtils.clamp;
+    const candidates = [[clamp(idealX, minX, maxX), clamp(idealY, minY, maxY)]];
+    if (previous) candidates.push([previous.x, previous.y, true]);
+    for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0], [-1, -1], [1, 1], [0, -2], [0, 2]]) {
+      candidates.push([clamp(idealX + dx * (pixelsWide + 10), minX, maxX), clamp(idealY + dy * (pixelsHigh + 10), minY, maxY)]);
+    }
+    const choose = (positions) => {
+      let best = null;
+      for (const [x, y, stable] of positions) {
+        if (x < minX || x > maxX || y < minY || y > maxY) continue;
+        const blocked = occupied.some((other) => Math.abs(x - other.x) < (pixelsWide + other.width) / 2 + 8 && Math.abs(y - other.y) < (pixelsHigh + other.height) / 2 + 8);
+        if (blocked) continue;
+        const score = Math.hypot(x - idealX, y - idealY) - (stable ? 12 : 0);
+        if (!best || score < best.score) best = { x, y, score };
+      }
+      return best;
+    };
+    const nearby = choose(candidates); if (nearby) return nearby;
+    // Reuse the existing safe-area search only when nearby slots are occupied.
+    const xs = new Set([minX, maxX, clamp(idealX, minX, maxX)]), ys = new Set([minY, maxY, clamp(idealY, minY, maxY)]);
+    for (let x = minX; x <= maxX; x += 30) xs.add(x);
+    for (let y = maxY; y >= minY; y -= 30) ys.add(y);
+    for (const other of occupied) for (const side of [-1, 1]) {
+      xs.add(clamp(other.x + side * ((pixelsWide + other.width) / 2 + 10), minX, maxX));
+      ys.add(clamp(other.y + side * ((pixelsHigh + other.height) / 2 + 10), minY, maxY));
+    }
+    const fallback = []; for (const x of xs) for (const y of ys) fallback.push([x, y]);
+    return choose(fallback);
+  }
+
+  function placeSceneLabel(item, anchor, pixelsWide, pixelsHigh, occupied, unitsPerPixel, lift = 34) {
+    personaProjection.copy(anchor).project(camera);
+    const idealX = (personaProjection.x * 0.5 + 0.5) * width, idealY = (-personaProjection.y * 0.5 + 0.5) * height - lift;
+    const best = personaProjection.z >= -1 && personaProjection.z <= 1
+      ? findLabelPosition(idealX, idealY, pixelsWide, pixelsHigh, occupied, item.labelPosition) : null;
+    item.label.visible = Boolean(best); if (item.leader) item.leader.visible = Boolean(best);
+    if (!best) { item.labelPosition = null; return false; }
+    item.labelPosition = { x: best.x, y: best.y };
+    occupied.push({ ...best, width: pixelsWide, height: pixelsHigh });
+    labelWorld.set(best.x / width * 2 - 1, -(best.y / height * 2 - 1), personaProjection.z).unproject(camera);
+    item.label.position.copy(labelWorld); item.label.scale.set(pixelsWide * unitsPerPixel, pixelsHigh * unitsPerPixel, 1);
+    item.label.userData.screenWidth = pixelsWide; item.label.userData.screenHeight = pixelsHigh;
+    if (item.leader) {
+      leaderEnd.set(best.x / width * 2 - 1, -((best.y + pixelsHigh * 0.35) / height * 2 - 1), personaProjection.z).unproject(camera);
+      const start = item.leaderAnchor || anchor, attribute = item.leader.geometry.attributes.position;
+      attribute.setXYZ(0, start.x, start.y, start.z); attribute.setXYZ(1, leaderEnd.x, leaderEnd.y, leaderEnd.z); attribute.needsUpdate = true;
+    }
+    return true;
+  }
+
   function updatePersonaLabels(now) {
     refreshLabelBounds(now);
-    const occupied = [], pixelsWide = width < 740 ? 116 : 128, pixelsHigh = pixelsWide * 184 / 576;
-    const unitsPerPixel = (camera.top - camera.bottom) / camera.zoom / height;
-    const clamp = THREE.MathUtils.clamp;
-    const clampX = (x) => clamp(x, labelBounds.left + pixelsWide / 2, labelBounds.right - pixelsWide / 2);
-    const clampY = (y) => clamp(y, labelBounds.top + pixelsHigh / 2, labelBounds.bottom - pixelsHigh / 2);
+    const occupied = [...labelBounds.obstacles], unitsPerPixel = (camera.top - camera.bottom) / camera.zoom / height;
+    // Required service entries reserve space before people, landscape invitations, and small talk.
+    const districtWidth = width < 740 ? 156 : 166;
+    for (const district of Object.values(districts)) {
+      if (!district.label) continue;
+      district.leader.material.opacity = selectedId === district.id || hoveredId === district.id ? 0.8 : 0.5;
+      placeSceneLabel(district, district.labelAnchor, districtWidth, districtWidth / 4, occupied, unitsPerPixel, 0);
+    }
+    const pixelsWide = width < 740 ? 140 : 152, pixelsHigh = pixelsWide * 184 / 576;
     for (const persona of Object.values(personas)) {
       if (!persona.label) continue;
-      const visible = selectedPersonaId ? selectedPersonaId === persona.id : !selectedId || selectedId === persona.districtId;
+      const visible = selectedPersonaId ? selectedPersonaId === persona.id
+        : selectedId ? selectedId === persona.districtId : hoveredPersonaId === persona.id;
       persona.label.visible = visible; persona.leader.visible = visible;
       persona.ring.material.opacity = selectedPersonaId === persona.id ? 0.86 : hoveredPersonaId === persona.id ? 0.72 : 0.34;
       const moodName = selectedPersonaId === persona.id ? persona.mood || 'neutral' : 'neutral';
       const mood = missionMoods[moodName];
-      persona.label.material.color.set(mood.tint);
+      persona.label.material.color.set('#FFFFFF');
       persona.ring.material.color.set(mood.halo || persona.color);
       persona.leader.material.color.set(mood.halo || persona.color);
       const pulse = moodName === 'celebrate' ? Math.sin(motionTime * 2.2) * 0.065 : 0;
       persona.ring.scale.setScalar(moodName === 'neutral' ? 1 : 1.62 + pulse);
       if (!visible) continue;
       persona.actor.root.getWorldPosition(citizenWorld); citizenWorld.y += persona.actor.height + 0.1;
-      personaProjection.copy(citizenWorld).project(camera);
-      const idealX = (personaProjection.x * 0.5 + 0.5) * width;
-      const idealY = (-personaProjection.y * 0.5 + 0.5) * height - 34;
-      let best = null;
-      for (const [dx, dy] of [[0, 0], [0, -48], [0, 48], [-138, 0], [138, 0], [-138, -48], [138, 48], [0, -96], [0, 96]]) {
-        const x = clampX(idealX + dx), y = clampY(idealY + dy);
-        let score = Math.hypot(x - idealX, y - idealY);
-        for (const previous of occupied) if (Math.abs(x - previous.x) < pixelsWide + 8 && Math.abs(y - previous.y) < pixelsHigh + 7) score += 10000;
-        if (!best || score < best.score) best = { x, y, score };
-      }
-      occupied.push({ ...best, width: pixelsWide, height: pixelsHigh });
-      labelWorld.set(best.x / width * 2 - 1, -(best.y / height * 2 - 1), personaProjection.z).unproject(camera);
-      persona.label.position.copy(labelWorld); persona.label.scale.set(pixelsWide * unitsPerPixel, pixelsHigh * unitsPerPixel, 1);
-      leaderEnd.set(best.x / width * 2 - 1, -((best.y + pixelsHigh * 0.33) / height * 2 - 1), personaProjection.z).unproject(camera);
-      const attribute = persona.leader.geometry.attributes.position;
-      attribute.setXYZ(0, citizenWorld.x, citizenWorld.y, citizenWorld.z); attribute.setXYZ(1, leaderEnd.x, leaderEnd.y, leaderEnd.z); attribute.needsUpdate = true;
+      placeSceneLabel(persona, citizenWorld, pixelsWide, pixelsHigh, occupied, unitsPerPixel);
     }
-    // On phones, reserve the existing scene labels as well as all persona hit areas.
-    if (width < 740) for (const label of labels) {
-      if (!label.visible) continue;
-      personaProjection.copy(label.position).project(camera);
-      occupied.push({ x: (personaProjection.x * 0.5 + 0.5) * width, y: (-personaProjection.y * 0.5 + 0.5) * height,
-        width: label.scale.x / unitsPerPixel, height: label.scale.y / unitsPerPixel });
-    }
-    // Small regional invitations remain an overview layer, leaving focused tasks uncluttered.
     for (const region of Object.values(regions)) {
       if (!region.label) continue;
       const visible = !selectedId && !selectedPersonaId;
       region.label.visible = visible; region.leader.visible = visible;
       if (!visible) continue;
-      const regionWidth = width < 740 ? 78 : 88, regionHeight = regionWidth * 168 / 320;
+      const regionWidth = width < 740 ? 100 : 112, regionHeight = regionWidth * 160 / 400;
       citizenWorld.copy(region.center); citizenWorld.y = region.id === 'hills' ? 2.6 : region.id === 'city' ? 2 : 1.35;
-      personaProjection.copy(citizenWorld).project(camera);
-      const idealX = (personaProjection.x * 0.5 + 0.5) * width, idealY = (-personaProjection.y * 0.5 + 0.5) * height - 27;
-      let best = null;
-      if (width < 740) {
-        const minX = labelBounds.left + regionWidth / 2, maxX = labelBounds.right - regionWidth / 2;
-        const minY = labelBounds.top + regionHeight / 2, maxY = labelBounds.bottom - regionHeight / 2;
-        if (minX <= maxX && minY <= maxY) {
-          const candidates = [[clamp(idealX, minX, maxX), clamp(idealY, minY, maxY)]];
-          if (region.mobileLabelPosition) candidates.push([region.mobileLabelPosition.x, region.mobileLabelPosition.y, true]);
-          // Search the complete safe area, including the space below the miniature city.
-          // Obstacle edges catch narrow free slots that a regular grid could skip.
-          const xs = new Set([minX, maxX, clamp(idealX, minX, maxX)]);
-          const ys = new Set([minY, maxY, clamp(idealY, minY, maxY)]);
-          for (let x = minX; x <= maxX; x += 18) xs.add(x);
-          for (let y = maxY; y >= minY; y -= 18) ys.add(y);
-          for (const previous of occupied) for (const side of [-1, 1]) {
-            xs.add(clamp(previous.x + side * ((regionWidth + previous.width) / 2 + 10), minX, maxX));
-            ys.add(clamp(previous.y + side * ((regionHeight + previous.height) / 2 + 10), minY, maxY));
-          }
-          for (const x of xs) for (const y of ys) candidates.push([x, y]);
-          for (const [x, y, stable] of candidates) {
-            if (x < minX || x > maxX || y < minY || y > maxY) continue;
-            const blocked = occupied.some((previous) => Math.abs(x - previous.x) < (regionWidth + previous.width) / 2 + 9 && Math.abs(y - previous.y) < (regionHeight + previous.height) / 2 + 9);
-            if (blocked) continue;
-            const score = Math.hypot(x - idealX, y - idealY) + (y < idealY ? 4 : 0) - (stable ? 16 : 0);
-            if (!best || score < best.score) best = { x, y, score };
-          }
-        }
-        if (!best) {
-          region.label.visible = false; region.leader.visible = false; region.mobileLabelPosition = null;
-          continue; // The landscape itself and the app's stroll entry remain clickable.
-        }
-        region.mobileLabelPosition = { x: best.x, y: best.y };
-      } else {
-        for (const [dx, dy] of [[0, 0], [0, -52], [0, 52], [-105, 0], [105, 0], [-105, -52], [105, 52], [0, -104], [0, 104]]) {
-          const x = clamp(idealX + dx, labelBounds.left + regionWidth / 2, labelBounds.right - regionWidth / 2);
-          const y = clamp(idealY + dy, labelBounds.top + regionHeight / 2, labelBounds.bottom - regionHeight / 2);
-          let score = Math.hypot(x - idealX, y - idealY);
-          for (const previous of occupied) if (Math.abs(x - previous.x) < (regionWidth + previous.width) / 2 + 7 && Math.abs(y - previous.y) < (regionHeight + previous.height) / 2 + 7) score += 10000;
-          if (!best || score < best.score) best = { x, y, score };
-        }
+      region.label.material.color.set('#FFFFFF'); region.leader.material.opacity = hoveredRegionId === region.id ? 0.8 : 0.5;
+      placeSceneLabel(region, citizenWorld, regionWidth, regionHeight, occupied, unitsPerPixel, 27);
+    }
+    updateResidentLabels(occupied, unitsPerPixel);
+  }
+
+  function updateResidentLabels(occupied, unitsPerPixel) {
+    for (const character of residentCharacters.values()) {
+      const active = selectedResidentId === character.resident.id, hovered = hoveredResidentId === character.resident.id;
+      character.label.visible = false; character.leader.visible = false;
+      character.ring.material.opacity = active ? 0.88 : hovered ? 0.7 : 0.25;
+      character.ring.scale.setScalar(active || hovered ? 1.24 : 1);
+      character.label.material.color.set('#FFFFFF');
+    }
+    // A mission keeps its existing visual focus. Neighbours remain clickable through their actors.
+    if (selectedPersonaId && !hoveredResidentId) return;
+    const candidates = residents.map((resident) => residentCharacters.get(resident.id))
+      .filter((character) => character && (!selectedId || character.districtId === selectedId));
+    const visible = [], limit = width < 740 ? 2 : 3;
+    const include = (character) => { if (character && visible.length < limit && !visible.includes(character)) visible.push(character); };
+    include(residentCharacters.get(selectedResidentId)); include(residentCharacters.get(hoveredResidentId));
+    // All timing derives from motionTime, which freezes for pause and reduced-motion preferences.
+    const round = Math.floor(motionTime / 12), ambientIndex = Math.floor(round / Math.max(1, candidates.length));
+    if (!selectedPersonaId) {
+      const targetCount = Math.min(limit, visible.length ? visible.length + 1 : 2);
+      for (let i = 0; i < candidates.length && visible.length < targetCount; i++) {
+        const offset = i === 1 ? Math.ceil(candidates.length / 2) : i > 1 ? i - 1 : 0;
+        include(candidates[(round + offset) % candidates.length]);
       }
-      occupied.push({ ...best, width: regionWidth, height: regionHeight });
-      labelWorld.set(best.x / width * 2 - 1, -(best.y / height * 2 - 1), personaProjection.z).unproject(camera);
-      region.label.position.copy(labelWorld); region.label.scale.set(regionWidth * unitsPerPixel, regionHeight * unitsPerPixel, 1);
-      region.label.material.color.set(hoveredRegionId === region.id ? '#FFE6BA' : '#FFFFFF');
-      leaderEnd.set(best.x / width * 2 - 1, -((best.y + regionHeight * 0.4) / height * 2 - 1), personaProjection.z).unproject(camera);
-      const attribute = region.leader.geometry.attributes.position;
-      attribute.setXYZ(0, citizenWorld.x, citizenWorld.y, citizenWorld.z); attribute.setXYZ(1, leaderEnd.x, leaderEnd.y, leaderEnd.z); attribute.needsUpdate = true;
+    }
+    const bubbleWidth = width < 740 ? 200 : 208, bubbleHeight = bubbleWidth * 210 / 640;
+    for (const character of visible) {
+      const { resident, actor } = character;
+      actor.root.getWorldPosition(citizenWorld); citizenWorld.y += actor.height + 0.1;
+      personaProjection.copy(citizenWorld).project(camera);
+      if (personaProjection.z < -1 || personaProjection.z > 1 || Math.abs(personaProjection.x) > 1.05 || Math.abs(personaProjection.y) > 1.05) continue;
+      if (!placeSceneLabel(character, citizenWorld, bubbleWidth, bubbleHeight, occupied, unitsPerPixel, 48)) continue;
+      paintResidentBubble(character, ambientIndex);
+      character.label.userData.ambientIndex = ambientIndex;
+      character.label.userData.residentName = resident.name;
     }
   }
 
@@ -1012,7 +1092,7 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
     const mobile = width < 740;
     if (!id || !districts[id]) {
       const target = new THREE.Vector3(0, 0.7, -0.1);
-      target.addScaledVector(viewRight, mobile ? 0 : -4.2);
+      target.addScaledVector(viewRight, mobile || document.body.classList.contains('city-first') ? 0 : -4.2);
       // On small screens the city sits a little lower, leaving space for the headline.
       if (mobile) target.y = 3.1;
       return { target, zoom: 1 };
@@ -1047,12 +1127,19 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
   }
   function select(id) {
     if (disposed) return;
-    selectedPersonaId = null; selectedId = districts[id] ? id : null; pendingZoom = null; labelBoundsTime = -Infinity; moveCamera(selectedId);
+    selectedPersonaId = null; selectedResidentId = null; selectedId = districts[id] ? id : null; pendingZoom = null; labelBoundsTime = -Infinity; moveCamera(selectedId);
   }
   function focusPersona(id) {
     if (disposed || !personas[id]) return;
-    selectedPersonaId = id; selectedId = personas[id].districtId;
+    selectedPersonaId = id; selectedResidentId = null; selectedId = personas[id].districtId;
     pendingZoom = null; labelBoundsTime = -Infinity; moveCamera(selectedId);
+  }
+  function focusResident(id) {
+    const character = residentCharacters.get(id);
+    if (disposed || !character) return false;
+    selectedPersonaId = null; selectedResidentId = id; selectedId = character.districtId;
+    pendingZoom = null; labelBoundsTime = -Infinity; moveCamera(selectedId);
+    return true;
   }
   function setMissionMood(personaId, mood = 'neutral') {
     if (disposed || !Object.hasOwn(personas, personaId) || !Object.hasOwn(missionMoods, mood)) return false;
@@ -1060,7 +1147,7 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
     return true;
   }
   function reset() {
-    selectedId = null; selectedPersonaId = null; pendingZoom = null; labelBoundsTime = -Infinity;
+    selectedId = null; selectedPersonaId = null; selectedResidentId = null; pendingZoom = null; labelBoundsTime = -Infinity;
     const destination = frameTarget();
     if (reducedMotion.matches) { controls.target.copy(destination.target); camera.position.copy(destination.target).add(cameraOffset); camera.zoom = 1; camera.updateProjectionMatrix(); transition = null; }
     else transition = { start: performance.now(), fromTarget: controls.target.clone(), toTarget: destination.target, fromPosition: camera.position.clone(), toPosition: destination.target.clone().add(cameraOffset), fromZoom: camera.zoom, toZoom: 1 };
@@ -1074,18 +1161,30 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
       const label = personas[id].label; projected.copy(label.position).project(camera);
       return { x: (projected.x * 0.5 + 0.5) * width, y: (-projected.y * 0.5 + 0.5) * height, visible: label.visible && projected.z >= -1 && projected.z <= 1, type: 'persona' };
     }
+    const character = residentCharacters.get(id);
+    if (character) {
+      if (character.label.visible) projected.copy(character.label.position);
+      else { character.actor.root.getWorldPosition(projected); projected.y += character.actor.height * 0.55; }
+      projected.project(camera);
+      return { x: (projected.x * 0.5 + 0.5) * width, y: (-projected.y * 0.5 + 0.5) * height,
+        visible: projected.z >= -1 && projected.z <= 1 && Math.abs(projected.x) <= 1 && Math.abs(projected.y) <= 1,
+        type: 'resident', bubbleVisible: character.label.visible, ambientIndex: character.ambientIndex };
+    }
     if (!districts[id]) return null;
     projected.copy(districts[id].label?.position || districts[id].center).project(camera);
-    return { x: (projected.x * 0.5 + 0.5) * width, y: (-projected.y * 0.5 + 0.5) * height, visible: projected.z >= -1 && projected.z <= 1 };
+    return { x: (projected.x * 0.5 + 0.5) * width, y: (-projected.y * 0.5 + 0.5) * height, visible: districts[id].label?.visible !== false && projected.z >= -1 && projected.z <= 1 };
   }
   function pick(event) {
     const rect = canvas.getBoundingClientRect();
     pointer.set((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1);
     raycaster.setFromCamera(pointer, camera);
-    // Named residents take precedence, so a person never also opens the underlying district.
+    // Life missions retain first priority; daily neighbours never open an underlying district.
     const personHits = raycaster.intersectObjects(personaLabels.filter((label) => label.visible), false)
       .concat(raycaster.intersectObjects(personaPickTargets, false));
     for (const hit of personHits) if (hit.object.userData.personaId) return { type: 'persona', id: hit.object.userData.personaId };
+    const residentHits = raycaster.intersectObjects(residentLabels.filter((label) => label.visible), false)
+      .concat(raycaster.intersectObjects(residentPickTargets, false));
+    for (const hit of residentHits) if (hit.object.userData.residentId) return { type: 'resident', id: hit.object.userData.residentId };
     const regionHits = raycaster.intersectObjects(regionLabels.filter((label) => label.visible), false);
     for (const hit of regionHits) if (hit.object.userData.regionId) return { type: 'region', id: hit.object.userData.regionId };
     const hits = raycaster.intersectObjects(labels.filter((label) => label.visible), false).concat(raycaster.intersectObjects(scene.children, true));
@@ -1094,6 +1193,7 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
       let object = hit.object;
       while (object) {
         if (object.userData.personaId) return { type: 'persona', id: object.userData.personaId };
+        if (object.userData.residentId) return { type: 'resident', id: object.userData.residentId };
         if (object.userData.regionId) return { type: 'region', id: object.userData.regionId };
         if (object.userData.districtId) return { type: 'district', id: object.userData.districtId };
         object = object.parent;
@@ -1115,6 +1215,7 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
     if (Math.hypot(event.clientX - down.x, event.clientY - down.y) > 6 || performance.now() - down.time > 700) return;
     const hit = pick(event);
     if (hit?.type === 'persona') { focusPersona(hit.id); onPersona(hit.id); }
+    else if (hit?.type === 'resident') { focusResident(hit.id); onResident(hit.id); }
     else if (hit?.type === 'region') onDistrict(hit.id);
     else if (hit) { select(hit.id); onSelect(hit.id); }
   }
@@ -1122,12 +1223,13 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
     if (pointerDown || event.pointerType === 'touch' || performance.now() - lastHoverTime < 70) return;
     lastHoverTime = performance.now(); const hit = pick(event);
     hoveredPersonaId = hit?.type === 'persona' ? hit.id : null;
+    hoveredResidentId = hit?.type === 'resident' ? hit.id : null;
     hoveredRegionId = hit?.type === 'region' ? hit.id : null;
     hoveredId = hoveredPersonaId ? personas[hoveredPersonaId].districtId : hit?.type === 'district' ? hit.id : null;
     canvas.style.cursor = hit ? 'pointer' : 'grab';
   }
   function onPointerCancel(event) { pointers.delete(event.pointerId); pointerDown = null; }
-  function onPointerLeave() { hoveredId = null; hoveredPersonaId = null; hoveredRegionId = null; canvas.style.cursor = 'grab'; }
+  function onPointerLeave() { hoveredId = null; hoveredPersonaId = null; hoveredResidentId = null; hoveredRegionId = null; canvas.style.cursor = 'grab'; }
   function onControlStart() { transition = null; pendingZoom = null; }
   function onContextLost(event) { event.preventDefault(); onError(new Error('WebGL context lost. Please reload to restore the city.')); }
   canvas.addEventListener('pointerdown', onPointerDown);
@@ -1234,12 +1336,11 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
     for (const district of Object.values(districts)) {
       const opacity = selectedId === district.id ? 0.7 : hoveredId === district.id ? 0.45 : 0;
       district.selection.material.opacity += (opacity - district.selection.material.opacity) * Math.min(delta * 9, 1);
-      const targetScale = hoveredId === district.id || selectedId === district.id ? 4.75 : 4.5;
-      district.label?.scale.lerp(new THREE.Vector3(targetScale, targetScale / 4, 1), Math.min(delta * 9, 1));
+      // Screen-space label sizing is owned by updatePersonaLabels, including hover and focus.
     }
     try {
       renderer.render(scene, camera);
-      if (!ready) { ready = true; onReady({ objects: renderer.info.render.calls, interactive: true }); }
+      if (!ready) { ready = true; onReady({ objects: renderer.info.render.calls, interactive: true, citizens: citizenAnimations.length, residents: residentCharacters.size }); }
     } catch (error) {
       cancelAnimationFrame(frame); onError(error);
     }
@@ -1255,7 +1356,7 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
     renderer.dispose(); scene.clear();
   }
   return {
-    select, focusPersona, setMissionMood, reset, resize, dispose, getSceneAnchor,
+    select, focusPersona, focusResident, setMissionMood, reset, resize, dispose, getSceneAnchor,
     setNight(value) { nightTarget = value ? 1 : 0; },
     setPaused(value) { paused = Boolean(value); },
     zoom(delta) { transition = null; pendingZoom = THREE.MathUtils.clamp((pendingZoom ?? camera.zoom) + Number(delta || 0), controls.minZoom, controls.maxZoom); },
