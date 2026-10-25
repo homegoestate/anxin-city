@@ -1,4 +1,6 @@
 import { calculateLoan } from './loan.js';
+import { getProfileFields, normalizeProfile } from './scenario-profile.js';
+export { getProfileFields, normalizeProfile } from './scenario-profile.js';
 
 // All amounts are illustrative NT dollars. This module has no DOM, I/O, clock,
 // randomness or saved state. Every result is rebuilt from the entire answer list.
@@ -6,6 +8,9 @@ const WAN = 10_000;
 const money = value => Math.round(value);
 const positiveGap = value => Math.max(0, money(value));
 const yuan = value => `${money(value).toLocaleString('zh-TW')} 元`;
+const wan = value => `${value.toLocaleString('zh-TW')} 萬元`;
+const ageText = value => Number(value.toFixed(1)).toLocaleString('zh-TW');
+const raisedRate = value => Number((value + 1).toFixed(10));
 const option = (id, label, description, acknowledgement) => ({ id, label, description, acknowledgement });
 const question = (id, title, prompt, help, options) => ({ id, title, prompt, help, options });
 const card = (id, label, value, detail, tone = 'neutral', unit = '元') => ({ id, label, value, unit, detail, tone });
@@ -127,10 +132,46 @@ export const scenarios = freezeDeep([
 
 export const MISSION_IDS = freezeDeep(scenarios.map(mission => mission.id));
 
-export function getMission(id) {
+function preparationCash(profile) {
+  const balance = profile.income - profile.livingCosts - profile.otherDebt;
+  return { saving: Math.min(30_000, Math.max(0, balance)), cashUse: Math.max(0, -balance) };
+}
+
+export function getMission(id, profile = {}) {
   const mission = scenarios.find(item => item.id === id);
   if (!mission) throw new RangeError('找不到這個練習任務。');
-  return mission;
+  const settings = normalizeProfile(id, profile);
+  if (getProfileFields(id).every(item => settings[item.id] === item.defaultValue)) return mission;
+  const customized = { ...mission, character: { ...mission.character }, questions: mission.questions.map(item => ({ ...item, options: item.options.map(choice => ({ ...choice })) })) };
+  const questions = customized.questions;
+  if (id === 'first-home') {
+    const preparation = preparationCash(settings);
+    questions[0].help = `基本生活費為每月 ${yuan(settings.livingCosts)}；以下是購屋後額外的優先預算，不重複扣入基本生活費。`;
+    questions[1].help = `先用貸款 ${settings.loanPercent}%、${settings.loanYears} 年、年利率 ${settings.annualRate}% 的假設試算；這不是銀行核貸承諾。`;
+    questions[2].help = preparation.cashUse > 0
+      ? `等待期基準收入扣生活費與其他債務後，每月需動用 ${yuan(preparation.cashUse)} 存款；不預設借款補足。房價、利率不變，不是市場預測。`
+      : `等待期基準收入扣生活費與其他債務後，本練習每月存 ${yuan(preparation.saving)}，上限 30,000 元，其餘餘額不自動加入購屋存款。房價、利率不變，不是市場預測。`;
+    questions[2].options[0].description = `以開始時可用存款 ${wan(settings.savingsWan)} 計算。`;
+    for (const [index, months] of [[1, 12], [2, 24]]) {
+      const change = (preparation.saving - preparation.cashUse) * months;
+      questions[2].options[index].label = `${preparation.saving > 0 ? '先存' : '先準備'} ${months} 個月`;
+      questions[2].options[index].description = change < 0 ? `這段期間需動用 ${yuan(-change)} 存款，未預設資金補入。` : `依基準收支假設增加 ${yuan(change)} 存款。`;
+      questions[2].options[index].acknowledgement = `你選擇 ${months} 個月準備期，存款變動依本組基準收支計算。`;
+    }
+    questions[3].help = `基準月收入 ${yuan(settings.income)}、生活費 ${yuan(settings.livingCosts)}、其他債務月付 ${yuan(settings.otherDebt)}。每次只套用所選一種購屋後壓力；等待期仍採基準收支。`;
+    questions[3].options[0].description = `年利率 ${settings.annualRate}%，月收入 ${yuan(settings.income)}。`;
+    questions[3].options[1].description = `月收入改為 ${yuan(settings.income * 0.8)}，房貸利率維持 ${settings.annualRate}%。`;
+    questions[3].options[2].description = `以 ${raisedRate(settings.annualRate)}% 重新計算整筆 ${settings.loanYears} 年貸款的月付金。`;
+  } else if (id === 'legacy-family') {
+    questions[1].help = `假設專用月收入 ${yuan(settings.dedicatedCareIncome)}、照顧現金 ${wan(settings.careCashWan)}；只計不足額，不計投資報酬或物價變動，也不把收入餘額加入專款。`;
+    for (const [index, budget] of [30_000, 60_000, 90_000].entries()) {
+      const gap = Math.max(0, budget - settings.dedicatedCareIncome);
+      questions[1].options[index].description = gap > 0 ? `專用收入以外，每月需要 ${yuan(gap)} 現金。` : '專用收入已涵蓋這組預算，每月現金缺口為 0 元；未用收入不自動加入專款。';
+    }
+    questions[3].help = `等待期間仍支付照顧缺口；盤點後另預留未來 ${settings.reserveMonths} 個月缺口，兩段期間不重疊。`;
+    for (const [index, months] of [1, 6, 12].entries()) questions[3].options[index].description = `先支付 ${months} 個月缺口，再保留 ${settings.reserveMonths} 個月。`;
+  }
+  return freezeDeep(customized);
 }
 
 function normalizeAnswers(mission, answers) {
@@ -147,7 +188,10 @@ function normalizeAnswers(mission, answers) {
 }
 
 function mortgage(principal, annualRate, years, income = 100_000) {
-  return money(calculateLoan({ principalWan: principal / WAN, annualRate, years, income, otherDebt: 0 }).monthly);
+  if (principal === 0) return 0;
+  // Monthly amortization does not depend on income. A positive calculator-only denominator
+  // permits the explicitly supported zero-income stress case without inventing user income.
+  return money(calculateLoan({ principalWan: principal / WAN, annualRate, years, income: Math.max(1, income), otherDebt: 0 }).monthly);
 }
 
 function loanMonth(balance, annualRate, payment) {
@@ -157,37 +201,42 @@ function loanMonth(balance, annualRate, payment) {
   return { interest, paid, principal, balance: balance - principal };
 }
 
-function evaluateFirstHome(selected) {
+function evaluateFirstHome(selected, profile) {
   const [priority, priceChoice, timing, shock] = selected;
   const purchasePrice = { 'price-900': 900, 'price-1200': 1200, 'price-1600': 1600 }[priceChoice] * WAN;
   const preparationMonths = { now: 0, 'save-12': 12, 'save-24': 24 }[timing];
   const priorityBudget = { commute: 4000, space: 6000, buffer: 10_000 }[priority];
-  const savings = 3_500_000 + preparationMonths * 30_000;
-  const income = shock === 'income-down' ? 68_000 : 85_000;
-  const annualRate = shock === 'rate-up' ? 3.5 : 2.5;
-  const loanPrincipal = purchasePrice * 0.75;
+  const preparation = preparationCash(profile);
+  const startingSavings = profile.savingsWan * WAN;
+  const savings = startingSavings + preparationMonths * (preparation.saving - preparation.cashUse);
+  const income = shock === 'income-down' ? money(profile.income * 0.8) : profile.income;
+  const annualRate = shock === 'rate-up' ? raisedRate(profile.annualRate) : profile.annualRate;
+  const loanPrincipal = money(purchasePrice * profile.loanPercent / 100);
   const downPayment = purchasePrice - loanPrincipal;
   const acquisitionOtherCost = 300_000;
   const protectedReserve = 600_000;
   const cashRequired = downPayment + acquisitionOtherCost + protectedReserve;
   const downPaymentGap = positiveGap(cashRequired - savings);
-  const monthlyMortgage = mortgage(loanPrincipal, annualRate, 30, income);
-  const baselineMortgage = mortgage(loanPrincipal, 2.5, 30, 85_000);
-  const remainingMonthly = income - 35_000 - 5_000 - monthlyMortgage;
+  const monthlyMortgage = mortgage(loanPrincipal, annualRate, profile.loanYears, income);
+  const baselineMortgage = mortgage(loanPrincipal, profile.annualRate, profile.loanYears, profile.income);
+  const remainingMonthly = income - profile.livingCosts - profile.otherDebt - monthlyMortgage;
   const comfortRemainingMonthly = remainingMonthly - priorityBudget;
+  const loanStartAge = profile.age + preparationMonths / 12, loanEndAge = loanStartAge + profile.loanYears;
+  const timeHint = `假設開始 ${ageText(profile.age)} 歲，準備 ${preparationMonths} 個月後約 ${ageText(loanStartAge)} 歲開始貸款，貸款期末約 ${ageText(loanEndAge)} 歲；僅是時間加總，不代表銀行年齡上限或核貸條件。`;
   const viewingTip = {
     commute: '看房前後各走一次尖峰通勤路線，記錄門到門時間、轉乘與停車費。',
     space: '把家人日常動線畫出來，現場核對使用空間、屋況與合法用途資料，不只看裝潢。',
     buffer: '問清管理費、公共設施維護、近期修繕與保險支出，把可查到的金額加進預算。',
   }[priority];
   const metrics = {
-    purchasePrice, loanPrincipal, loanPercent: 75, downPayment, acquisitionOtherCost,
-    protectedReserve, cashRequired, savings, preparationMonths, monthlyPreparationSaving: 30_000,
+    purchasePrice, loanPrincipal, loanPercent: profile.loanPercent, downPayment, acquisitionOtherCost,
+    protectedReserve, cashRequired, savings, preparationMonths, monthlyPreparationSaving: preparation.saving,
     downPaymentGap, cashAfterPurchase: savings - downPayment - acquisitionOtherCost,
-    cashAfterReserve: savings - cashRequired, income, livingCost: 35_000, otherDebt: 5_000,
-    annualRate, loanYears: 30, monthlyMortgage, baselineMortgage,
-    mortgageIncreaseMonthly: monthlyMortgage - baselineMortgage, incomeReductionMonthly: 85_000 - income,
+    cashAfterReserve: savings - cashRequired, income, livingCost: profile.livingCosts, otherDebt: profile.otherDebt,
+    annualRate, loanYears: profile.loanYears, monthlyMortgage, baselineMortgage,
+    mortgageIncreaseMonthly: monthlyMortgage - baselineMortgage, incomeReductionMonthly: profile.income - income,
     remainingMonthly, priorityBudget, comfortRemainingMonthly,
+    startingSavings, monthlyPreparationCashUse: preparation.cashUse, startingAge: profile.age, loanStartAge, loanEndAge,
   };
   const ending = downPaymentGap > 0
     ? { id: 'cash-gap', title: '先補齊進場現金', tone: 'danger', summary: `在這組假設下，連同費用與 60 萬元預備金，仍有 ${yuan(downPaymentGap)} 的進場缺口。` }
@@ -197,24 +246,25 @@ function evaluateFirstHome(selected) {
         ? { id: 'narrow-buffer', title: '現金可接上，月餘裕較窄', tone: 'caution', summary: `這組情境每月剩 ${yuan(comfortRemainingMonthly)}；仍須檢查修繕、保險與其他未列支出。` }
         : { id: 'budget-buffer', title: '這組假設保留了月餘裕', tone: 'good', summary: `扣除已列支出與優先預算後，每月保留 ${yuan(comfortRemainingMonthly)}；這不是貸款資格判定。` };
   return {
-    metrics, ending, timeline: [], flags: ['illustrative-only', 'financing-not-approved'],
+    metrics, ending, timeHint, timeline: [], flags: ['illustrative-only', 'financing-not-approved'],
     metricCards: [
       card('entry-gap', '進場現金缺口', downPaymentGap, '自備房款＋其他費用 30 萬＋預備金 60 萬－假設存款。', downPaymentGap > 0 ? 'danger' : 'good'),
-      card('mortgage', '假設房貸月付', monthlyMortgage, `${annualRate}%、30 年本息平均攤還；未代表銀行條件。`),
-      card('remaining', '扣除基本支出後月餘額', remainingMonthly, '已扣房貸、生活費 35,000 元及其他債務月付 5,000 元。', remainingMonthly < 0 ? 'danger' : 'neutral'),
+      card('mortgage', '假設房貸月付', monthlyMortgage, `${annualRate}%、${profile.loanYears} 年本息平均攤還；未代表銀行條件。`),
+      card('remaining', '扣除基本支出後月餘額', remainingMonthly, `已扣房貸、生活費 ${yuan(profile.livingCosts)}及其他債務月付 ${yuan(profile.otherDebt)}。`, remainingMonthly < 0 ? 'danger' : 'neutral'),
       card('comfort', '再保留優先預算後', comfortRemainingMonthly, `另保留所選生活目標 ${yuan(priorityBudget)}／月。`, comfortRemainingMonthly < 0 ? 'danger' : 'good'),
     ],
     insights: [
       `自備房款 ${yuan(downPayment)}，其他取得費用 ${yuan(acquisitionOtherCost)}，預備金 ${yuan(protectedReserve)}，合計 ${yuan(cashRequired)}。`,
-      `每月算式：${yuan(income)}－${yuan(monthlyMortgage)} 房貸－35,000 元生活費－5,000 元其他債務＝${yuan(remainingMonthly)}。`,
-      shock === 'income-down' ? '本次只調降收入 20%；利率仍為 2.5%。' : shock === 'rate-up' ? `本次以 3.5% 重算整筆 30 年新貸款，較基準每月增加 ${yuan(monthlyMortgage - baselineMortgage)}。不是既有貸款中途調息的精算。` : '本次尚未加入收入下降或利率上升壓力。',
+      `每月算式：${yuan(income)}－${yuan(monthlyMortgage)} 房貸－${yuan(profile.livingCosts)}生活費－${yuan(profile.otherDebt)}其他債務＝${yuan(remainingMonthly)}。`,
+      shock === 'income-down' ? `本次只調降購屋後收入 20%；利率仍為 ${profile.annualRate}%。` : shock === 'rate-up' ? `本次以 ${annualRate}% 重算整筆 ${profile.loanYears} 年新貸款，較基準每月增加 ${yuan(monthlyMortgage - baselineMortgage)}。不是既有貸款中途調息的精算。` : '本次尚未加入收入下降或利率上升壓力。',
+      timeHint,
     ],
     nextSteps: ['把實際可用存款與不可動用的預備金分開。', '向銀行確認鑑價、可貸金額、利率、期限與其他授信條件。', '加入實際管理費、保險、修繕與家庭支出後再看價格範圍。'],
-    assumptions: ['全部為虛構情境，金額單位為新臺幣元。', '貸款 75% 是計算假設，不是可貸成數或核貸承諾。', '其他取得費用 30 萬元是概估預留，未逐項計算稅費。', '等待期間每月存 30,000 元，假設總價與利率不變；沒有預測市場。', '月付金四捨五入至元；基本生活費不含另外所選的優先預算。'],
+    assumptions: ['全部為虛構情境，金額單位為新臺幣元。', `貸款 ${profile.loanPercent}% 是計算假設，不是可貸成數或核貸承諾。`, `開始時可用存款 ${wan(profile.savingsWan)}，基準月收入 ${yuan(profile.income)}、生活費 ${yuan(profile.livingCosts)}、其他債務月付 ${yuan(profile.otherDebt)}。`, '其他取得費用 30 萬元與保留預備金 60 萬元仍為固定練習假設，未逐項計算稅費。', `等待期間按基準收支每月存 ${yuan(preparation.saving)}，若基本收支不足則每月動用 ${yuan(preparation.cashUse)} 存款；不預設借款補足。儲蓄上限 30,000 元，房價與利率不變；沒有預測市場。`, '月付金四捨五入至元；基本生活費不含另外所選的購屋後優先預算。', timeHint],
     feedbackDetails: [
       [`基本生活費之外，每月另留 ${yuan(priorityBudget)}。`, `本組情境保留後的月餘額為 ${yuan(comfortRemainingMonthly)}。`, viewingTip],
       [`假設總價 ${yuan(purchasePrice)}；貸款 ${yuan(loanPrincipal)}；自備房款 ${yuan(downPayment)}。`, `含費用與預備金後，進場需要 ${yuan(cashRequired)}。`],
-      [`準備 ${preparationMonths} 個月後，假設存款為 ${yuan(savings)}。`, `依目前全部選擇計算，進場缺口為 ${yuan(downPaymentGap)}。`],
+      [`準備 ${preparationMonths} 個月後，假設存款為 ${yuan(savings)}。`, `等待期每月存 ${yuan(preparation.saving)}、需動用原存款 ${yuan(preparation.cashUse)}；負餘額表示待補資金。`, `依目前全部選擇計算，進場缺口為 ${yuan(downPaymentGap)}。`],
       [`目前採用月收入 ${yuan(income)}、年利率 ${annualRate}%。`, `房貸月付 ${yuan(monthlyMortgage)}；扣完所列全部預算後剩 ${yuan(comfortRemainingMonthly)}／月。`],
     ],
   };
@@ -437,21 +487,28 @@ function evaluateSeller(selected) {
   };
 }
 
-function evaluateLegacyFamily(selected) {
+function evaluateLegacyFamily(selected, profile) {
   const [control, care, participants, planningTime] = selected;
   const careMonthlyBudget = { 'care-30000': 30_000, 'care-60000': 60_000, 'care-90000': 90_000 }[care];
   const planningMonths = { 'plan-1': 1, 'plan-6': 6, 'plan-12': 12 }[planningTime];
-  const monthlyCareGap = careMonthlyBudget - 20_000;
+  const monthlyCareGap = Math.max(0, careMonthlyBudget - profile.dedicatedCareIncome);
   const planningPeriodCareCost = monthlyCareGap * planningMonths;
-  const careCashAtPlanning = 2_000_000 - planningPeriodCareCost;
-  const requiredCareReserve = monthlyCareGap * 24;
+  const careCashStart = profile.careCashWan * WAN;
+  const careCashAtPlanning = careCashStart - planningPeriodCareCost;
+  const requiredCareReserve = monthlyCareGap * profile.reserveMonths;
   const careCashAfterReserve = careCashAtPlanning - requiredCareReserve;
   const careReserveGap = positiveGap(-careCashAfterReserve);
+  const reserveEndAge = profile.age + (planningMonths + profile.reserveMonths) / 12;
+  const timeHint = `假設開始 ${ageText(profile.age)} 歲，等待 ${planningMonths} 個月並另預留 ${profile.reserveMonths} 個月，預留至約 ${ageText(reserveEndAge)} 歲；只是期間加總，不是壽命或實際照顧需求預測。`;
+  const coverageMonthsAfterPlanning = monthlyCareGap === 0 ? null : Math.max(0, Math.floor(careCashAtPlanning / monthlyCareGap));
+  const coverageExplanation = monthlyCareGap === 0
+    ? '專用收入已涵蓋本組照顧預算，現金缺口為 0 元，現金覆蓋月數不適用；未用收入不自動加入照顧專款。'
+    : `盤點後現金按每月不足額，約可支付 ${coverageMonthsAfterPlanning} 個月；此為現金覆蓋期間，不是壽命預測。`;
   const metrics = {
-    careCashStart: 2_000_000, dedicatedCareIncome: 20_000, careMonthlyBudget, monthlyCareGap,
-    planningMonths, planningPeriodCareCost, careCashAtPlanning, reserveMonths: 24,
+    careCashStart, dedicatedCareIncome: profile.dedicatedCareIncome, careMonthlyBudget, monthlyCareGap,
+    planningMonths, planningPeriodCareCost, careCashAtPlanning, reserveMonths: profile.reserveMonths,
     requiredCareReserve, careCashAfterReserve, careReserveGap,
-    coverageMonthsAfterPlanning: Math.max(0, Math.floor(careCashAtPlanning / monthlyCareGap)),
+    coverageMonthsAfterPlanning, startingAge: profile.age, reserveEndAge,
   };
   const controlText = {
     'retain-control': '先研究保留財產與日後繼承：記錄本人想保留的控制、居住與生活需要，再安排日後繼承協調。',
@@ -464,26 +521,26 @@ function evaluateLegacyFamily(selected) {
     'self-first': '先記錄本人意願，再安排照顧與家人分工；目前不是全家共同決議。',
   }[participants];
   const ending = careReserveGap > 0
-    ? { id: 'care-cash-gap', title: '先處理照顧現金，再談資產安排', tone: 'danger', summary: `在等待 ${planningMonths} 個月並另保留未來 24 個月缺口後，照顧現金還少 ${yuan(careReserveGap)}。` }
+    ? { id: 'care-cash-gap', title: '先處理照顧現金，再談資產安排', tone: 'danger', summary: `在等待 ${planningMonths} 個月並另保留未來 ${profile.reserveMonths} 個月缺口後，照顧現金還少 ${yuan(careReserveGap)}。` }
     : participants !== 'all-together'
       ? { id: 'discussion-in-progress', title: '已有盤點起點，仍需補齊討論', tone: 'caution', summary: '這組假設照顧預留尚可涵蓋；下一步是把本人意願、照顧者工作與其他家人需求接起來。' }
       : { id: 'discussion-agenda-ready', title: '可以帶著清楚的需求開會', tone: 'good', summary: '你已選出意願重點、照顧預算、參與者與時間；尚未形成法律或稅務方案。' };
   return {
-    metrics, ending, timeline: [], plan: { control, participants }, flags: ['illustrative-only', 'no-legal-or-tax-determination'],
+    metrics, ending, timeHint, coverageExplanation, timeline: [], plan: { control, participants }, flags: ['illustrative-only', 'no-legal-or-tax-determination'],
     metricCards: [
-      card('care-gap', '每月需動用照顧現金', monthlyCareGap, '照顧預算扣除假設專用月收入 20,000 元。'),
+      card('care-gap', '每月需動用照顧現金', monthlyCareGap, `照顧預算扣除假設專用月收入 ${yuan(profile.dedicatedCareIncome)}；不足額最低為 0 元，收入餘額不加入專款。`),
       card('planning-time', '第一輪盤點時間', planningMonths, '等待期間仍支付照顧缺口。', planningMonths > 1 ? 'caution' : 'neutral', '個月後'),
-      card('care-reserve', '盤點後 24 個月預留', requiredCareReserve, '僅為照顧現金缺口預留，沒有計算稅額。'),
-      card('care-remaining', '等待及預留後現金餘額', careCashAfterReserve, '假設照顧現金 200 萬，未計投資報酬、物價變動或突發醫療。', careCashAfterReserve < 0 ? 'danger' : 'good'),
+      card('care-reserve', `盤點後 ${profile.reserveMonths} 個月預留`, requiredCareReserve, '僅為照顧現金缺口預留，沒有計算稅額。'),
+      card('care-remaining', '等待及預留後現金餘額', careCashAfterReserve, `假設照顧現金 ${wan(profile.careCashWan)}，未計投資報酬、物價變動或突發醫療。`, careCashAfterReserve < 0 ? 'danger' : 'good'),
     ],
-    insights: [controlText, participantText, `等待期使用 ${yuan(planningPeriodCareCost)}；之後的 24 個月另需 ${yuan(requiredCareReserve)}。`, '這個任務不推算贈與、繼承或信託的稅額與法律效果。'],
+    insights: [controlText, participantText, `等待期使用 ${yuan(planningPeriodCareCost)}；之後的 ${profile.reserveMonths} 個月另需 ${yuan(requiredCareReserve)}。`, coverageExplanation, timeHint, '這個任務不推算贈與、繼承或信託的稅額與法律效果；照顧專款與另頁稅務案例分開。'],
     nextSteps: ['記錄本人的生活、居住、決策與照顧意願。', '列出資產權利、現有貸款、照顧支出與可用現金，避免只看不動產名目價值。', '安排尚未參與的相關家人，再以實際文件確認法律工具與稅務資料。'],
-    assumptions: ['全部為虛構家庭情境：照顧現金 200 萬、照顧專用月收入 2 萬。', '所選照顧預算先扣專用收入，只有不足額由現金支付；沒有重複計入整筆照顧費。', '等待期費用與盤點後未來 24 個月預留分開計算，期間不重疊。', '沒有模擬不動產變現、投資報酬、通膨或突發醫療。', '選項只表達需求與討論順序，不判定任何法律資格、有效性或稅負。'],
+    assumptions: [`全部為虛構家庭情境：照顧現金 ${wan(profile.careCashWan)}、照顧專用月收入 ${yuan(profile.dedicatedCareIncome)}。`, '所選照顧預算先扣專用收入，只有不足額由現金支付；沒有重複計入整筆照顧費，收入餘額不自動加入專款。', `等待期費用與盤點後未來 ${profile.reserveMonths} 個月預留分開計算，期間不重疊。`, '沒有模擬不動產變現、投資報酬、通膨或突發醫療。', '選項只表達需求與討論順序，不判定任何法律資格、有效性或稅負。', timeHint],
     feedbackDetails: [
       [controlText, '目前沒有指定或執行任何法律工具。'],
-      [`每月照顧預算 ${yuan(careMonthlyBudget)}，扣專用收入後需 ${yuan(monthlyCareGap)}。`, `未來 24 個月缺口預留為 ${yuan(requiredCareReserve)}。`],
+      [`每月照顧預算 ${yuan(careMonthlyBudget)}，扣專用收入後需 ${yuan(monthlyCareGap)}。`, `未來 ${profile.reserveMonths} 個月缺口預留為 ${yuan(requiredCareReserve)}。`, coverageExplanation],
       [participantText, '請把尚待討論者與資料列成下一步。'],
-      [`等待 ${planningMonths} 個月先使用 ${yuan(planningPeriodCareCost)}。`, `另留未來 24 個月後，現金餘額 ${yuan(careCashAfterReserve)}。`],
+      [`等待 ${planningMonths} 個月先使用 ${yuan(planningPeriodCareCost)}。`, `另留未來 ${profile.reserveMonths} 個月後，現金餘額 ${yuan(careCashAfterReserve)}。`, timeHint],
     ],
   };
 }
@@ -495,11 +552,12 @@ const evaluators = {
   'legacy-family': evaluateLegacyFamily,
 };
 
-export function evaluateMission(id, answers = []) {
-  const mission = getMission(id);
+export function evaluateMission(id, answers = [], profile = {}) {
+  const settings = normalizeProfile(id, profile);
+  const mission = getMission(id, settings);
   const normalized = normalizeAnswers(mission, answers);
   const selected = normalized.map((answer, index) => answer ?? mission.questions[index].options[0].id);
-  const evaluated = evaluators[id](selected);
+  const evaluated = evaluators[id](selected, settings);
   const answeredCount = normalized.filter(answer => answer !== null).length;
   const nextIndex = normalized.indexOf(null);
   const feedback = mission.questions.flatMap((item, index) => {
@@ -511,25 +569,27 @@ export function evaluateMission(id, answers = []) {
   const { feedbackDetails, ...result } = evaluated;
   void feedbackDetails;
   return {
-    missionId: id, answers: normalized, answeredCount, complete: answeredCount === mission.questions.length,
+    missionId: id, profile: { ...settings }, answers: normalized, answeredCount, complete: answeredCount === mission.questions.length,
     nextQuestionId: nextIndex === -1 ? null : mission.questions[nextIndex].id,
     ...result, feedback, assumptions: [...defaults, ...result.assumptions],
   };
 }
 
-export function buildLineSummary(id, answers = []) {
-  const mission = getMission(id);
-  const result = evaluateMission(id, answers);
+export function buildLineSummary(id, answers = [], profile = {}) {
+  const mission = getMission(id, profile);
+  const result = evaluateMission(id, answers, profile);
   const choices = mission.questions.map((item, index) => {
     const selected = item.options.find(choice => choice.id === result.answers[index]);
     return `${index + 1}. ${item.title}：${selected ? selected.label : '尚未選擇（結果使用預覽假設）'}`;
   });
   const figures = result.metricCards.map(item => `${item.label}：${item.value.toLocaleString('zh-TW')} ${item.unit}`);
+  const profileLines = getProfileFields(id).map(item => `${item.label}：${result.profile[item.id].toLocaleString('zh-TW')} ${item.unit}`);
   return [
     '【安心城市｜虛構情境演練】',
     '只記錄遊戲選擇，不代表訪客的實際財務、貸款資格或法律方案。',
     `${mission.title}（${result.complete ? '已完成 4 題' : `已選 ${result.answeredCount}／4 題，仍為預覽`}）`,
-    ...choices, '', ...figures, '',
+    ...choices, '', ...(profileLines.length ? ['本次情境假設：', ...profileLines, result.timeHint, ''] : []), ...figures, '',
+    ...(result.coverageExplanation ? [result.coverageExplanation] : []),
     `練習結果：${result.ending.title}`, result.ending.summary,
     '想進一步確認：', ...result.nextSteps.map((step, index) => `${index + 1}. ${step}`),
     '以上均為假設；實際貸款、稅費與法律效果須以資料另行確認。',

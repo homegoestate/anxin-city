@@ -1,6 +1,7 @@
-import { createCity } from './city.js?v=4.0.0';
-import { createEnhancements } from './enhancements.js?v=4.0.0';
-import { createTainanExplorer } from './tainan-ui.js?v=4.0.0';
+import {createServiceHub} from './service-hub.js?v=5.0.0';
+import { createCity } from './city.js?v=5.0.0';
+import { createEnhancements } from './enhancements.js?v=5.0.0';
+import { createTainanExplorer } from './tainan-ui.js?v=5.0.0';
 let enhancements,tainanExplorer;
 
 const journeys = {
@@ -35,8 +36,12 @@ function failCity(){const load=$('#loading');load.hidden=false;load.classList.re
 enhancements=createEnhancements({onExploreTainan:()=>tainanExplorer?.open(),getScene:()=>scene,selectScene,getCurrentScene:()=>currentId,openJourneyChecklist:(id)=>{selectScene(id);currentTab='ready';renderPanel();},toast});
 tainanExplorer=createTainanExplorer({onStartMission:(id)=>enhancements.showPersona(id),onFeedback:context=>enhancements.openFeedback(context),toast});
 $('#start-tainan').onclick=()=>tainanExplorer.open();
+const serviceHub=createServiceHub({toast,onMission:id=>enhancements.showPersona(id),onTainan:()=>tainanExplorer.open(),onGuide:id=>enhancements.openGuide(id)});
 try{scene=createCity({onDistrict:region=>tainanExplorer.open(region),onPersona:(id)=>enhancements.showPersona(id),canvas:$('#city'),onSelect:selectScene,onReady:()=>{const load=$('#loading');load.classList.add('loaded');setTimeout(()=>load.hidden=true,650);},onError:failCity});updatePaused();}catch(error){console.error('City initialization failed',error);failCity();}
 updateCount();
 
 
 
+
+const entry=new URLSearchParams(location.search).get('start');
+if(['first-home','move-home','seller','legacy-family','tainan','policy','services'].includes(entry))requestAnimationFrame(()=>{if(entry==='tainan')tainanExplorer.open();else if(entry==='policy')enhancements.openGuide('first-home');else if(entry==='services')serviceHub.open();else enhancements.showPersona(entry);});
