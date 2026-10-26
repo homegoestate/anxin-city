@@ -1,12 +1,12 @@
 import { createExperienceUI } from './experience-ui.js?v=11.0.0';
 import {createServiceHub} from './service-hub.js?v=11.0.0';
 import { createCity } from './city.js?v=11.0.0';
-import { createEnhancements } from './enhancements.js?v=11.0.0';
-import { createTainanExplorer } from './tainan-ui.js?v=10.0.0';
+import { createEnhancements } from './enhancements.js?v=12.0.0';
+import { createTainanExplorer } from './tainan-ui.js?v=12.0.0';
 import { createResidentChat } from './resident-ui.js?v=10.0.0';
-import { createCultureWalk } from './culture-ui.js?v=10.0.0';
+import { createCultureWalk } from './culture-ui.js?v=12.0.0';
 import { tainanAtlas } from './tainan-atlas.js?v=8.0.0';
-import { tainanSeasons } from './tainan-data.js?v=8.0.0';
+import { tainanSeasons } from './tainan-data.js?v=12.0.0';
 let enhancements,tainanExplorer,residentChat,cultureWalk;
 
 const journeys = {
@@ -74,4 +74,4 @@ updateCount();
 
 
 const entryParams=new URLSearchParams(location.search),entry=entryParams.get('start');
-if(['first-home','move-home','seller','legacy-family','tainan','policy','services','residents','culture'].includes(entry))requestAnimationFrame(()=>{if(entry==='culture')cultureWalk.open({placeId:entryParams.get('place')});else if(entry==='residents')residentChat.open(entryParams.get('resident'));else if(entry==='tainan')tainanExplorer.open();else if(entry==='policy')enhancements.openGuide('first-home');else if(entry==='services')serviceHub.open();else enhancements.showPersona(entry);});
+if(['first-home','move-home','seller','legacy-family','tainan','policy','services','residents','culture','seasons','events'].includes(entry))requestAnimationFrame(()=>{if(entry==='culture')cultureWalk.open({placeId:entryParams.get('place')});else if(entry==='residents')residentChat.open(entryParams.get('resident'));else if(entry==='tainan')tainanExplorer.open();else if(entry==='seasons'||entry==='events')tainanExplorer.openTarget({tab:'seasons',month:Number(entryParams.get('month')||0),seasonMode:entry});else if(entry==='policy')enhancements.openGuide('first-home');else if(entry==='services')serviceHub.open();else enhancements.showPersona(entry);});

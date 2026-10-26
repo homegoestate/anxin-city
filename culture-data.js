@@ -2,7 +2,7 @@
 // kind 是介面用的中性分類，不代表法定文化資產類別或級別。
 // lookFor、localLens、visitorLens 與 respect 是編輯提出的觀察與參觀建議。
 // 未列固定開放時間、費用或年度祭典日期；現場開放及活動請查官方公告。
-export const cultureReviewedAt = '2026-10-25';
+export const cultureReviewedAt = '2026-10-26';
 
 export const cultureThemes = [
   { id: 'gates-harbors', title: '城門與海港', subtitle: '從城牆、洋行與舊港，讀懂城市如何與外界往來。' },
@@ -13,7 +13,8 @@ export const cultureThemes = [
   { id: 'people-land', title: '多元族群與土地記憶', subtitle: '聽見不同群體的聲音，也理解歷史如何被記錄。' },
 ];
 
-const source = (id, title, url) => ({ id, title, url, reviewedAt: cultureReviewedAt });
+// 舊來源保留原查核日；新增或重新查核時必須明確傳入日期。
+const source = (id, title, url, reviewedAt = '2026-10-25') => ({ id, title, url, reviewedAt });
 
 export const cultureSources = {
   'culture-anping-fort': source('culture-anping-fort', '臺南市政府文化局｜安平古堡', 'https://historic.tainan.gov.tw/index.php?id=58&lang=cht&option=module&task=pageinfo'),
@@ -44,6 +45,27 @@ export const cultureSources = {
   'culture-kabua-sua': source('culture-kabua-sua', '臺南市政府觀光旅遊局｜西拉雅部落・吉貝耍', 'https://www.twtainan.net/zh-tw/attractions/detail/1060/'),
   'culture-tapani': source('culture-tapani', '噍吧哖文化園區｜關於我們', 'https://tapani.tainan.gov.tw/index.php?inter=about'),
   'culture-hakka': source('culture-hakka', '臺南市政府客家事務委員會｜臺南市客家文化會館', 'https://web.tainan.gov.tw/hakka/cp.aspx?n=26775'),
+  'culture-fan-salt': source('culture-fan-salt', '雲嘉南濱海國家風景區管理處｜青鯤鯓扇形鹽田', 'https://www.swcoast-nsa.gov.tw/zh-tw/attraction/details/87', '2026-10-26'),
+  'culture-qigu-lagoon': source('culture-qigu-lagoon', '臺南市政府觀光旅遊局｜七股潟湖的養蚵與漁業地景', 'https://www.twtainan.net/zh-tw/tours/columns/detail/7018/', '2026-10-26'),
+  'culture-soulangh': source('culture-soulangh', '蕭壠文化園區｜園區沿革', 'https://soulangh.tnc.gov.tw/index.php?id=1&inter=about', '2026-10-26'),
+  'culture-sicao-fort': source('culture-sicao-fort', '臺灣國家公園主題網｜四草砲臺', 'https://www.taiwan.nps.gov.tw/home/zh-tw/attractions/21109.html', '2026-10-26'),
+  'culture-chongwen-arch': source('culture-chongwen-arch', '文化部國家文化記憶庫｜重道崇文坊', 'https://tcmb.culture.tw/zh-tw/detail?id=19851127000065&indexCode=BOCH_CountryCulture_11', '2026-10-26'),
+  'culture-magistrate': source('culture-magistrate', '臺南市政府文化局｜原臺南縣知事官邸', 'https://historic.tainan.gov.tw/index.php?id=533&index=4&lang=cht&option=module&task=pageinfo', '2026-10-26'),
+  'culture-sankandian': source('culture-sankandian', '臺南市政府觀光旅遊局｜永康三崁店糖廠神社遺蹟', 'https://www.twtainan.net/zh-tw/attractions/detail/4260/', '2026-10-26'),
+  'culture-baoan': source('culture-baoan', '臺南市政府觀光旅遊局｜保安車站', 'https://www.twtainan.net/zh-tw/attractions/detail/571/', '2026-10-26'),
+  'culture-guiren-art': source('culture-guiren-art', '臺南市政府觀光旅遊局｜歸仁美學館', 'https://www.twtainan.net/zh-tw/attractions/detail/4279/', '2026-10-26'),
+  'culture-liu-chi-hsiang': source('culture-liu-chi-hsiang', '臺南市政府觀光旅遊局｜劉啟祥美術紀念館', 'https://www.twtainan.net/zh-tw/attractions/detail/5624/', '2026-10-26'),
+  'culture-tsung-yeh': source('culture-tsung-yeh', '總爺藝文中心｜園區沿革', 'https://tyart.tnc.gov.tw/index.php?id=1&inter=about', '2026-10-26'),
+  'culture-longhu': source('culture-longhu', '臺南市政府觀光旅遊局｜赤山龍湖巖', 'https://www.twtainan.net/zh-tw/attractions/detail/532/', '2026-10-26'),
+  'culture-shanhua-market': source('culture-shanhua-market', '臺南市政府觀光旅遊局｜善化牛墟', 'https://www.twtainan.net/zh-tw/attractions/detail/5603/', '2026-10-26'),
+  'culture-zhenhu': source('culture-zhenhu', '臺南市政府觀光旅遊局｜蘇厝第一代天府真護宮', 'https://www.twtainan.net/zh-tw/attractions/detail/1339/', '2026-10-26'),
+  'culture-guanziling': source('culture-guanziling', '西拉雅國家風景區管理處｜關子嶺溫泉', 'https://www.siraya-nsa.gov.tw/zh-tw/attractions/detail/3', '2026-10-26'),
+  'culture-toushe': source('culture-toushe', '臺南市政府觀光旅遊局｜頭社太上龍頭忠義廟・西拉雅公廨', 'https://www.twtainan.net/zh-tw/attractions/detail/1004/', '2026-10-26'),
+  'culture-jiang-settlement': source('culture-jiang-settlement', '臺南市楠西區公所｜認識楠西・鹿陶洋江家古厝', 'https://nansi.tainan.gov.tw/cp.aspx?n=7560', '2026-10-26'),
+  'culture-nanhua-reservoir': source('culture-nanhua-reservoir', '臺南市政府觀光旅遊局｜南化水庫', 'https://www.twtainan.net/zh-tw/attractions/detail/623/', '2026-10-26'),
+  'culture-zuozhen-history': source('culture-zuozhen-history', '臺南左鎮化石園區｜沿革', 'https://fossil.tnc.gov.tw/content/index.php?m2=20', '2026-10-26'),
+  'culture-zuozhen-intro': source('culture-zuozhen-intro', '臺南左鎮化石園區｜園區簡介', 'https://fossil.tnc.gov.tw/content/index.php?m2=96', '2026-10-26'),
+  'culture-shanxi': source('culture-shanxi', '臺南市政府觀光旅遊局｜關廟山西宮', 'https://www.twtainan.net/zh-tw/attractions/detail/580/', '2026-10-26'),
 };
 
 export const culturePlaces = [
@@ -310,5 +332,543 @@ export const culturePlaces = [
     respect: '課程與展演須依報名及使用規範參與；拍攝活動中的人物先徵詢同意。',
     sourceIds: ['culture-hakka'],
     quiz: { question: '客家文化會館結合了哪些功能？', options: ['只提供停車', '只進行港口裝卸', '文化展示、研習與展演'], correctIndex: 2, explanation: '會館兼具文化展示、教育研習與交流展演等功能。' },
+  },
+  {
+    "id": "culture-fan-salt",
+    "name": "青鯤鯓扇形鹽田",
+    "districtId": "jiangjun",
+    "themeId": "water-industry",
+    "kind": "地方記憶",
+    "hook": "像扇子展開的線條，原本是為了讓鹽工方便工作。",
+    "story": "青鯤鯓扇形鹽田以鹽工宿舍為中心，向外展開的扇骨包含給水、排水、給鹵的溝渠和道路。收鹽的結晶池靠近宿舍，讓工作路程縮短。這種排列先服務生產，後來才成為容易辨認的地景。鹽田停止曬鹽後，水面與田埂仍留下作業配置；看懂一條溝通往哪裡，比只記住扇形外觀更接近鹽工曾經的日常。",
+    "lookFor": "沿公開道路比較田格、溝渠與道路方向，找出扇形如何展開。",
+    "localLens": "把長輩記得的季節工作與田區位置對照，區分口述記憶和現場解說。",
+    "visitorLens": "先想像水與鹵如何移動，再欣賞夕陽映照的幾何線條。",
+    "respect": "不走上鹽田田埂或進入舊宿舍；拍攝不阻礙道路通行。",
+    "sourceIds": [
+      "culture-fan-salt"
+    ],
+    "attractionId": "jiangjun-fan-salt",
+    "quiz": {
+      "question": "扇形鹽田的「扇骨」主要包含什麼？",
+      "options": [
+        "遊樂設施的排隊欄杆",
+        "給排水溝渠與道路",
+        "城牆防禦壕溝"
+      ],
+      "correctIndex": 1,
+      "explanation": "扇骨安排了水、鹵的流動與交通，結晶池則靠近鹽工宿舍。"
+    }
+  },
+  {
+    "id": "culture-qigu-lagoon",
+    "name": "七股潟湖與養蚵地景",
+    "districtId": "qigu",
+    "themeId": "water-industry",
+    "kind": "生活文化",
+    "hook": "水面上的一排竹竿，也是一戶人家的工作日程。",
+    "story": "七股潟湖被當地漁民稱為內海仔，潮汐交換的水域支持養蚵與捕魚。從岸上或合法遊程看見的桿架，有些連著蚵棚，有些是定置漁網，並非都為遊客搭設。不同養殖方式回應水深與潮水條件，沿海風景因此也包含生產知識。把水面當作仍在工作的地方閱讀，便能理解漁民、食物與潟湖環境彼此相依。",
+    "lookFor": "從開放觀察點辨認蚵棚與定置網，留意解說如何區分用途。",
+    "localLens": "從餐桌上一顆蚵的來源出發，了解地方養殖需要哪些環境條件。",
+    "visitorLens": "把注意力留給正在工作的人，少用單一漂亮畫面概括漁村。",
+    "respect": "不碰漁具或擅登蚵棚；搭船依合法業者與海況安排，不假定每日出航。",
+    "sourceIds": [
+      "culture-qigu-lagoon"
+    ],
+    "attractionId": "qigu-lagoon",
+    "quiz": {
+      "question": "潟湖水面的桿架可以連結哪些生產用途？",
+      "options": [
+        "蚵棚與定置漁網",
+        "水庫發電機",
+        "火車維修設備"
+      ],
+      "correctIndex": 0,
+      "explanation": "故事介紹養蚵與捕魚，蚵棚及定置網都是仍與居民生計相連的設施。"
+    }
+  },
+  {
+    "id": "culture-soulangh",
+    "name": "蕭壠文化園區",
+    "districtId": "jiali",
+    "themeId": "rural-crafts",
+    "kind": "文化場域",
+    "hook": "十四棟倉庫換了工作，運糖的空間成了看展的地方。",
+    "story": "蕭壠文化園區由原佳里糖廠倉庫群轉用，十四棟倉庫曾由運糖鐵道串連，留下南、北兩條廊道的空間特色。糖業停止後，老倉庫經整修，逐步承接展覽、藝術家駐村與兒童藝術教育。「蕭壠」也來自西拉雅社名。一次參觀可以分開讀地名、產業與今日創作，理解文化園區如何在既有建築裡繼續長出新的生活。",
+    "lookFor": "比較倉庫門口與廊道的排列，再看各館如何安排展示。",
+    "localLens": "想想身邊閒置建築除了拆除，還能容納哪些公共活動。",
+    "visitorLens": "看一場展覽，也花幾分鐘追問展場原來儲存什麼。",
+    "respect": "作品能否觸碰依標示，尊重駐村工作空間；不攀爬舊設施。",
+    "sourceIds": [
+      "culture-soulangh"
+    ],
+    "attractionId": "jiali-soulangh",
+    "quiz": {
+      "question": "蕭壠文化園區的十四棟倉庫，原本屬於哪種產業？",
+      "options": [
+        "航空修造",
+        "石油提煉",
+        "糖業"
+      ],
+      "correctIndex": 2,
+      "explanation": "園區前身是佳里糖廠倉庫群，運糖鐵道曾串連各倉庫。"
+    }
+  },
+  {
+    "id": "culture-sicao-fort",
+    "name": "四草砲臺",
+    "districtId": "annan",
+    "themeId": "gates-harbors",
+    "kind": "古蹟建築",
+    "hook": "學校旁的一段牆，曾經朝向需要守備的海口。",
+    "story": "四草砲臺又稱鎮海城，是清代因應鴉片戰爭威脅而設置的海防設施。當年的砲與完整防禦配置已不復見，鎮海國小旁仍可讀到城壘和砲孔。今天靠近校園的牆面，提醒我們歷史空間會被後來的城市生活包圍。沿著說明想像舊海口與防線，比把現存牆體誤認成整座砲臺，更能理解遺存的意義。",
+    "lookFor": "在可通行區域觀察砲孔與城壘，不以現況補猜已消失的設施。",
+    "localLens": "比較熟悉的校園周邊與解說中的舊海口，找出地景改變的線索。",
+    "visitorLens": "把四草的生態行程和海防歷史並讀，認識同一片土地的不同用途。",
+    "respect": "遵守校園及現場管制，不擅入教學區、不攀爬或坐上城壘。",
+    "sourceIds": [
+      "culture-sicao-fort"
+    ],
+    "quiz": {
+      "question": "今日四草砲臺主要可從哪些遺存閱讀歷史？",
+      "options": [
+        "完整海軍艦隊",
+        "城壘與砲孔",
+        "大型製糖機具"
+      ],
+      "correctIndex": 1,
+      "explanation": "現存線索包括鎮海國小旁的城壘與砲孔，並非完整保存的砲臺配置。"
+    }
+  },
+  {
+    "id": "culture-chongwen-arch",
+    "name": "臺南公園重道崇文坊",
+    "districtId": "north",
+    "themeId": "learning-streets",
+    "kind": "古蹟建築",
+    "hook": "公園裡的石坊，原來為一筆支持教育的捐助而立。",
+    "story": "重道崇文坊原為表揚林朝英捐資修建縣學文廟而設，不是臺南公園一開始就有的裝飾。它曾位在龍王廟前，後因都市道路改造而遷到公園燕潭旁，並經修繕保存。石坊一面記錄地方人士對教育的支持，一面也記錄城市更新如何移動歷史物件。讀字、看石材，再對照遷移經過，就能把散步接回公共生活的變化。",
+    "lookFor": "辨認石匾上的文字，再看柱、橫梁與石雕如何組成牌坊。",
+    "localLens": "下次到公園時，試著向同行者說明這座石坊為何不在原址。",
+    "visitorLens": "將公園當作可閱讀的公共空間，留意不同年代留下的物件。",
+    "respect": "不攀坐石坊、不自行拓印；拍照時保留步道與居民休憩空間。",
+    "sourceIds": [
+      "culture-chongwen-arch"
+    ],
+    "attractionId": "north-tainan-park",
+    "quiz": {
+      "question": "重道崇文坊最初為表揚哪一件事而設？",
+      "options": [
+        "捐資修建縣學文廟",
+        "開闢製鹽池",
+        "興建飛機跑道"
+      ],
+      "correctIndex": 0,
+      "explanation": "林朝英支持地方教育的捐助，是石坊建立的背景。"
+    }
+  },
+  {
+    "id": "culture-magistrate",
+    "name": "原臺南縣知事官邸",
+    "districtId": "east",
+    "themeId": "learning-streets",
+    "kind": "古蹟建築",
+    "hook": "一棟官邸的房間，曾接住不同年代的公務與生活。",
+    "story": "原臺南縣知事官邸最初規劃為地方首長住所，日治時期也曾作為總督與皇族巡視臺南時的行館。戰後，地政事務所、東區區公所等公家機關先後使用，部分時期由多個單位共用。今天讀這棟建築，不能只停在官邸一個名稱；把用途變化排成時間線，能看見行政制度、接待需求與市民洽公如何先後進入同一處空間。",
+    "lookFor": "對照館內年代說明，找出住所、接待與公務用途的差別。",
+    "localLens": "從家人曾經洽公的經驗出發，理解熟悉建築不只一種身分。",
+    "visitorLens": "先讀使用年代，再看建築細節，避免把所有空間都歸於同一時期。",
+    "respect": "依開放範圍參觀，展覽、課程與商業服務分別看公告，不擅入工作區。",
+    "sourceIds": [
+      "culture-magistrate"
+    ],
+    "attractionId": "east-magistrate-residence",
+    "quiz": {
+      "question": "戰後哪些單位曾使用這座官邸？",
+      "options": [
+        "遠洋捕鯨船隊",
+        "高山伐木工班",
+        "地政事務所、東區區公所等機關"
+      ],
+      "correctIndex": 2,
+      "explanation": "建築戰後曾由多個公家機關使用，地政與區政服務也是它的歷史。"
+    }
+  },
+  {
+    "id": "culture-sankandian",
+    "name": "永康三崁店糖廠神社遺蹟",
+    "districtId": "yongkang",
+    "themeId": "water-industry",
+    "kind": "地方記憶",
+    "hook": "木造建築不在了，基座仍能讓人讀到糖廠生活。",
+    "story": "三崁店糖廠內曾設有神社，將生產場所與日治時期的信仰空間連在一起。木造部分已消失，現場仍留下本殿、鳥居、石燈等設施的基座和參道線索。這裡因此不只關於製糖機器，也能讓人思考工廠中的日常與制度。參觀時應以遺構和解說為依據，不把想像的完整神社當作眼前實物；周邊林地同時也是生態棲地。",
+    "lookFor": "依解說辨認基座與參道，分清現存部分和已消失的建築。",
+    "localLens": "把工廠看成曾有人生活的場所，想想產業記憶除了產品還包含什麼。",
+    "visitorLens": "用遺構的位置閱讀空間，留意林地裡仍在延續的生命。",
+    "respect": "依現場開放及修復動線行走，不攀登基座、不捕捉或驚擾動物。",
+    "sourceIds": [
+      "culture-sankandian"
+    ],
+    "attractionId": "yongkang-sankandian",
+    "quiz": {
+      "question": "三崁店神社木造部分消失後，還能觀察什麼？",
+      "options": [
+        "完整木造殿堂",
+        "基座與參道等遺構",
+        "正在生產的製糖流水線"
+      ],
+      "correctIndex": 1,
+      "explanation": "故事列出的現存線索是基座與參道，不能把已消失的木構視為仍然存在。"
+    }
+  },
+  {
+    "id": "culture-baoan",
+    "name": "保安車站",
+    "districtId": "rende",
+    "themeId": "water-industry",
+    "kind": "地方記憶",
+    "hook": "祝福車票之外，木造車站也記得糖廠與通學的人。",
+    "story": "保安車站原稱車路墘車站，後來為配合車路墘糖廠運輸而遷到現址。木造站房與今日旅客動線並存，使它同時是歷史建築景觀與日常交通空間。「永保安康」車票讓站名廣為人知，但車站的故事也包括產業運輸、居民出門和學生通學。看屋架與候車空間時，不妨想一想，保存老車站如何兼顧持續使用的需要。",
+    "lookFor": "在開放候車區觀察木構與屋頂，並留意旅客進出動線。",
+    "localLens": "記錄自己或家人的搭車路線，將個人通勤接回地方運輸史。",
+    "visitorLens": "拍站名之前先讓旅客通行，再從糖廠運輸理解車站位置。",
+    "respect": "月臺進出依鐵路規定；不跨越軌道，不為取景阻擋通勤旅客。",
+    "sourceIds": [
+      "culture-baoan"
+    ],
+    "attractionId": "rende-baoan-station",
+    "quiz": {
+      "question": "保安車站遷到現址的重要原因是？",
+      "options": [
+        "配合糖廠運輸",
+        "改建為海港碼頭",
+        "設置高山纜車"
+      ],
+      "correctIndex": 0,
+      "explanation": "車站原稱車路墘車站，位置調整與車路墘糖廠運輸需求有關。"
+    }
+  },
+  {
+    "id": "culture-guiren-art",
+    "name": "歸仁美學館",
+    "districtId": "guiren",
+    "themeId": "learning-streets",
+    "kind": "文化場域",
+    "hook": "原本辦公與維持治安的地方，現在讓人看展、讀書。",
+    "story": "歸仁圓環旁的歸仁美學館，日治時期是歸仁莊役場，後來由警察分局使用，遷出後再經空間活化。今天的展覽、圖書與課程，和保留下來的拘留室形成不同年代的對照。這棟建築的轉變，不只是外觀變漂亮，而是公共空間從行政、警政用途走向文化學習。辨認保留的痕跡，能理解再利用為何也要交代原來的歷史。",
+    "lookFor": "對照舊用途介紹和今日展覽動線，觀察哪些空間被保留。",
+    "localLens": "想想家鄉常用的公有建築，退休之後還能如何服務居民。",
+    "visitorLens": "把拘留室放回警政使用的脈絡，不只當作拍照布景。",
+    "respect": "課程進行時勿打擾，展品與保留空間依館方標示使用。",
+    "sourceIds": [
+      "culture-guiren-art"
+    ],
+    "attractionId": "guiren-living-art-center",
+    "quiz": {
+      "question": "歸仁美學館曾有哪些公務用途？",
+      "options": [
+        "鹽工宿舍與鹽倉",
+        "港口海關與燈塔",
+        "莊役場與警察分局"
+      ],
+      "correctIndex": 2,
+      "explanation": "館舍先後承接地方行政與警政用途，後來才轉為文化學習空間。"
+    }
+  },
+  {
+    "id": "culture-liu-chi-hsiang",
+    "name": "劉啟祥美術紀念館",
+    "districtId": "liuying",
+    "themeId": "learning-streets",
+    "kind": "文化場域",
+    "hook": "從一位柳營畫家的老家，看藝術如何走向遠方再被記住。",
+    "story": "出生於柳營的劉啟祥，曾到日本與法國學習繪畫，是臺灣早期留學畫家之一。他的故居長期閒置損壞後，經家屬、土地持有人與政府協調修復，成為美術紀念館。看畫家經歷時，也可以看保存工作如何完成：一棟老屋要重新向公眾敞開，除了修繕材料，還需要不同人的同意與合作。藝術史於是和地方共同記憶相遇。",
+    "lookFor": "從作品介紹選一段學習經歷，再對照故居的修復說明。",
+    "localLens": "找找家鄉人物的故事如何被保存，思考誰參與了這份工作。",
+    "visitorLens": "不只記住洋樓外觀，也讀畫家如何往返不同地方與創作經驗。",
+    "respect": "依展覽規範拍攝，不碰作品與老屋構件；各空間用途看現場標示。",
+    "sourceIds": [
+      "culture-liu-chi-hsiang"
+    ],
+    "attractionId": "liuying-liu-chi-hsiang",
+    "quiz": {
+      "question": "劉啟祥曾到哪兩個國家學習繪畫？",
+      "options": [
+        "冰島與芬蘭",
+        "日本與法國",
+        "巴西與秘魯"
+      ],
+      "correctIndex": 1,
+      "explanation": "故事介紹他的留日、留法經歷，也說明故居修復需要多方合作。"
+    }
+  },
+  {
+    "id": "culture-tsung-yeh",
+    "name": "總爺藝文中心",
+    "districtId": "madou",
+    "themeId": "rural-crafts",
+    "kind": "文化場域",
+    "hook": "糖廠停止製糖後，居民把共同記憶留下來。",
+    "story": "總爺藝文中心前身是明治製糖的工廠與本社。糖廠關閉、廠房面臨拆除時，地方文史工作者與居民提出保留訴求，使紅樓辦公室、宿舍、餐廳等空間得以保存再用。今日園區以工藝、展覽與藝術交流為主要方向。散步時若把辦公、居住和飲食空間分開看，便會發現糖廠原本是一套工作與生活相連的地方。",
+    "lookFor": "依園區解說辨認紅樓、宿舍與餐廳各自原來的用途。",
+    "localLens": "想想哪些共同生活記憶值得留下，以及保存需要誰一起參與。",
+    "visitorLens": "選一種工藝深入看，再回頭觀察展館原本服務哪些工作者。",
+    "respect": "老樹、建物與展示品依保護規範觀賞；工作坊及展期另查館方公告。",
+    "sourceIds": [
+      "culture-tsung-yeh"
+    ],
+    "attractionId": "madou-tsung-yeh",
+    "quiz": {
+      "question": "總爺部分建築得以保留，與哪一項行動有關？",
+      "options": [
+        "地方居民與文史工作者提出保存訴求",
+        "將所有舊建築移到海上",
+        "停止所有文化使用"
+      ],
+      "correctIndex": 0,
+      "explanation": "關廠與拆除之際，地方的保存訴求促成後續修復與再利用。"
+    }
+  },
+  {
+    "id": "culture-longhu",
+    "name": "赤山龍湖巖",
+    "districtId": "liujia",
+    "themeId": "faith-festivals",
+    "kind": "生活文化",
+    "hook": "看起來像木頭的構造，也可能藏著新材料的手藝。",
+    "story": "六甲赤山龍湖巖的現有建築經過改建，並非整座都可視為早期原貌。寺內可從門神姿態、觀音石雕與磨石子書法讀到不同技藝，也能看見鋼筋水泥模仿木構、剪黏結合西式山牆的做法。材料改變，匠師仍透過造型與手工延續表達。這裡適合練習分辨建築年代和信仰歷史，兩者相關，卻不一定同樣古老。",
+    "lookFor": "選一處仿木構與一處石雕，比較材料、線條和表面質感。",
+    "localLens": "從家中常見的磨石子出發，找出寺廟如何把生活材料做成文字與圖像。",
+    "visitorLens": "少追問「有多老」，多觀察不同年代工藝如何一起存在。",
+    "respect": "保持寺院安靜，不觸摸雕刻或干擾禮佛；攝影依現場規範。",
+    "sourceIds": [
+      "culture-longhu"
+    ],
+    "attractionId": "liujia-chishan-longhu",
+    "quiz": {
+      "question": "赤山龍湖巖有哪些材料與形式交會的例子？",
+      "options": [
+        "全館都由冰塊雕成",
+        "只保留未加工岩洞",
+        "水泥仿木構與剪黏結合西式山牆"
+      ],
+      "correctIndex": 2,
+      "explanation": "故事以這些做法說明材料變化與手工技藝可以同時存在。"
+    }
+  },
+  {
+    "id": "culture-shanhua-market",
+    "name": "善化牛墟",
+    "districtId": "shanhua",
+    "themeId": "rural-crafts",
+    "kind": "生活文化",
+    "hook": "名字還叫牛墟，交易的東西卻跟著農村生活改變。",
+    "story": "牛墟原是農業社會交易耕牛的市場。善化牛墟的牛隻買賣已成歷史，現在延續為定期農民市集，可見種苗、農具、竹編籃具與生活用品等不同攤位。從耕牛轉向多樣商品，反映農村生產與採買需求的改變。來這裡不只找稀奇物件，也可以觀察哪些工具仍被需要，讓市場成為理解勞動、修補與日常消費的地方。",
+    "lookFor": "比較農用工具與生活用品，想想每件物品解決什麼工作。",
+    "localLens": "向熟悉的長輩請教一件舊工具，再和攤商或解說核對用途。",
+    "visitorLens": "先看交易與使用情境，別把還在營業的市集當成展示櫥窗。",
+    "respect": "開市與休市另查當期公告；拍攝攤商先詢問，不擋住交易或裝卸。",
+    "sourceIds": [
+      "culture-shanhua-market"
+    ],
+    "quiz": {
+      "question": "今日善化牛墟主要延續為什麼樣的場所？",
+      "options": [
+        "仍只交易耕牛的市場",
+        "農具與生活用品等定期市集",
+        "船舶修理工場"
+      ],
+      "correctIndex": 1,
+      "explanation": "牛隻交易已成歷史，市集以多樣農用與日常商品繼續服務地方生活。"
+    }
+  },
+  {
+    "id": "culture-zhenhu",
+    "name": "蘇厝第一代天府真護宮",
+    "districtId": "anding",
+    "themeId": "faith-festivals",
+    "kind": "生活文化",
+    "hook": "不用等祭典，也能從一艘王船看見工藝與地方心意。",
+    "story": "曾文溪旁的真護宮主祀五府千歲，建廟敘事與漂流王船相連，這屬地方信仰記憶。廟方保存的永祀王船，讓平日也有理解王船文化的入口；船上縮小的廟宇形船艙、旗幟與彩繪，各有儀式意義。閱讀時先區分傳說、實物和當年度祭儀安排，再看裝飾如何把信眾的願望放進一艘船，而不把它當作日常交通工具。",
+    "lookFor": "依開放指引觀察船艙造型、旗幟與彩繪的不同位置。",
+    "localLens": "從熟悉的王船祭經驗延伸，了解平日保存與維護也需要人力。",
+    "visitorLens": "請解說協助辨認裝飾寓意，避免只憑外形推測祭儀用途。",
+    "respect": "不登船、不觸碰祭器；祭典日期及參觀安排依廟方最新公告。",
+    "sourceIds": [
+      "culture-zhenhu"
+    ],
+    "attractionId": "anding-zhenhu-temple",
+    "quiz": {
+      "question": "永祀王船最適合放在哪一種脈絡中理解？",
+      "options": [
+        "地方信仰、儀式與工藝",
+        "一般渡輪時刻表",
+        "糖廠運料車隊"
+      ],
+      "correctIndex": 0,
+      "explanation": "王船的船艙、旗幟與彩繪承載祭儀意義，並不是日常渡輪。"
+    }
+  },
+  {
+    "id": "culture-guanziling",
+    "name": "關子嶺溫泉公園與寶泉露頭",
+    "districtId": "baihe",
+    "themeId": "water-industry",
+    "kind": "地方記憶",
+    "hook": "一處冒出的泉水，如何讓山城長出旅宿與街道？",
+    "story": "關子嶺以泥漿溫泉聞名，日治時期的開發使泉水與山城的遊憩生活逐漸連結。從溫泉公園的寶泉橋，可在規定範圍內認識溫泉源頭之一的寶泉露頭。把老街和露頭放在一起看，能理解自然資源如何帶動住宿、交通與地方服務。這張卡閱讀的是地方發展與用水文化，不把歷史上的溫泉美稱當成現代療效保證。",
+    "lookFor": "先讀寶泉露頭的解說，再觀察公園與街道如何接近泉源。",
+    "localLens": "比較自己記得的山城樣貌，哪些設施因溫泉而逐漸形成。",
+    "visitorLens": "除了選擇泡湯，也走一段公共空間，閱讀水源與聚落的關係。",
+    "respect": "不跨越泉源防護柵欄、不直接碰觸湧泉；各設施使用依管理者規範。",
+    "sourceIds": [
+      "culture-guanziling"
+    ],
+    "attractionId": "baihe-guanziling-spring",
+    "quiz": {
+      "question": "寶泉露頭提供哪一種地方文化線索？",
+      "options": [
+        "遠洋貨輪裝卸",
+        "高山採礦軌道",
+        "溫泉水源與山城發展"
+      ],
+      "correctIndex": 2,
+      "explanation": "露頭是溫泉源頭之一，可把泉水與關子嶺的旅宿、街道及服務發展連起來。"
+    }
+  },
+  {
+    "id": "culture-toushe",
+    "name": "頭社公廨（太上龍頭忠義廟）",
+    "districtId": "danei",
+    "themeId": "people-land",
+    "kind": "生活文化",
+    "hook": "名稱裡雖有「廟」，認識它仍要從頭社的文化脈絡開始。",
+    "story": "大內頭社的太上龍頭忠義廟，是西拉雅族人祭祀太祖的公廨。建築保留三面有牆、沒有廟門的形式，內部東、中、西三室與不同部落相連；祀壺也是認識祭祀空間的重要物件。這些安排不能只套用一般漢人廟宇的解讀方式。從地方說明出發，辨認名稱、空間與社群關係，才能看見頭社本身的文化，而非把各部落混為一談。",
+    "lookFor": "在同意的參觀範圍觀察三面牆與分室配置，閱讀各室介紹。",
+    "localLens": "比較頭社與其他社群的自我介紹，留意相似之中仍有不同。",
+    "visitorLens": "先聽在地解說再理解祭器，讓社群的稱呼與經驗居於中心。",
+    "respect": "祭儀不是隨到隨看的表演；進入、拍照及活動參與先詢問，不碰祀壺。",
+    "sourceIds": [
+      "culture-toushe"
+    ],
+    "attractionId": "danei-toushe-shrine",
+    "quiz": {
+      "question": "頭社公廨內東、中、西三室的安排與什麼相連？",
+      "options": [
+        "三種製糖程序",
+        "不同部落的祭祀空間",
+        "三條國際航線"
+      ],
+      "correctIndex": 1,
+      "explanation": "東、中、西三室與不同部落的祭祀空間相連，需從地方社群理解。"
+    }
+  },
+  {
+    "id": "culture-jiang-settlement",
+    "name": "鹿陶洋江家古厝",
+    "districtId": "nanxi",
+    "themeId": "rural-crafts",
+    "kind": "地方記憶",
+    "hook": "一排排護龍，記錄一家族如何把住居向兩側展開。",
+    "story": "鹿陶洋江家古厝是大型單姓傳統聚落，四進三院的主軸外，兩側還伸出多排護龍。拜亭、公廳、神明廳與祖祀堂等空間，把家族共同使用和各房居住的需求放在同一組建築裡。閱讀古厝不只看屋齡，也看房舍如何相互連接。這裡仍有住居與家族使用的性質，老屋保存要同時顧到生活、維護與參訪，不能把整個聚落當成無人的展館。",
+    "lookFor": "依公開動線看主軸與兩側房舍的排列，分清共用和居住空間。",
+    "localLens": "從家族聚會的經驗想想，共用空間如何協調不同成員的生活。",
+    "visitorLens": "先了解開放範圍，再以建築配置認識聚落，避免自行探入房舍。",
+    "respect": "住家、祭祀及修復區不擅入；參訪安排先向管理單位確認。",
+    "sourceIds": [
+      "culture-jiang-settlement"
+    ],
+    "quiz": {
+      "question": "江家古厝兩側多排房舍，常用哪個名稱來描述？",
+      "options": [
+        "護龍",
+        "砲墩",
+        "蚵棚"
+      ],
+      "correctIndex": 0,
+      "explanation": "主軸之外的護龍向兩側展開，形成大型家族住居聚落的配置。"
+    }
+  },
+  {
+    "id": "culture-nanhua-reservoir",
+    "name": "南化水庫",
+    "districtId": "nanhua",
+    "themeId": "water-industry",
+    "kind": "地方記憶",
+    "hook": "眼前是湖景，背後也是城市每天需要的供水工作。",
+    "story": "南化水庫是臺南重要的供水水庫，從台20線一帶可讀到水域與山地聚落的關係。壩下周邊也承載噍吧哖事件相關的歷史記憶，水利設施與地方故事在同一片地景交會。看水庫時，可以先問它服務哪些生活需求，再分開閱讀工程與歷史解說。漂亮湖面並不表示整個水域都是遊憩空間，持續供水與設施維護仍是重要用途。",
+    "lookFor": "在合法觀景點對照水庫用途介紹，留意供水設施與遊憩區的界線。",
+    "localLens": "把日常節水或停水經驗接回水源，思考城市與上游的關係。",
+    "visitorLens": "用兩條線閱讀：一條是公共供水，一條是地方歷史，避免混成同一故事。",
+    "respect": "不進入庫區水域或管制設施；道路與觀景點是否開放另查公告。",
+    "sourceIds": [
+      "culture-nanhua-reservoir"
+    ],
+    "attractionId": "nanhua-reservoir",
+    "quiz": {
+      "question": "南化水庫在今日城市生活中的重要角色是？",
+      "options": [
+        "替遠洋商船補給",
+        "公共供水",
+        "製作陶土窯燒"
+      ],
+      "correctIndex": 1,
+      "explanation": "故事指出水庫是臺南的重要供水設施，湖景之外仍有公共用水功能。"
+    }
+  },
+  {
+    "id": "culture-zuozhen-fossil",
+    "name": "臺南左鎮化石園區",
+    "districtId": "zuozhen",
+    "themeId": "people-land",
+    "kind": "文化場域",
+    "hook": "一間學校的收藏，如何走到今天的五座展館？",
+    "story": "左鎮化石園區的歷史，不只是一批化石被放進櫥窗。菜寮溪的發現吸引研究者，也有地方採集者與光榮國小師生長年整理、保存；校內鄉土文物室逐步促成化石館，後來再整合成園區。今日展示把自然史、西拉雅文物和研究工作放在不同脈絡中。看展時留意出土、分類與解說的過程，就能理解地方好奇心如何累積成公共知識。",
+    "lookFor": "選一件化石追讀發現與研究說明，再看館史中的地方參與。",
+    "localLens": "想想學校或社區保留的物件，如何整理後成為大家能讀懂的資料。",
+    "visitorLens": "區分化石、考古文物與研究推論，不把不同年代的事物混為同時。",
+    "respect": "只使用館方開放的互動設施；不自行到溪床採集或移動疑似化石。",
+    "sourceIds": [
+      "culture-zuozhen-history",
+      "culture-zuozhen-intro"
+    ],
+    "attractionId": "zuozhen-fossil-park",
+    "quiz": {
+      "question": "化石館發展過程中，哪一項地方參與很重要？",
+      "options": [
+        "港口船員報關",
+        "糖廠工人調度列車",
+        "地方採集者與國小師生整理收藏"
+      ],
+      "correctIndex": 2,
+      "explanation": "故事介紹地方採集者及光榮國小師生的保存工作，收藏逐步走向公共展館。"
+    }
+  },
+  {
+    "id": "culture-shanxi",
+    "name": "關廟山西宮",
+    "districtId": "guanmiao",
+    "themeId": "faith-festivals",
+    "kind": "生活文化",
+    "hook": "拜拜、買菜與看彩繪，可以在同一段廟口路上發生。",
+    "story": "山西宮主祀關聖帝君，關廟地名也與這座廟的信仰相連。廟埕緊接市場，祭拜與採買交織成地方日常；現有建築歷經修建，門神、壁畫與樑枋畫則可讀到潘麗水、潘岳雄等彩繪藝師的工作。看一幅人物畫，再回頭觀察廟口的人流，便能理解廟宇如何同時承接信仰、技藝與生活，而不是只在大型祭典時才有故事。",
+    "lookFor": "選一幅門神或壁畫讀題材，再比較畫中人物姿勢與配色。",
+    "localLens": "逛市場時多留幾分鐘看彩繪，替平常採買路線加上一段工藝觀察。",
+    "visitorLens": "把廟埕與市場一起看，理解地方文化如何在每天的往來中延續。",
+    "respect": "不干擾祭拜與市場交易；拍攝人物先詢問，祭典路線依當年公告。",
+    "sourceIds": [
+      "culture-shanxi"
+    ],
+    "attractionId": "guanmiao-shanxi-temple",
+    "quiz": {
+      "question": "山西宮廟埕與市場相接，最能呈現什麼？",
+      "options": [
+        "信仰與日常採買交織",
+        "只有祭典日才有人使用",
+        "港口與海關共用碼頭"
+      ],
+      "correctIndex": 0,
+      "explanation": "廟宇與市場相鄰，祭拜、採買與工藝欣賞都能進入平日生活。"
+    }
   },
 ];
