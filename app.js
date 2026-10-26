@@ -1,13 +1,34 @@
-import { createExperienceUI } from './experience-ui.js?v=11.0.0';
-import {createServiceHub} from './service-hub.js?v=11.0.0';
-import { createCity } from './city.js?v=11.0.0';
-import { createEnhancements } from './enhancements.js?v=12.0.0';
-import { createTainanExplorer } from './tainan-ui.js?v=12.0.0';
-import { createResidentChat } from './resident-ui.js?v=10.0.0';
-import { createCultureWalk } from './culture-ui.js?v=12.0.0';
-import { tainanAtlas } from './tainan-atlas.js?v=8.0.0';
-import { tainanSeasons } from './tainan-data.js?v=12.0.0';
-let enhancements,tainanExplorer,residentChat,cultureWalk;
+import { createExperienceUI } from './experience-ui.js?v=13.0.0';
+import { createServiceHub } from './service-hub.js?v=11.0.0';
+import { createEnhancements } from './enhancements.js?v=13.0.0';
+import { lazyFeature } from './lazy-feature.js?v=13.0.0';
+import { createCityGuide } from './city-guide.js?v=13.0.0';
+let enhancements, experienceUI, cityGuide;
+let quality='auto', exploreMode='homes';
+try { const saved=localStorage.getItem('anxin-city-quality-v13');if(['auto','high','standard','economy'].includes(saved))quality=saved; } catch {}
+function featureProxy(label,load,create,methods){
+ const get=lazyFeature(load,create);
+ return Object.fromEntries(methods.map(method=>[method,(...args)=>{toast('正在準備'+label+'…');return get().then(feature=>{clearTimeout(toastTimer);$('#toast').classList.remove('show');return feature[method](...args);}).catch(error=>{console.error(label+'載入失敗',error);toast(label+'暫時載入不完整，請再點一次重試；其他功能仍可使用。');});}]));
+}
+async function exploreAction(action){
+ if(action.kind==='culture')return cultureWalk.open({placeId:action.id});
+ if(action.kind==='district'||action.kind==='future')return tainanExplorer.openTarget({districtId:action.id,phase:action.kind==='future'?'future':'past'});
+ try {
+  if(action.kind==='attraction'){
+   const {tainanAtlas}=await import('./tainan-atlas.js?v=8.0.0');
+   const place=Object.values(tainanAtlas).flatMap(d=>d.attractions).find(a=>a.id===action.id);
+   if(place)return tainanExplorer.openTarget({tab:'attractions',attractionQuery:place.name});
+  }else if(action.kind==='season'){
+   const {tainanSeasons}=await import('./tainan-data.js?v=12.0.0');
+   const season=tainanSeasons.find(item=>item.id===action.id);
+   if(season)return tainanExplorer.openTarget({tab:'seasons',month:season.months[0],seasonId:season.id});
+  }
+ }catch(error){console.error(error);toast('這段散步資料暫時無法載入，請稍後再試。');}
+}
+const tainanExplorer=featureProxy('台南散步',()=>import('./tainan-ui.js?v=13.0.0'),m=>m.createTainanExplorer({onStartMission:id=>enhancements.showPersona(id),onFeedback:context=>enhancements.openFeedback(context),onExploreCulture:target=>cultureWalk.open(target),toast}),['open','openTarget']);
+let cultureInstance;
+const cultureWalk=featureProxy('文化走讀',()=>import('./culture-ui.js?v=13.0.0'),m=>cultureInstance=m.createCultureWalk({onExplore:action=>{cultureInstance.close();exploreAction(action);},onFeedback:context=>{cultureInstance.close();enhancements.openFeedback(context);},onResidents:()=>{cultureInstance.close();residentChat.open();},toast}),['open']);
+const residentChat=featureProxy('街坊聊聊',()=>import('./resident-ui.js?v=13.0.0'),m=>m.createResidentChat({onExplore:exploreAction,onMission:()=>enhancements.openPeople(),onFeedback:context=>enhancements.openFeedback({scene:'general',persona:'none',contextLabel:'街坊聊聊｜'+(context.residentName||'日常對話')}),toast}),['open']);
 
 const journeys = {
   buy: { no:'01', english:'A HOME TO BEGIN', name:'買房過戶', title:'買房前，先看懂權利與責任。', subtitle:'從產權、契約到付款與登記，陪您把重要的交易步驟想清楚。', steps:[['先整理購屋條件','釐清購屋目的、自備款與每月可負擔金額，留下生活預備金。'],['看懂物件與交易條件','確認土地、建物及使用現況，整理契約、付款與點交的待確認事項。'],['安排貸款與簽約','向銀行確認鑑價、申貸條件與時程，再協調付款與交屋安排。'],['完成過戶與交屋','依個案辦理稅費、登記、撥款與點交，逐項確認交付內容。']],checks:[['購屋預算與自備款範圍','先列出可運用資金與希望保留的預備金。'],['物件基本資料','整理地址、坪數、用途及手邊的物件資料。'],['貸款需求與財力資料','先盤點收入及既有負債；實際申貸文件依銀行要求。'],['預計簽約與交屋時間','列出希望完成時間及需要配合的安排。']],question:'除了房價，我還需要準備哪些支出？如果銀行鑑價與預期不同，付款安排要怎麼調整？'},
@@ -27,8 +48,8 @@ function updateCount(){const count=Object.keys(journeys).reduce((sum,id)=>sum+jo
 function checklistHtml(id){return `<div class="checklist-items">${journeys[id].checks.map(([title,desc],i)=>`<label class="check-item"><input type="checkbox" data-check="${id}-${i}" ${saved[`${id}-${i}`]===true?'checked':''}><span>${title}<small>${desc}</small></span></label>`).join('')}</div>`;}
 function attachChecks(root){root.querySelectorAll('[data-check]').forEach(input=>input.addEventListener('change',()=>{saved[input.dataset.check]=input.checked;save();document.querySelectorAll(`[data-check="${input.dataset.check}"]`).forEach(other=>{other.checked=input.checked;});}));}
 function renderPanel(){const data=journeys[currentId];const panel=$('#detail-panel');panel.innerHTML=`<div class="panel-top"><span class="eyebrow">JOURNEY ${data.no} · ${data.english}</span><button class="icon-button panel-close" aria-label="關閉場景導覽">${iconClose}</button></div><h2>${data.title}</h2><p class="panel-subtitle">${data.subtitle}</p><div class="panel-tabs" role="tablist" aria-label="${data.name}導覽"><button id="tab-flow" class="panel-tab" role="tab" aria-controls="scene-tab-content" aria-selected="${currentTab==='flow'}" data-tab="flow">服務旅程</button><button id="tab-ready" class="panel-tab" role="tab" aria-controls="scene-tab-content" aria-selected="${currentTab==='ready'}" data-tab="ready">準備清單</button></div><div id="scene-tab-content" role="tabpanel" aria-labelledby="tab-${currentTab}">${currentTab==='flow'?`<ol class="flow-list">${data.steps.map(([title,description],i)=>`<li class="flow-step"><span class="flow-number">${i+1}</span><h3>${title}</h3><p>${description}</p></li>`).join('')}</ol>`:checklistHtml(currentId)+`<div class="question-block"><h3>帶著這個問題，開始討論</h3><p>${data.question}</p></div>`}</div><p class="panel-note">一般服務流程示意；實際文件、順序與辦理條件依個案確認。</p><button class="panel-action">${currentTab==='flow'?'看看我可以先準備什麼':'查看我的完整準備清單'}<span>↗</span></button>`;panel.querySelector('.panel-close').onclick=resetView;panel.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{currentTab=b.dataset.tab;renderPanel();panel.querySelector(`[data-tab="${currentTab}"]`).focus({preventScroll:true});});panel.querySelector('.panel-action').onclick=()=>{if(currentTab==='flow'){currentTab='ready';renderPanel();panel.scrollTop=0;}else openChecklist();};attachChecks(panel);panel.scrollTop=0;enhancements?.decorateJourney(currentId);}
-function selectScene(id){if(!journeys[id])return;enhancements?.clearPersonaState();currentId=id;currentTab='flow';document.body.classList.add('scene-selected');document.getElementById("intro").inert=true;document.getElementById("intro").setAttribute('aria-hidden','true');$('#detail-panel').hidden=false;$$('[data-scene]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.scene===id)));renderPanel();scene?.select(id);}
-function resetView(){enhancements?.clearPersonaState();currentId=null;$('#detail-panel').hidden=true;document.body.classList.remove('scene-selected');document.getElementById("intro").inert=false;document.getElementById("intro").removeAttribute('aria-hidden');$$('[data-scene]').forEach(button=>button.setAttribute('aria-pressed','false'));scene?.reset();}
+function selectScene(id){if(!journeys[id])return;cityGuide?.close();experienceUI?.setRegionFocus(null);scene?.setExploreMode('homes');experienceUI?.setExploreMode('homes');exploreMode='homes';enhancements?.clearPersonaState();currentId=id;currentTab='flow';document.body.classList.add('scene-selected');document.getElementById("intro").inert=true;document.getElementById("intro").setAttribute('aria-hidden','true');$('#detail-panel').hidden=false;$$('[data-scene]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.scene===id)));renderPanel();scene?.select(id);}
+function resetView(){cityGuide?.close();experienceUI?.setRegionFocus(null);enhancements?.clearPersonaState();currentId=null;$('#detail-panel').hidden=true;document.body.classList.remove('scene-selected');document.getElementById("intro").inert=false;document.getElementById("intro").removeAttribute('aria-hidden');$$('[data-scene]').forEach(button=>button.setAttribute('aria-pressed','false'));scene?.reset();}
 function openChecklist(){const container=$('#all-checklists');container.innerHTML=Object.entries(journeys).map(([id,data])=>`<section class="checklist-group"><h3>${data.no} · ${data.name}</h3>${checklistHtml(id)}</section>`).join('');attachChecks(container);$('#checklist-dialog').showModal();}
 $$('[data-scene]').forEach(button=>button.onclick=()=>selectScene(button.dataset.scene));
 $('#start-explore').onclick=()=>residentChat?.open();$('#brand-home').onclick=resetView;$('#reset-view').onclick=resetView;$('#zoom-in').onclick=()=>scene?.zoom(0.2);$('#zoom-out').onclick=()=>scene?.zoom(-0.2);
@@ -37,37 +58,41 @@ function updatePaused(){const button=$('#pause-toggle');button.setAttribute('ari
 $('#pause-toggle').onclick=()=>{paused=!paused;updatePaused();};$('#open-checklist').onclick=openChecklist;$('#help-button').onclick=()=>$('#help-dialog').showModal();$$('[data-close-dialog]').forEach(button=>button.onclick=()=>button.closest('dialog').close());$$('dialog').forEach(dialog=>dialog.addEventListener('click',event=>{if(event.target===dialog){const r=dialog.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)dialog.close();}}));
 $('#download-summary').onclick=()=>{const lines=['宏國・易丞｜不動產安心城','我的諮詢準備摘要','',`整理日期：${new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}`,''];Object.entries(journeys).forEach(([id,data])=>{lines.push(`${data.no} ${data.name}`,...data.checks.map(([title],i)=>`${saved[`${id}-${i}`]===true?'[已準備]':'[待整理]'} ${title}`),`可討論的問題：${data.question}`,'');});lines.push('本摘要由您在體驗版的勾選產生，僅供諮詢準備。','未提交預約或傳送任何案件資料。實際文件與辦理方式依個案確認。');const blob=new Blob(['\uFEFF'+lines.join('\r\n')],{type:'text/plain;charset=utf-8'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='宏國易丞_諮詢準備摘要.txt';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);toast('已開始下載您的諮詢準備摘要');};
 document.addEventListener('keydown',event=>{if(document.querySelector('dialog[open]'))return;if(['INPUT','TEXTAREA','SELECT'].includes(event.target.tagName))return;const id={'1':'buy','2':'sell','3':'legacy'}[event.key];if(id)selectScene(id);if(event.key==='Escape')resetView();});
-function failCity(){const load=$('#loading');load.hidden=false;load.classList.remove('loaded');load.innerHTML='<strong>這個瀏覽器暫時無法開啟立體城市</strong><small>您仍可使用街坊聊聊、台南散步與人生任務。</small><button class="primary-button" id="continue-text" style="margin-top:24px">繼續服務導覽 ↗</button>';$('#continue-text').onclick=()=>{load.classList.add('loaded');setTimeout(()=>load.hidden=true,650);};}
-enhancements=createEnhancements({onExploreTainan:()=>tainanExplorer?.open(),getScene:()=>scene,selectScene,getCurrentScene:()=>currentId,openJourneyChecklist:(id)=>{selectScene(id);currentTab='ready';renderPanel();},toast});
-tainanExplorer=createTainanExplorer({onStartMission:(id)=>enhancements.showPersona(id),onFeedback:context=>enhancements.openFeedback(context),onExploreCulture:target=>cultureWalk.open(target),toast});
-cultureWalk=createCultureWalk({
- onExplore:action=>{
-  cultureWalk.close();
-  if(action.kind==='district')tainanExplorer.openTarget({districtId:action.id});
-  else if(action.kind==='attraction'){const place=Object.values(tainanAtlas).flatMap(d=>d.attractions).find(a=>a.id===action.id);if(place)tainanExplorer.openTarget({tab:'attractions',attractionQuery:place.name});}
- },
- onFeedback:context=>{cultureWalk.close();enhancements.openFeedback(context);},
- onResidents:()=>{cultureWalk.close();residentChat.open();},toast
-});
-residentChat=createResidentChat({
- onExplore:action=>{
-  if(action.kind==='culture')cultureWalk.open({placeId:action.id});
-  else if(action.kind==='district'||action.kind==='future')tainanExplorer.openTarget({districtId:action.id,phase:action.kind==='future'?'future':'past'});
-  else if(action.kind==='attraction'){
-   const attraction=Object.values(tainanAtlas).flatMap(d=>d.attractions).find(a=>a.id===action.id);
-   if(attraction)tainanExplorer.openTarget({tab:'attractions',attractionQuery:attraction.name});
-  }else if(action.kind==='season'){
-   const season=tainanSeasons.find(s=>s.id===action.id);
-   if(season)tainanExplorer.openTarget({tab:'seasons',month:season.months[0],seasonId:season.id});
-  }
- },
- onMission:()=>enhancements.openPeople(),
- onFeedback:context=>enhancements.openFeedback({scene:'general',persona:'none',contextLabel:`街坊聊聊｜${context.residentName||'日常對話'}`}),toast
-});
-$('#start-tainan').onclick=()=>tainanExplorer.open();
+
+const cityStatus=document.createElement('div');cityStatus.className='city-runtime-status';cityStatus.hidden=true;cityStatus.setAttribute('role','status');
+cityStatus.innerHTML='<span>立體城市暫時無法顯示，人生任務、散步與回饋仍可使用。</span><button type="button">重試</button>';
+$('#experience').append(cityStatus);
+function releaseLoading(){const load=$('#loading');load.classList.add('loaded');setTimeout(()=>load.hidden=true,650);}
+function failCity(){releaseLoading();cityStatus.hidden=false;document.body.classList.add('city-text-mode');experienceUI?.setCityAvailable(false);}
+function cityReady(){releaseLoading();cityStatus.hidden=true;document.body.classList.remove('city-text-mode');experienceUI?.setCityAvailable(true);}
+function setMode(mode){exploreMode=mode==='tainan'?'tainan':'homes';scene?.setExploreMode(exploreMode);experienceUI?.setExploreMode(exploreMode);if(exploreMode==='homes'){cityGuide?.close();experienceUI?.setRegionFocus(null);scene?.restoreView();}}
+function focusRegion(region){if(currentId)resetView();else cityGuide?.close();setMode('tainan');const key=region==='plain'?'plains':region;scene?.focusRegion(key);experienceUI?.setRegionFocus(key);cityGuide.open(key);}
+function returnOverview(){cityGuide?.close();experienceUI?.setRegionFocus(null);scene?.restoreView();}
+enhancements=createEnhancements({onExploreTainan:()=>tainanExplorer.open(),getScene:()=>scene,selectScene,getCurrentScene:()=>currentId,openJourneyChecklist:id=>{selectScene(id);currentTab='ready';renderPanel();},toast});
+for(const [id,label,open] of [['resident-button','街坊聊聊',()=>residentChat.open()],['tainan-button','台南散步',()=>tainanExplorer.open()]]){
+ const button=document.createElement('button');button.id=id;button.type='button';button.textContent=label;button.setAttribute('aria-haspopup','dialog');button.onclick=open;$('.header-nav').insertBefore(button,$('#open-checklist'));
+}
 const serviceHub=createServiceHub({toast,onMission:id=>enhancements.showPersona(id),onTainan:()=>tainanExplorer.open(),onGuide:id=>enhancements.openGuide(id)});
-createExperienceUI({enhancements,tainanExplorer,residentChat,cultureWalk,serviceHub});
-try{scene=createCity({onResident:id=>residentChat.open(id),onDistrict:region=>tainanExplorer.open(region),onPersona:(id)=>enhancements.showPersona(id),canvas:$('#city'),onSelect:selectScene,onReady:()=>{const load=$('#loading');load.classList.add('loaded');setTimeout(()=>load.hidden=true,650);},onError:failCity});updatePaused();}catch(error){console.error('City initialization failed',error);failCity();}
+cityGuide=createCityGuide({onExplore:region=>tainanExplorer.open(region),onResidents:()=>residentChat.open(),onOverview:returnOverview});
+experienceUI=createExperienceUI({enhancements,tainanExplorer,residentChat,cultureWalk,serviceHub,quality,exploreMode,
+ onQualityChange:mode=>{quality=mode;try{localStorage.setItem('anxin-city-quality-v13',quality);}catch{}scene?.setQuality(quality);},
+ onExploreMode:setMode,onRegionFocus:focusRegion,onReturnOverview:returnOverview});
+experienceUI.setCityAvailable(false);
+$('#reset-view').onclick=()=>{resetView();returnOverview();};
+let cityStarting=false;
+async function startCity(){
+ if(cityStarting)return;cityStarting=true;cityStatus.querySelector('button').disabled=true;
+ try {
+  const {createCity}=await import('./city.js?v=13.0.0');
+  scene?.dispose();
+  scene=createCity({canvas:$('#city'),quality,onResident:id=>residentChat.open(id),onDistrict:focusRegion,onPersona:id=>enhancements.showPersona(id),onSelect:selectScene,onReady:cityReady,onRecovered:cityReady,onError:failCity,onQualityChange:state=>experienceUI.setQuality(state.mode)});
+  scene.setExploreMode(exploreMode);scene.setNight(night);updatePaused();
+ }catch(error){console.error('City initialization failed',error);failCity();}
+ finally{cityStarting=false;cityStatus.querySelector('button').disabled=false;}
+}
+cityStatus.querySelector('button').onclick=startCity;
+// The functional navigation stays available while the optional WebGL scene loads.
+releaseLoading();startCity();
 updateCount();
 
 

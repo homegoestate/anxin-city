@@ -1,6 +1,6 @@
 import { cultureReviewedAt, cultureThemes, cultureSources, culturePlaces } from './culture-data.js?v=12.0.0';
 import { tainanDistricts } from './tainan-data.js?v=12.0.0';
-import { readingButtonHtml } from './service-hub.js?v=8.0.0';
+import { readingButtonHtml } from './service-hub.js?v=11.0.0';
 import { loadCulturePassport, saveCulturePassport, stampCulturePlace, cultureQuizOutcome, filterCulturePlaces } from './culture-state.js?v=10.0.0';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));

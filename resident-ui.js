@@ -1,6 +1,6 @@
 import {residents,residentEvents,residentEventSources,residentReviewedAt,eventStatus,taipeiDay} from './resident-data.js?v=10.0.0';
 import {createConversation,chooseReply,currentNode} from './resident-state.js?v=8.0.0';
-import {readingButtonHtml} from './service-hub.js?v=8.0.0';
+import {readingButtonHtml} from './service-hub.js?v=11.0.0';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const groups=[['all','都來聊聊'],['daily','日常生活'],['culture','地方文化'],['family','親子時光'],['nature','自然出遊']];
@@ -45,9 +45,9 @@ function portrait(resident,small=false){
 
 export function createResidentChat({onExplore,onMission,onFeedback,toast}={}){
  const nav=document.querySelector('.header-nav');
- const button=document.createElement('button');
+ const button=document.querySelector('#resident-button')||document.createElement('button');
  button.id='resident-button';button.className='resident-nav';button.type='button';button.textContent='街坊聊聊';button.setAttribute('aria-haspopup','dialog');button.setAttribute('aria-controls','resident-dialog');
- if(nav){const before=nav.querySelector('#tainan-button');nav.insertBefore(button,before||null);}
+ if(nav&&!button.isConnected){const before=nav.querySelector('#tainan-button');nav.insertBefore(button,before||null);}
  const dialog=document.createElement('dialog');
  dialog.id='resident-dialog';dialog.className='rc-dialog';dialog.setAttribute('aria-labelledby','resident-title');
  document.body.append(dialog);

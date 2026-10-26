@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from './vendor/OrbitControls.js';
 import { residents } from './resident-data.js?v=10.0.0';
+import { createCityRuntime, createCityQuality } from './city-runtime.js?v=13.0.0';
 
 // RAF timestamps belong to the frame's clock. Do not seed this clock with performance.now():
 // the first callback can carry an earlier timestamp after expensive scene initialization.
@@ -76,18 +77,22 @@ export function findCityLabelPosition({ idealX, idealY, width, height, bounds, o
 }
 
 /* Original, procedural miniature. No downloaded models or image assets. */
-export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, onResident = () => {}, onDistrict = () => {}, onReady = () => {}, onError = () => {} }) {
+export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, onResident = () => {}, onDistrict = () => {}, onReady = () => {}, onError = () => {}, onRecovered = () => {}, onQualityChange = () => {}, quality = 'auto' }) {
+  let runtime = null;
+  const qualityController = createCityQuality({ mode: quality, devicePixelRatio: window.devicePixelRatio || 1 });
   let renderer;
   try {
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
   } catch (error) {
     onError(error);
-    return { select() {}, focusPersona() {}, focusResident() { return false; }, setMissionMood() { return false; }, reset() {}, setNight() {}, setPaused() {}, zoom() {}, resize() {}, dispose() {}, getSceneAnchor() { return null; } };
+    return { select() {}, focusPersona() {}, focusResident() { return false; }, focusRegion() { return false; }, restoreView() { return false; }, setExploreMode() { return false; }, setMissionMood() { return false; }, reset() {}, setNight() {}, setPaused() {}, zoom() {}, resize() {}, dispose() {}, getSceneAnchor() { return null; }, setQuality(mode) { return qualityController.setMode(mode); }, getQuality() { return qualityController.getState(); }, getRuntimeState() { return { unavailable: true, sleeping: true, renders: 0 }; } };
   }
 
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
-  renderer.shadowMap.enabled = true;
+  renderer.setPixelRatio(qualityController.getState().pixelRatio);
+  renderer.shadowMap.enabled = qualityController.getState().shadows;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.autoUpdate = false;
+  renderer.shadowMap.needsUpdate = true;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.12;
@@ -214,7 +219,7 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
   const hemi = new THREE.HemisphereLight('#FFF9E8', '#7D9F8D', 2.5); scene.add(hemi);
   const sun = new THREE.DirectionalLight('#FFF1D0', 4.3);
   sun.position.set(-19, 31, 15); sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.mapSize.set(qualityController.getState().shadowSize, qualityController.getState().shadowSize);
   Object.assign(sun.shadow.camera, { left: -23, right: 23, top: 23, bottom: -23, near: 1, far: 90 });
   sun.shadow.bias = -0.00045; sun.shadow.normalBias = 0.045; sun.shadow.radius = 3;
   sun.target.position.set(0, 0, -1); scene.add(sun, sun.target);
@@ -965,11 +970,12 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
   batchStatics();
   batchCitizens();
 
-  let disposed = false, frame = 0, ready = false, nightTarget = 0, nightMix = 0, paused = false, motionTime = 0;
+  let disposed = false, ready = false, nightTarget = 0, nightMix = 0, paused = false, motionTime = 0, pendingRecovery = false;
   let selectedId = null, selectedPersonaId = null, selectedResidentId = null, hoveredId = null, hoveredPersonaId = null, hoveredResidentId = null, hoveredRegionId = null;
-  let transition = null, previousTime = null, pendingZoom = null;
+  let transition = null, pendingZoom = null, selectedRegionId = null, savedRegionView = null, exploreMode = 'homes';
   const dayColor = new THREE.Color('#F4F1E7'), nightColor = new THREE.Color('#152D35');
   const waterDay = new THREE.Color(palette.water), waterNight = new THREE.Color('#284F59');
+  const shallowNight = new THREE.Color('#40676B'), edgeNight = new THREE.Color('#28464E'), outerNight = new THREE.Color('#1B353E');
   const raycaster = new THREE.Raycaster(), pointer = new THREE.Vector2(), projected = new THREE.Vector3();
   const cameraOffset = new THREE.Vector3(31, 29, 36), viewRight = new THREE.Vector3(36, 0, -31).normalize();
   const viewUp = new THREE.Vector3().crossVectors(cameraOffset, viewRight).normalize();
@@ -1003,7 +1009,7 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
       else bounds.right = Math.min(bounds.right, detail.left - 12);
     }
     // The compact introduction reserves its actual rectangle, not an entire side of the city.
-    for (const rect of [header, dock, intro, detail, visibleRect('.scene-tools'), visibleRect('.office-strip')]) {
+    for (const rect of [header, dock, intro, detail, visibleRect('.scene-tools'), visibleRect('.office-strip'), visibleRect('#city-guide:not([hidden])')]) {
       if (!rect || rect.right <= 0 || rect.left >= width || rect.bottom <= 0 || rect.top >= height) continue;
       bounds.obstacles.push({ x: (rect.left + rect.right) / 2, y: (rect.top + rect.bottom) / 2,
         width: rect.right - rect.left, height: rect.bottom - rect.top });
@@ -1069,6 +1075,24 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
       persona.ring.scale.setScalar(moodName === 'neutral' ? 1 : 1.62 + pulse);
     }
     resetResidentLabels();
+    if (exploreMode === 'tainan' && selectedRegionId && regions[selectedRegionId]) {
+      const region = regions[selectedRegionId];
+      citizenWorld.copy(region.center); citizenWorld.y = region.id === 'hills' ? 2.6 : 2;
+      region.leader.material.opacity = 0.8;
+      placeSceneLabel(region, citizenWorld, mobile ? 132 : 148, mobile ? 52.8 : 59.2, occupied, unitsPerPixel, 28);
+      return;
+    }
+    if (exploreMode === 'tainan') {
+      for (const region of Object.values(regions)) {
+        citizenWorld.copy(region.center); citizenWorld.y = region.id === 'hills' ? 2.6 : 2;
+        region.leader.material.opacity = hoveredRegionId === region.id ? 0.8 : 0.5;
+        const regionWidth = mobile ? 112 : 132;
+        placeSceneLabel(region, citizenWorld, regionWidth, regionWidth * 0.4, occupied, unitsPerPixel, 27);
+      }
+      if (mobile) placeResidentLabel(residentCharacters.get(selectedResidentId || hoveredResidentId), occupied, unitsPerPixel);
+      else updateResidentLabels(occupied, unitsPerPixel);
+      return;
+    }
     if (mobile) {
       const plan = cityMobileLabelPlan({ districtIds: Object.keys(districts),
         personaDistricts: Object.fromEntries(Object.values(personas).map((persona) => [persona.id, persona.districtId])),
@@ -1090,7 +1114,7 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
     }
     for (const region of Object.values(regions)) {
       if (!region.label) continue;
-      const visible = !selectedId && !selectedPersonaId;
+      const visible = exploreMode === 'tainan' && !selectedId && !selectedPersonaId;
       region.label.visible = visible; region.leader.visible = visible;
       if (!visible) continue;
       const regionWidth = width < 740 ? 100 : 112, regionHeight = regionWidth * 160 / 400;
@@ -1173,15 +1197,18 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
     return { target, zoom: mobile ? 1.75 : 1.48 };
   }
   function moveCamera(id, immediate = false) {
-    const destination = frameTarget(id);
+    moveToView(frameTarget(id), immediate);
+  }
+  function moveToView(destination, immediate = false) {
     const currentOffset = camera.position.clone().sub(controls.target);
     if (currentOffset.lengthSq() < 1) currentOffset.copy(cameraOffset);
-    const endPosition = destination.target.clone().add(currentOffset);
+    const endPosition = destination.position?.clone() || destination.target.clone().add(currentOffset);
     if (immediate || reducedMotion.matches) {
       controls.target.copy(destination.target); camera.position.copy(endPosition); camera.zoom = destination.zoom; camera.updateProjectionMatrix(); transition = null;
     } else {
       transition = { start: performance.now(), fromTarget: controls.target.clone(), toTarget: destination.target, fromPosition: camera.position.clone(), toPosition: endPosition, fromZoom: camera.zoom, toZoom: destination.zoom };
     }
+    runtime?.invalidate();
   }
   function resize() {
     if (disposed) return;
@@ -1193,21 +1220,25 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
     camera.top = visibleHeight / 2; camera.bottom = -visibleHeight / 2; camera.updateProjectionMatrix();
     if (!ready) {
       const initial = frameTarget(); defaultTarget.copy(initial.target); controls.target.copy(initial.target); camera.position.copy(initial.target).add(cameraOffset);
-    } else moveCamera(selectedId, true);
+    }
     controls.update();
+    runtime?.invalidate();
   }
   function select(id) {
     if (disposed) return;
+    selectedRegionId = null; savedRegionView = null;
     selectedPersonaId = null; selectedResidentId = null; selectedId = districts[id] ? id : null; pendingZoom = null; labelBoundsTime = -Infinity; moveCamera(selectedId);
   }
   function focusPersona(id) {
     if (disposed || !personas[id]) return;
+    selectedRegionId = null; savedRegionView = null;
     selectedPersonaId = id; selectedResidentId = null; selectedId = personas[id].districtId;
     pendingZoom = null; labelBoundsTime = -Infinity; moveCamera(selectedId);
   }
   function focusResident(id) {
     const character = residentCharacters.get(id);
     if (disposed || !character) return false;
+    selectedRegionId = null; savedRegionView = null;
     selectedPersonaId = null; selectedResidentId = id; selectedId = character.districtId;
     pendingZoom = null; labelBoundsTime = -Infinity; moveCamera(selectedId);
     return true;
@@ -1215,13 +1246,38 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
   function setMissionMood(personaId, mood = 'neutral') {
     if (disposed || !Object.hasOwn(personas, personaId) || !Object.hasOwn(missionMoods, mood)) return false;
     personas[personaId].mood = mood;
+    runtime?.invalidate();
+    return true;
+  }
+  function focusRegion(id) {
+    const regionId = id === 'plain' ? 'plains' : id;
+    if (disposed || !Object.hasOwn(regions, regionId)) return false;
+    if (!savedRegionView) savedRegionView = { target: controls.target.clone(), position: camera.position.clone(), zoom: camera.zoom, selectedId, selectedPersonaId, selectedResidentId };
+    selectedRegionId = regionId; selectedId = null; selectedPersonaId = null; selectedResidentId = null;
+    pendingZoom = null; labelBoundsTime = -Infinity;
+    const target = regions[regionId].center.clone(); target.y = regionId === 'hills' ? 1.6 : 1.2;
+    moveToView({ target, zoom: width < 740 ? 2.15 : 1.9 });
+    return true;
+  }
+  function restoreView() {
+    if (disposed || !savedRegionView) return false;
+    const previous = savedRegionView; savedRegionView = null; selectedRegionId = null;
+    selectedId = previous.selectedId; selectedPersonaId = previous.selectedPersonaId; selectedResidentId = previous.selectedResidentId;
+    pendingZoom = null; labelBoundsTime = -Infinity; moveToView(previous);
+    return true;
+  }
+  function setExploreMode(mode) {
+    if (disposed || (mode !== 'homes' && mode !== 'tainan')) return false;
+    exploreMode = mode; labelBoundsTime = -Infinity; runtime?.invalidate();
     return true;
   }
   function reset() {
+    selectedRegionId = null; savedRegionView = null;
     selectedId = null; selectedPersonaId = null; selectedResidentId = null; pendingZoom = null; labelBoundsTime = -Infinity;
     const destination = frameTarget();
     if (reducedMotion.matches) { controls.target.copy(destination.target); camera.position.copy(destination.target).add(cameraOffset); camera.zoom = 1; camera.updateProjectionMatrix(); transition = null; }
     else transition = { start: performance.now(), fromTarget: controls.target.clone(), toTarget: destination.target, fromPosition: camera.position.clone(), toPosition: destination.target.clone().add(cameraOffset), fromZoom: camera.zoom, toZoom: 1 };
+    runtime?.invalidate();
   }
   function getSceneAnchor(id) {
     if (Object.hasOwn(regions, id) && regions[id].label) {
@@ -1298,12 +1354,16 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
     hoveredRegionId = hit?.type === 'region' ? hit.id : null;
     hoveredId = hoveredPersonaId ? personas[hoveredPersonaId].districtId : hit?.type === 'district' ? hit.id : null;
     canvas.style.cursor = hit ? 'pointer' : 'grab';
+    runtime?.invalidate();
   }
   function onPointerCancel(event) { pointers.delete(event.pointerId); pointerDown = null; }
-  function onPointerLeave() { hoveredId = null; hoveredPersonaId = null; hoveredResidentId = null; hoveredRegionId = null; canvas.style.cursor = 'grab'; }
-  function onControlStart() { transition = null; pendingZoom = null; }
+  function onPointerLeave() { hoveredId = null; hoveredPersonaId = null; hoveredResidentId = null; hoveredRegionId = null; canvas.style.cursor = 'grab'; runtime?.invalidate(); }
+  function onControlStart() { transition = null; pendingZoom = null; runtime?.setInteracting(true); }
+  function onControlEnd() { runtime?.setInteracting(false); }
+  function onControlChange() { runtime?.invalidate(); }
   function onMotionPreferenceChange() {
     controls.enableDamping = !reducedMotion.matches;
+    runtime?.setReducedMotion(reducedMotion.matches);
     if (!reducedMotion.matches) return;
     if (transition) {
       controls.target.copy(transition.toTarget); camera.position.copy(transition.toPosition); camera.zoom = transition.toZoom;
@@ -1312,28 +1372,61 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
     if (pendingZoom !== null) { camera.zoom = pendingZoom; pendingZoom = null; }
     camera.updateProjectionMatrix(); controls.update();
   }
-  function onContextLost(event) { event.preventDefault(); onError(new Error('WebGL context lost. Please reload to restore the city.')); }
+  function onContextLost(event) {
+    event.preventDefault(); pendingRecovery = true; runtime?.setContextLost(true);
+    onError(new Error('WebGL context lost. The city will retry when graphics become available.'));
+  }
+  function onContextRestored() {
+    if (disposed) return;
+    pendingRecovery = true; applyQuality(qualityController.getState()); runtime?.setContextLost(false);
+  }
+  function syncVisibility() {
+    const hidden = document.visibilityState === 'hidden', obscured = Boolean(document.querySelector('dialog[open]'));
+    runtime?.setHidden(hidden); runtime?.setObscured(obscured);
+    if (hidden || obscured) { pointers.clear(); pointerDown = null; runtime?.setInteracting(false); }
+    labelBoundsTime = -Infinity;
+    runtime?.invalidate();
+  }
+  function applyQuality(state) {
+    const shadowsChanged = renderer.shadowMap.enabled !== state.shadows;
+    renderer.setPixelRatio(state.pixelRatio); renderer.shadowMap.enabled = state.shadows;
+    if (sun.shadow.mapSize.x !== state.shadowSize) {
+      sun.shadow.map?.dispose(); sun.shadow.map = null;
+      sun.shadow.mapPass?.dispose(); sun.shadow.mapPass = null;
+      sun.shadow.mapSize.set(state.shadowSize, state.shadowSize);
+    }
+    renderer.shadowMap.autoUpdate = false; renderer.shadowMap.needsUpdate = true;
+    if (shadowsChanged) materials.forEach(material => { material.needsUpdate = true; });
+    runtime?.setFrameInterval(1000 / state.maxFps);
+    onQualityChange(state);
+    return state;
+  }
+  function setQuality(mode) { return disposed ? qualityController.getState() : applyQuality(qualityController.setMode(mode, window.devicePixelRatio || 1)); }
   canvas.addEventListener('pointerdown', onPointerDown);
   canvas.addEventListener('pointerup', onPointerUp);
   canvas.addEventListener('pointermove', onPointerMove);
   canvas.addEventListener('pointercancel', onPointerCancel);
   canvas.addEventListener('pointerleave', onPointerLeave);
   canvas.addEventListener('webglcontextlost', onContextLost);
+  canvas.addEventListener('webglcontextrestored', onContextRestored);
   controls.addEventListener('start', onControlStart);
+  controls.addEventListener('end', onControlEnd);
+  controls.addEventListener('change', onControlChange);
   reducedMotion.addEventListener('change', onMotionPreferenceChange);
+  document.addEventListener('visibilitychange', syncVisibility);
   canvas.style.touchAction = 'none'; canvas.style.cursor = 'grab';
   const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(resize) : null;
+  const dialogObserver = typeof MutationObserver !== 'undefined' ? new MutationObserver(syncVisibility) : null;
+  dialogObserver?.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['open', 'hidden'] });
   if (observer) observer.observe(canvas); else window.addEventListener('resize', resize);
   resize();
 
-  function animate(now) {
-    if (disposed) return;
-    frame = requestAnimationFrame(animate);
-    const delta = cityFrameDelta(now, previousTime);
-    if (Number.isFinite(now)) previousTime = now;
-    if (!paused && !reducedMotion.matches) motionTime += delta;
+  function animate(now, frameState) {
+    if (disposed) return false;
+    const delta = Math.min(frameState.elapsed / 1000, 0.05);
+    if (frameState.ambient) motionTime += delta;
     if (transition) {
-      const progress = Math.min((now - transition.start) / 1000, 1), ease = 1 - Math.pow(1 - progress, 3);
+      const progress = Math.max(0, Math.min((now - transition.start) / 1000, 1)), ease = 1 - Math.pow(1 - progress, 3);
       controls.target.lerpVectors(transition.fromTarget, transition.toTarget, ease);
       camera.position.lerpVectors(transition.fromPosition, transition.toPosition, ease);
       camera.zoom = THREE.MathUtils.lerp(transition.fromZoom, transition.toZoom, ease); camera.updateProjectionMatrix();
@@ -1343,7 +1436,7 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
       camera.zoom = THREE.MathUtils.lerp(camera.zoom, pendingZoom, Math.min(delta * 10, 1)); camera.updateProjectionMatrix();
       if (Math.abs(camera.zoom - pendingZoom) < 0.001) pendingZoom = null;
     }
-    controls.update();
+    const cameraMoving = controls.update();
     for (const actor of citizenAnimations) {
       if (actor.route) {
         const t = cityMotionPhase(actor.offset, motionTime, actor.speed, actor.route.getLength());
@@ -1404,49 +1497,60 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
       animation.object.position.z = animation.z + Math.cos(motionTime * 0.045 + animation.offset) * 0.4;
     }
     for (const animation of cloudAnimations) animation.object.position.x = animation.x + Math.sin(motionTime * 0.035 + animation.offset) * 1.2;
-    nightMix += (nightTarget - nightMix) * Math.min(delta * 2.4, 1);
+    if (reducedMotion.matches || Math.abs(nightTarget - nightMix) < 0.001) nightMix = nightTarget;
+    else nightMix += (nightTarget - nightMix) * Math.min(delta * 2.4, 1);
     scene.background = tmpColor.copy(dayColor).lerp(nightColor, nightMix);
     mat.water.color.copy(waterDay).lerp(waterNight, nightMix);
-    mat.waterShallow.color.set('#ABCAC0').lerp(new THREE.Color('#40676B'), nightMix);
-    mat.waterEdge.color.set('#CCDDD0').lerp(new THREE.Color('#28464E'), nightMix);
-    mat.waterOuter.color.set('#E3E9DC').lerp(new THREE.Color('#1B353E'), nightMix);
+    mat.waterShallow.color.set('#ABCAC0').lerp(shallowNight, nightMix);
+    mat.waterEdge.color.set('#CCDDD0').lerp(edgeNight, nightMix);
+    mat.waterOuter.color.set('#E3E9DC').lerp(outerNight, nightMix);
     mat.window.emissiveIntensity = nightMix * 1.6; mat.light.emissiveIntensity = 0.25 + nightMix * 2.1;
     hemi.intensity = THREE.MathUtils.lerp(2.5, 1.05, nightMix);
     sun.intensity = THREE.MathUtils.lerp(4.3, 0.8, nightMix);
     fill.intensity = THREE.MathUtils.lerp(0.9, 1.6, nightMix);
     renderer.toneMappingExposure = THREE.MathUtils.lerp(1.12, 0.95, nightMix);
+    let selectionMoving = false;
     for (const district of Object.values(districts)) {
       const opacity = selectedId === district.id ? 0.7 : hoveredId === district.id ? 0.45 : 0;
-      district.selection.material.opacity += (opacity - district.selection.material.opacity) * Math.min(delta * 9, 1);
+      if (reducedMotion.matches || Math.abs(opacity - district.selection.material.opacity) < 0.001) district.selection.material.opacity = opacity;
+      else { district.selection.material.opacity += (opacity - district.selection.material.opacity) * Math.min(delta * 9, 1); selectionMoving = true; }
       // Screen-space label sizing is owned by updatePersonaLabels, including hover and focus.
     }
-    try {
-      renderer.render(scene, camera);
-      if (!ready) { ready = true; onReady({ objects: renderer.info.render.calls, interactive: true, citizens: citizenAnimations.length, residents: residentCharacters.size }); }
-    } catch (error) {
-      cancelAnimationFrame(frame); onError(error);
-    }
+    if (frameState.ambient) renderer.shadowMap.needsUpdate = true;
+    renderer.render(scene, camera);
+    if (!ready) { ready = true; onReady({ objects: renderer.info.render.calls, interactive: true, citizens: citizenAnimations.length, residents: residentCharacters.size }); }
+    if (pendingRecovery) { pendingRecovery = false; onRecovered(); }
+    const adapted = qualityController.sample(frameState.elapsed, frameState.ambient && !transition && !frameState.interacting);
+    if (adapted) applyQuality(adapted);
+    return Boolean(transition || pendingZoom !== null || cameraMoving || selectionMoving || Math.abs(nightTarget - nightMix) >= 0.001);
   }
-  frame = requestAnimationFrame(animate);
+  runtime = createCityRuntime({ onFrame: animate, onError });
+  runtime.setReducedMotion(reducedMotion.matches); syncVisibility(); applyQuality(qualityController.getState());
+  runtime.invalidate();
   function dispose() {
-    if (disposed) return; disposed = true; cancelAnimationFrame(frame); observer?.disconnect();
-    window.removeEventListener('resize', resize); controls.removeEventListener('start', onControlStart); controls.dispose();
+    if (disposed) return; disposed = true; runtime.dispose(); observer?.disconnect(); dialogObserver?.disconnect();
+    window.removeEventListener('resize', resize); document.removeEventListener('visibilitychange', syncVisibility);
+    controls.removeEventListener('start', onControlStart); controls.removeEventListener('end', onControlEnd); controls.removeEventListener('change', onControlChange); controls.dispose();
     reducedMotion.removeEventListener('change', onMotionPreferenceChange);
     canvas.removeEventListener('pointerdown', onPointerDown); canvas.removeEventListener('pointerup', onPointerUp);
     canvas.removeEventListener('pointermove', onPointerMove); canvas.removeEventListener('pointercancel', onPointerCancel);
     canvas.removeEventListener('pointerleave', onPointerLeave); canvas.removeEventListener('webglcontextlost', onContextLost);
+    canvas.removeEventListener('webglcontextrestored', onContextRestored);
     geometries.forEach((geometry) => geometry.dispose()); materials.forEach((m) => m.dispose()); textures.forEach((texture) => texture.dispose());
     renderer.dispose(); scene.clear();
   }
   return {
-    select, focusPersona, focusResident, setMissionMood, reset, resize, dispose, getSceneAnchor,
-    setNight(value) { nightTarget = value ? 1 : 0; },
-    setPaused(value) { paused = Boolean(value); },
+    select, focusPersona, focusResident, focusRegion, restoreView, setExploreMode, setMissionMood, reset, resize, dispose, getSceneAnchor, setQuality,
+    getQuality() { return qualityController.getState(); },
+    getRuntimeState() { return { ...runtime.getState(), quality: qualityController.getState(), selectedRegion: selectedRegionId, exploreMode, returnViewAvailable: Boolean(savedRegionView), drawCalls: renderer.info.render.calls, view: { position: camera.position.toArray(), target: controls.target.toArray(), zoom: camera.zoom } }; },
+    setNight(value) { nightTarget = value ? 1 : 0; runtime.invalidate(); },
+    setPaused(value) { paused = Boolean(value); runtime.setPaused(paused); },
     zoom(delta) {
       transition = null;
       const target = THREE.MathUtils.clamp((pendingZoom ?? camera.zoom) + Number(delta || 0), controls.minZoom, controls.maxZoom);
       if (reducedMotion.matches) { camera.zoom = target; pendingZoom = null; camera.updateProjectionMatrix(); controls.update(); }
       else pendingZoom = target;
+      runtime.invalidate();
     },
   };
 }

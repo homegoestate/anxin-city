@@ -1,4 +1,4 @@
-import {readingButtonHtml} from './service-hub.js?v=8.0.0';
+import {readingButtonHtml} from './service-hub.js?v=11.0.0';
 import {tainanRegions,tainanDistricts,tainanSources,tainanSeasons,tainanReviewedAt} from './tainan-data.js?v=12.0.0';
 import {tainanUpdates,tainanUpdatesReviewedAt} from './tainan-updates.js?v=8.0.0';
 import {tainanAtlas,tainanAtlasSources,tainanAtlasReviewedAt} from './tainan-atlas.js?v=8.0.0';
@@ -33,7 +33,7 @@ function landscape(region) {
 
 export function createTainanExplorer({onStartMission,onFeedback,onExploreCulture,toast}) {
  const nav=document.querySelector('.header-nav');
- const button=document.createElement('button');button.id='tainan-button';button.className='tainan-nav';button.textContent='台南散步';nav.insertBefore(button,document.querySelector('#open-checklist'));
+ const button=document.querySelector('#tainan-button')||document.createElement('button');button.id='tainan-button';button.classList.add('tainan-nav');button.textContent='台南散步';if(!button.isConnected)nav.insertBefore(button,document.querySelector('#open-checklist'));
  const dialog=document.createElement('dialog');dialog.id='tainan-dialog';dialog.className='tn-dialog';dialog.setAttribute('aria-label','台南散步集章');document.body.append(dialog);
  let passport;try{passport=restorePassport(localStorage.getItem(PASSPORT_KEY),ids);}catch{passport=restorePassport(null,ids);}
  let tab='explore',region='all',query='',selected=(tainanDistricts.find(d=>d.name==='玉井區')||tainanDistricts[0]).id,updateFilter='all',saved=true;

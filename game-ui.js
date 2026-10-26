@@ -1,5 +1,5 @@
 import { getMission, evaluateMission, buildLineSummary, getProfileFields, normalizeProfile } from './game-engine.js?v=6.0.0';
-import { nextServiceHtml, readingButtonHtml } from './service-hub.js?v=6.0.0';
+import { nextServiceHtml, readingButtonHtml } from './service-hub.js?v=11.0.0';
 import { legacyPolicy } from './legacy-policy.js?v=3.0.0';
 
 const people = {
