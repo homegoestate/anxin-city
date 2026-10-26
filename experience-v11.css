@@ -1,0 +1,66 @@
+/* V11: a clear professional identity, one starting action, and a quieter city. */
+.scenario-top{position:sticky;top:0;z-index:2;background:#fbf9f2;padding-bottom:10px}.night-mode .scenario-top{background:#243f35}
+.skip-link{position:fixed;z-index:100;left:16px;top:-100px;padding:14px 20px;background:#fffdf6;border:2px solid #1e5850;border-radius:8px;color:#183e39}.skip-link:focus{top:12px}
+body.city-first #experience{min-height:0;height:100dvh}
+body.city-first .masthead{display:flex;top:max(20px,env(safe-area-inset-top));left:28px;right:28px;gap:16px;align-items:center}
+body.city-first .brand{width:auto;min-width:0;white-space:normal;gap:10px}
+body.city-first .brand strong{font-size:21px;letter-spacing:1px;line-height:1.4}
+body.city-first .brand small{font-size:12px;line-height:1.5;letter-spacing:.3px;color:#31584d;margin-top:2px}
+.menu-toggle{display:flex;align-items:center;gap:9px;min-width:80px;min-height:46px;padding:10px 14px;border:1px solid #b4c6b7;border-radius:12px;background:#fffcf4;color:#214c45;flex-shrink:0;font-size:15px;font-weight:700}
+.menu-toggle svg{width:19px;height:19px}.menu-toggle:hover{background:#e9eee2}
+body.city-first .masthead>.header-nav{display:none}
+body.city-first .intro{top:114px;left:28px;right:auto;bottom:auto;width:302px;padding:20px;border:1px solid #b4c5b5;border-radius:16px;background:#fffcf4;box-shadow:0 8px 32px #244e4310;pointer-events:auto}
+body.city-first .intro .entry-eyebrow{font-size:12px;color:#785237;font-weight:700;line-height:1.6;letter-spacing:1px;margin:0 0 9px}
+body.city-first .intro #hero-title{font-family:inherit;color:#183e39;font-size:27px;line-height:1.5;letter-spacing:.5px;margin:0 0 10px;font-weight:750}
+body.city-first .intro .entry-instruction{white-space:normal;font-size:15px;letter-spacing:0;line-height:1.8;color:#395d50;margin:0 0 16px}
+body.city-first .entry-actions{display:grid;grid-template-columns:1fr;gap:7px}
+body.city-first .intro #start-explore{display:flex;align-items:center;justify-content:space-between;width:100%;font-size:16px;letter-spacing:.1px;min-height:49px;padding:12px 14px;font-weight:700;border-radius:9px}
+body.city-first .intro #start-tainan{display:block;text-align:center;min-height:44px;background:transparent;border:0;font-size:14px;font-weight:500;line-height:1.5;padding:10px 3px;color:#315d50;text-decoration:underline;text-underline-offset:4px}
+body.city-first .intro .entry-boundary{font-size:12px;color:#546a5d;line-height:1.7;letter-spacing:0;margin:9px 0 0}
+body.city-first:not(.scene-selected) .journey-dock{display:none}
+.office-strip{position:absolute;z-index:7;left:28px;bottom:max(19px,env(safe-area-inset-bottom));display:flex;align-items:center;gap:18px;color:#234c40;background:#fffdf3f2;border:1px solid #c7d4c3;border-radius:11px;padding:8px 14px;font-size:13px;line-height:1.6;max-width:calc(100% - 56px)}
+.office-strip p{margin:0}.office-strip button,.office-strip a{display:inline-flex;align-items:center;min-height:44px;color:#254f43;background:none;border:0;font-size:14px;padding:6px 2px;text-decoration:underline;text-underline-offset:4px}
+.scene-selected .office-strip{display:none}
+body.city-first .scene-tools{top:102px;right:28px;backdrop-filter:none;background:#fffcf4}
+.view-tools-panel{display:flex;align-items:center;gap:3px}.view-tools-toggle{display:none}
+body.city-first .scene-tools .icon-button,body.city-first .scene-tools .reading-size{width:44px;min-width:44px;height:44px;min-height:44px;font-size:20px}
+body.city-first .detail-panel{top:164px;bottom:144px;max-height:none}
+.experience-menu{color:#183e39;background:#fffcf4;border:1px solid #c7d4c3;border-radius:18px;box-shadow:0 20px 80px #183e3940;width:min(580px,calc(100% - 24px));max-height:calc(100dvh - 28px);padding:24px;overflow:auto;overscroll-behavior:contain}
+.experience-menu::backdrop{background:#153d3966;backdrop-filter:blur(5px)}
+.experience-dialog-top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.experience-dialog-top h2{font:700 25px/1.5 "Microsoft JhengHei",system-ui,sans-serif;margin:5px 0 0}.experience-dialog-top .menu-close{width:44px;height:44px;flex-shrink:0;border:1px solid #c5d1bf}
+.menu-lead{font-size:16px;line-height:1.8;margin:18px 0;color:#466054}.experience-menu h3{font-size:15px;margin:20px 0 10px;color:#657255}
+body.city-first .experience-menu .header-nav{display:grid;gap:8px;width:100%;margin:0}
+.experience-menu [data-menu-local],.experience-menu [data-menu-support]{display:grid;gap:8px}
+body.city-first .experience-menu button:not(.menu-close){display:flex!important;width:100%;justify-content:space-between;align-items:center;min-height:49px;padding:12px 14px;background:#edf1e5;border:1px solid #d3dec9;border-radius:9px;font-size:16px!important;font-weight:600;line-height:1.6;white-space:normal;letter-spacing:0;text-align:left;color:#214c45}
+body.city-first .experience-menu button:not(.menu-close)::before{content:none!important}
+body.city-first .experience-menu #people-button{background:#235a4b;color:#fffdf6;border-color:#235a4b}
+.menu-local{margin:20px 0 0;padding:12px 14px;border:1px solid #d4d8c5;border-radius:10px}.menu-local summary{min-height:42px;padding:7px 0;cursor:pointer;font-size:16px;font-weight:700}.menu-local p{font-size:14px;line-height:1.8;color:#546b5d;margin:4px 0 12px}
+.office-card{margin:22px 0;background:#edf0e3;border:1px solid #ccd7c1;border-radius:13px;padding:22px;color:#234c40}.office-eyebrow{font-size:12px;line-height:1.7;letter-spacing:1px;color:#8b6241}.office-card h3{font-size:23px;line-height:1.5;margin:7px 0 10px;letter-spacing:.3px}.office-card p{font-size:var(--reading-body,16px);line-height:1.9;margin:10px 0}.office-card .office-practitioners{font-weight:700}.office-contacts{display:grid;grid-template-columns:1fr 2fr;gap:10px;margin:18px 0}.office-contacts a{display:flex;flex-direction:column;gap:6px;padding:13px;background:#fffdf6;border-radius:8px;color:#214c45;text-decoration:none}.office-contacts small{font-size:13px}.office-contacts strong{font-size:16px;line-height:1.6}.office-links{display:flex;gap:12px 22px;flex-wrap:wrap}.office-links a{font-size:15px;line-height:1.8;color:#285a45;min-height:44px;padding:10px 0;text-underline-offset:4px}
+.person-card .resident-art{background-image:url('./assets/residents-v11.png')}.resident-portrait,.persona-heading .resident-art{background-image:url('./assets/residents-v11.png')}
+.people-dialog{padding:0!important;max-height:calc(100dvh - 24px)!important}.people-dialog .dialog-top{position:sticky;top:0;z-index:3;padding:18px 22px 10px;background:#fbf9f2;border-bottom:1px solid #d9ded2}.people-dialog .dialog-top h2{font-family:inherit;font-size:24px;line-height:1.5;letter-spacing:.5px;margin:8px 0}.people-dialog .dialog-top .icon-button{width:44px;height:44px;flex-shrink:0}.people-dialog .dialog-lead{margin:16px 22px!important;line-height:1.8}.people-dialog .people-grid{margin:0 22px!important}.people-dialog .keyboard-hint{margin:18px 22px;font-size:13px;line-height:1.8}
+body.city-first.night-mode .intro,body.city-first.night-mode .office-strip,body.city-first.night-mode .menu-toggle{background:#203f37;border-color:#6c8a77;color:#f4f5e4}body.city-first.night-mode .intro #hero-title,body.city-first.night-mode .intro p,body.city-first.night-mode .intro #start-tainan,body.city-first.night-mode .office-strip button,body.city-first.night-mode .office-strip a,body.city-first.night-mode .brand small{color:#e1eddb}body.city-first.night-mode .scene-tools{background:#203f37}
+@media(max-width:760px){
+ body.city-first .masthead{top:max(12px,env(safe-area-inset-top));left:14px;right:14px;gap:10px}
+ body.city-first .brand-mark{width:32px;height:38px;flex-shrink:0}body.city-first .brand strong{font-size:17px;letter-spacing:.4px}body.city-first .brand small{font-size:10px;letter-spacing:.1px;line-height:1.6;display:block}
+ .menu-toggle{min-width:62px;min-height:44px;padding:8px;gap:5px;font-size:14px;border-radius:9px}.menu-toggle svg{width:17px}
+ body.city-first .intro{left:14px;right:14px;top:auto;bottom:71px;width:auto;padding:15px 17px;border-radius:14px;}
+ body.city-first .intro .entry-eyebrow{font-size:11px;margin:0 0 5px;letter-spacing:.6px}
+ body.city-first .intro #hero-title{font-size:22px;line-height:1.4;margin:0 0 6px;letter-spacing:.1px}
+ body.city-first .intro .entry-instruction{font-size:14px;line-height:1.7;margin:0 0 11px}
+ body.city-first .intro .entry-boundary{display:none}body.city-first .entry-actions{display:grid;grid-template-columns:1fr;gap:2px}
+ body.city-first .intro #start-explore{font-size:16px;min-height:47px;padding:10px 13px}.city-first .intro #start-tainan{min-height:40px!important;padding:8px 3px!important;font-size:14px!important}
+ .office-strip{bottom:max(8px,env(safe-area-inset-bottom));left:14px;right:14px;max-width:none;min-height:47px;justify-content:space-between;gap:8px;padding:3px 11px;font-size:11px;line-height:1.6;border-radius:10px}
+ .office-strip .office-phone{display:none}.office-strip button{font-size:12px;flex-shrink:0}.office-strip p{max-width:190px}
+ body.city-first .scene-tools,body.city-first.scene-selected .scene-tools{top:76px;right:14px;padding:3px;border-radius:12px;display:flex;align-items:flex-start;gap:3px;}
+ .view-tools-toggle{display:block;min-width:44px;min-height:44px;border:0;border-radius:8px;background:none;color:inherit;font-size:13px}
+ .view-tools-panel{display:none;flex-wrap:wrap;max-width:190px;gap:2px}.scene-tools.is-expanded .view-tools-panel{display:flex}.scene-tools.is-expanded{max-width:260px}.view-tools-panel .tool-divider{display:none}
+ body.city-first .scene-tools .icon-button,body.city-first .scene-tools .reading-size{width:44px;min-width:44px;height:44px;min-height:44px}
+ body.city-first .detail-panel{top:132px;bottom:116px;left:12px;right:12px;width:auto;max-height:none;z-index:9}
+ .experience-menu{padding:18px;max-height:calc(100dvh - 20px)}.experience-dialog-top h2{font-size:22px}.menu-lead{font-size:15px;margin:14px 0}
+ .office-card{padding:17px}.office-card h3{font-size:21px}.office-contacts{grid-template-columns:1fr}.office-links{gap:4px}
+}
+@media(max-width:380px){body.city-first .brand strong{font-size:15px}.brand-mark{display:none!important}body.city-first .intro #hero-title{font-size:20px}.office-strip p{font-size:10px;max-width:150px}}
+@media(max-width:760px) and (max-height:690px){body.city-first .intro{bottom:66px;padding:11px 14px}body.city-first .intro .entry-eyebrow{display:none}body.city-first .intro #hero-title{font-size:20px}body.city-first .intro .entry-instruction{font-size:13px;margin-bottom:7px}body.city-first .intro #start-explore{min-height:44px}.office-strip{bottom:6px}}
+@media(max-height:480px) and (max-width:950px){body.city-first .intro{left:14px;right:auto;top:86px;bottom:auto;width:245px;padding:12px}body.city-first .intro #hero-title{font-size:20px}body.city-first .intro .entry-eyebrow,body.city-first .intro .entry-instruction,body.city-first .intro .entry-boundary{display:none}body.city-first .office-strip{right:auto;max-width:320px}.office-strip p{display:none}body.city-first .detail-panel{top:74px;bottom:15px;left:auto;right:12px;width:min(65vw,440px)}body.city-first.scene-selected .journey-dock{display:none}}
+@media(prefers-reduced-motion:reduce){body.city-first *,body.city-first *::before,body.city-first *::after{scroll-behavior:auto!important;animation-duration:.001ms!important;transition-duration:.001ms!important}}

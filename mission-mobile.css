@@ -1,0 +1,85 @@
+/* V11: keep the current decision first, without reducing the reading size. */
+.mission-story{grid-column:1;grid-row:1}
+.mission-play{grid-column:2;grid-row:1;scroll-margin-top:14px}
+.mission-current-step{display:none}
+.mission-progress button>span{position:relative}
+.mission-step-check{position:absolute;right:-5px;bottom:-5px;width:14px;height:14px;display:grid;place-items:center;border-radius:50%;background:#31594d;color:#fff;font:10px system-ui,sans-serif}
+.mission-dialog .mission-close,.mission-dialog .reading-action,.scenario-dialog .scenario-close{min-width:44px;min-height:44px;width:44px;height:44px;flex-shrink:0}
+.mission-dialog button:focus-visible,.scenario-dialog button:focus-visible,.mission-dialog summary:focus-visible{outline:3px solid #8b5a32;outline-offset:3px}
+.mission-layout,.mission-shell{scroll-behavior:auto}
+.mission-dialog #mission-question-title,.mission-dialog #mission-ending-title,.mission-reaction{scroll-margin-top:14px}
+.mission-policy-shortcut{margin-top:24px;margin-bottom:0}
+
+@media(max-width:760px),(max-width:980px) and (max-height:540px){
+  .mission-dialog{box-sizing:border-box;width:calc(100vw - 12px);height:calc(100dvh - 12px);max-height:calc(100dvh - 12px);margin:auto;border-radius:14px}
+  .mission-shell{padding-top:env(safe-area-inset-top,0px);padding-right:env(safe-area-inset-right,0px);padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);box-sizing:border-box}
+  .mission-header{display:grid;grid-template-columns:minmax(0,1fr) 44px 44px;align-items:center;gap:6px;padding:8px 12px}
+  .mission-header>div:first-child{min-width:0;grid-column:1;grid-row:1}
+  .mission-header .mission-kicker{display:none}
+  .mission-header strong{font-size:16px;line-height:1.5;letter-spacing:0;margin:0;overflow-wrap:anywhere}
+  .mission-header-tools{display:contents}
+  .mission-header-tools .reading-action{grid-column:2;grid-row:1;padding:4px;font-size:16px}
+  .mission-header-tools .mission-close{grid-column:3;grid-row:1;font-size:25px}
+  .mission-settings-open{grid-column:1/-1;grid-row:2;justify-self:start;min-height:44px;padding:7px 12px;font-size:var(--reading-small);white-space:normal}
+  .mission-progress{display:grid;grid-template-columns:repeat(4,44px) minmax(0,1fr);gap:4px;padding:0 12px 6px}
+  .mission-progress button{display:flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:0;gap:0}
+  .mission-progress button:after,.mission-progress button b,.mission-progress .progress-ending{display:none}
+  .mission-progress button>span{width:29px;height:29px;font-size:16px;font-family:system-ui,sans-serif}
+  .mission-progress button:disabled{opacity:.65}
+  .mission-current-step{display:block;padding-left:4px;color:#31594d;font-size:var(--reading-small);line-height:1.5;overflow-wrap:anywhere}
+  .mission-layout{display:flex;flex-direction:column;min-height:0;overflow-x:hidden;overflow-y:auto;scroll-padding-top:14px}
+  .mission-play{order:0;flex:none;padding:17px 16px 22px}
+  .mission-play>h2,.mission-ending h2{font-size:var(--reading-title);line-height:1.55;margin:8px 0 12px;overflow-wrap:anywhere}
+  .mission-situation{margin-bottom:18px}
+  .mission-choice{padding:16px 13px;gap:10px}
+  .mission-choice>span:nth-child(2){min-width:0}
+  .mission-choice strong,.mission-choice small{overflow-wrap:anywhere}
+  .choice-letter{width:28px;height:28px;font-size:14px}
+  .choice-arrow{padding:0;flex-shrink:0}
+  .mission-story{order:1;flex:none;border-right:0;border-top:1px solid #dfe3d1;border-bottom:0;padding:20px 18px;display:grid;grid-template-columns:85px minmax(0,1fr)}
+  .mission-story .resident-portrait{width:85px;height:85px}
+  .mission-story .mission-metrics{grid-column:1/-1}
+  .mission-shell[data-phase="question"] .mission-metrics{display:grid}
+  .mission-story .profile-time-note,.mission-story .mission-assumptions,.mission-story>.mission-fine{grid-column:1/-1}
+  .mission-metrics{grid-template-columns:1fr}
+  .mission-metric{display:grid;grid-template-columns:minmax(0,1fr) auto;min-height:0;padding:10px 12px}
+  .mission-metric>span{min-height:0}
+  .mission-metric p{grid-column:1/-1}
+  .mission-policy-shortcut{margin-top:24px}
+  .mission-policy-shortcut button,.change-choice,.mission-rewind button,.handoff-secondary a,.handoff-secondary button{min-height:44px}
+  .mission-footer{padding:8px 12px 4px;gap:6px;flex-wrap:wrap}
+  .mission-footer>div{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .mission-footer button{min-height:44px;font-size:var(--reading-small)!important;line-height:1.6!important}
+  .mission-footer .mission-back,.mission-footer .mission-guide,.mission-footer .mission-feedback{padding:8px 4px}
+  .mission-continue{width:100%;padding:10px 14px;order:-1}
+  .mission-shell[data-phase="question"] .mission-continue{display:none}
+  .mission-shell:not([data-phase="ending"]) .mission-save-note{display:none}
+  .mission-restart{padding:10px 14px}
+  .mission-save-note{padding:3px 12px 8px;font-size:var(--reading-small)!important;line-height:1.6!important;letter-spacing:0}
+  .consequence-card{padding:16px 13px;gap:10px}
+  .consequence-card>div{min-width:0}
+  .mission-reaction>h3{font-size:var(--reading-choice);line-height:1.65}
+  .mission-compare>div p{flex-direction:column;gap:5px}
+  .tax-paths,.tax-example-grid{grid-template-columns:1fr}
+  .scenario-dialog{box-sizing:border-box;width:calc(100vw - 16px);max-height:calc(100dvh - 16px);padding:calc(18px + env(safe-area-inset-top,0px)) calc(16px + env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) calc(16px + env(safe-area-inset-left,0px))}
+  .scenario-grid{grid-template-columns:1fr}
+  .scenario-actions{flex-wrap:wrap}
+  .scenario-actions button{min-height:44px;flex:1 1 160px}
+}
+
+/* A short screen needs one scroll area so header/footer cannot consume the body. */
+@media(max-width:980px) and (max-height:540px){
+  .mission-shell{overflow-y:auto;overscroll-behavior:contain}
+  .mission-header{order:0;flex:none}
+  .mission-progress{order:1;flex:none}
+  .mission-layout{display:contents;overflow:visible}
+  .mission-play{order:2}
+  .mission-footer{order:3;flex:none}
+  .mission-save-note{order:4;flex:none}
+  .mission-story{order:5;display:grid}
+  .mission-choices{display:flex;flex-direction:column}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .mission-dialog *,.scenario-dialog *{scroll-behavior:auto!important;animation:none!important;transition:none!important}
+}

@@ -1,0 +1,48 @@
+.feedback-dialog{width:min(640px,calc(100% - 28px));max-height:calc(100dvh - 28px);overflow-y:auto;color:var(--ink)}
+.feedback-dialog [hidden]{display:none!important}
+.feedback-dialog .dialog-top{align-items:flex-start;position:sticky;top:0;z-index:2;background:#fbf9f2;padding-bottom:10px}
+.feedback-dialog .dialog-top h2{font-size:25px;line-height:1.5;letter-spacing:1px;margin-top:5px}
+.feedback-dialog .feedback-close{flex-shrink:0;min-width:44px;min-height:44px}
+.feedback-dialog .dialog-lead{font-size:14px;line-height:1.9}
+.feedback-purpose{font-size:12px;line-height:1.85;border-left:3px solid #aa805a;padding:8px 12px;background:#f1ecdf;color:#665f49;margin:14px 0}
+.feedback-dialog .tn-feedback-context{font-size:12px;overflow-wrap:anywhere;margin-bottom:20px}
+.feedback-dialog .field-label,.feedback-dialog .form-row label{font-size:14px;line-height:1.8}
+.feedback-dialog select,.feedback-dialog textarea{font-size:16px;line-height:1.65}
+.feedback-dialog .consent-row{font-size:12px;line-height:1.85}
+.feedback-dialog .privacy-note,.feedback-memory-note{font-size:12px;line-height:1.85;color:#69745f}
+.feedback-memory-note{margin:8px 0 14px}
+.feedback-dialog .field-foot{font-size:11px;line-height:1.7;color:#69745f}
+.feedback-dialog .form-status{font-size:13px;line-height:1.9}
+.feedback-locked,.feedback-countdown{font-size:12px;line-height:1.85;padding:10px 12px;border-radius:7px;background:#f3ead9;color:#785c3d}
+.feedback-locked{margin-bottom:8px}
+.feedback-countdown{margin-top:8px}
+.feedback-dialog textarea[readonly]{background:#f0f1e9;color:#52634e;cursor:text}
+.feedback-dialog select:disabled,.feedback-dialog input:disabled{opacity:.75;cursor:default}
+.feedback-dialog button:disabled{opacity:.55;cursor:wait}
+.feedback-retry-actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:14px}
+.feedback-retry-actions .primary-button{flex:1;justify-content:center;min-width:180px}
+.feedback-secondary{border:1px solid #a9b99d;background:transparent;color:#365d49;border-radius:7px;padding:11px 15px;font:inherit;font-size:13px;line-height:1.6;cursor:pointer;min-height:44px}
+.feedback-secondary:hover{background:#e7eddf}
+.feedback-dialog :is(button,select,textarea,input):focus-visible{outline:3px solid #8b9f6c;outline-offset:3px}
+.feedback-new-confirm{border:1px solid #c7a87c;border-radius:9px;background:#f5eddd;padding:16px;margin-top:15px;color:#6f5537}
+.feedback-new-confirm strong{font-size:14px}
+.feedback-new-confirm p{font-size:13px;line-height:1.9;margin:7px 0 14px}
+.feedback-choice-actions{display:flex;flex-wrap:wrap;gap:9px}
+.feedback-dialog #feedback-receipt{font-size:13px;line-height:1.8;user-select:all}
+.feedback-dialog #feedback-created-at{display:block;font-size:15px;line-height:1.8;color:#365d49;font-variant-numeric:tabular-nums}
+.feedback-dialog #feedback-copy{margin-top:20px}
+.feedback-dialog #feedback-copy-status{font-size:12px;line-height:1.8;min-height:1.8em;margin:9px 0;color:#526b45}
+.feedback-dialog #feedback-copy-fallback{text-align:left;margin-top:12px}
+.feedback-dialog #feedback-copy-text{width:100%;resize:vertical;overflow-wrap:anywhere;font-size:12px;line-height:1.8;box-sizing:border-box}
+.feedback-dialog .feedback-receipt-note{font-size:12px!important;color:#69745f!important;margin-top:16px}
+.feedback-dialog #feedback-again{margin-top:18px}
+.night-mode .feedback-purpose,.night-mode .feedback-new-confirm{background:#454633;color:#eddfc3;border-color:#ad9064}
+.night-mode .feedback-dialog .dialog-top{background:#243f35}
+.night-mode .feedback-dialog .privacy-note,.night-mode .feedback-memory-note,.night-mode .feedback-dialog .field-foot,.night-mode .feedback-dialog .feedback-receipt-note{color:#c9d4bd!important}
+.night-mode .feedback-dialog .tn-feedback-context,.night-mode .feedback-dialog textarea[readonly],.night-mode .feedback-dialog #feedback-receipt{background:#344c3b;color:#e2e9d4}
+.night-mode .feedback-locked,.night-mode .feedback-countdown{background:#494832;color:#eddfc3}
+.night-mode .feedback-secondary{border-color:#809572;color:#e0ead0}
+.night-mode .feedback-secondary:hover{background:#38523f}
+.night-mode .feedback-dialog #feedback-created-at,.night-mode .feedback-dialog #feedback-copy-status{color:#d6e5c7}
+@media(max-width:760px){.feedback-dialog{padding:22px 18px;width:calc(100% - 22px);max-height:calc(100dvh - 22px);box-sizing:border-box}.feedback-dialog .dialog-top h2{font-size:21px;letter-spacing:.4px}.feedback-dialog .dialog-lead{font-size:13px}.feedback-dialog .field-foot{flex-wrap:wrap;gap:4px}.feedback-dialog .form-row{gap:12px}.feedback-retry-actions{align-items:stretch}.feedback-retry-actions .feedback-secondary{flex:1}.feedback-choice-actions button{flex:1}.feedback-dialog #feedback-receipt{font-size:12px}}
+@media(max-width:380px){.feedback-dialog .form-row{grid-template-columns:1fr}.feedback-dialog .dialog-top h2{font-size:19px}.feedback-dialog .eyebrow{font-size:9px}}

@@ -21,6 +21,60 @@ export function cityMotionPhase(offset, elapsed, speed, length = 1) {
   return remainder < 0 ? (remainder + 1) % 1 : remainder === 0 ? 0 : remainder;
 }
 
+// A phone reserves at most three invitations. The person's active conversation wins
+// over neighbouring services; scenery remains available through the Tainan entrance.
+export function cityMobileLabelPlan({ districtIds, personaDistricts, residentIds, selectedDistrictId, selectedPersonaId, selectedResidentId, hoveredDistrictId, hoveredPersonaId, hoveredResidentId }) {
+  const plan = [];
+  const add = (type, id, valid) => {
+    if (valid && id && plan.length < 3 && !plan.some((item) => item.type === type && item.id === id)) plan.push({ type, id });
+  };
+  const persona = (id) => add('persona', id, Object.hasOwn(personaDistricts, id));
+  const resident = (id) => add('resident', id, residentIds.includes(id));
+  const district = (id) => add('district', id, districtIds.includes(id));
+  persona(selectedPersonaId); resident(selectedResidentId);
+  persona(hoveredPersonaId); resident(hoveredResidentId);
+  district(selectedDistrictId); district(hoveredDistrictId);
+  if (districtIds.includes(selectedDistrictId)) {
+    Object.entries(personaDistricts).forEach(([id, districtId]) => { if (districtId === selectedDistrictId) persona(id); });
+  } else districtIds.forEach(district);
+  return plan;
+}
+
+export function findCityLabelPosition({ idealX, idealY, width, height, bounds, occupied, previous, maxDisplacement = Infinity }) {
+  const minX = bounds.left + width / 2, maxX = bounds.right - width / 2;
+  const minY = bounds.top + height / 2, maxY = bounds.bottom - height / 2;
+  if (minX > maxX || minY > maxY) return null;
+  const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+  const candidates = [[clamp(idealX, minX, maxX), clamp(idealY, minY, maxY)]];
+  if (previous) candidates.push([previous.x, previous.y, true]);
+  for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0], [-1, -1], [1, 1], [0, -2], [0, 2]]) {
+    candidates.push([clamp(idealX + dx * (width + 10), minX, maxX), clamp(idealY + dy * (height + 10), minY, maxY)]);
+  }
+  const choose = (positions) => {
+    let best = null;
+    for (const [x, y, stable] of positions) {
+      if (x < minX || x > maxX || y < minY || y > maxY) continue;
+      const distance = Math.hypot(x - idealX, y - idealY);
+      if (distance > maxDisplacement) continue;
+      const blocked = occupied.some((other) => Math.abs(x - other.x) < (width + other.width) / 2 + 8 && Math.abs(y - other.y) < (height + other.height) / 2 + 8);
+      if (blocked) continue;
+      const score = distance - (stable ? 12 : 0);
+      if (!best || score < best.score) best = { x, y, score };
+    }
+    return best;
+  };
+  const nearby = choose(candidates); if (nearby) return nearby;
+  const xs = new Set([minX, maxX, clamp(idealX, minX, maxX)]), ys = new Set([minY, maxY, clamp(idealY, minY, maxY)]);
+  for (let x = minX; x <= maxX; x += 30) xs.add(x);
+  for (let y = maxY; y >= minY; y -= 30) ys.add(y);
+  for (const other of occupied) for (const side of [-1, 1]) {
+    xs.add(clamp(other.x + side * ((width + other.width) / 2 + 10), minX, maxX));
+    ys.add(clamp(other.y + side * ((height + other.height) / 2 + 10), minY, maxY));
+  }
+  const fallback = []; for (const x of xs) for (const y of ys) fallback.push([x, y]);
+  return choose(fallback);
+}
+
 /* Original, procedural miniature. No downloaded models or image assets. */
 export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, onResident = () => {}, onDistrict = () => {}, onReady = () => {}, onError = () => {} }) {
   let renderer;
@@ -39,8 +93,9 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
   renderer.toneMappingExposure = 1.12;
   const scene = new THREE.Scene();
   const camera = new THREE.OrthographicCamera(-24, 24, 14, -14, 0.1, 180);
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const controls = new OrbitControls(camera, canvas);
-  controls.enableDamping = true;
+  controls.enableDamping = !reducedMotion.matches;
   controls.dampingFactor = 0.075;
   controls.enablePan = false;
   controls.minPolarAngle = Math.PI / 5.8;
@@ -166,9 +221,9 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
   const fill = new THREE.DirectionalLight('#C7E6E0', 0.9); fill.position.set(16, 15, -20); scene.add(fill);
 
   const districts = {
-    buy: { id: 'buy', name: '安心買房', center: new THREE.Vector3(-6.9, 1, 3.25), color: palette.coral, rotation: 0.07 },
-    sell: { id: 'sell', name: '從容賣房', center: new THREE.Vector3(6.3, 1, 3.8), color: palette.ochre, rotation: -0.05 },
-    legacy: { id: 'legacy', name: '好好傳承', center: new THREE.Vector3(0.05, 1, -7.5), color: palette.jade, rotation: 0.08 },
+    buy: { id: 'buy', name: '買房過戶', center: new THREE.Vector3(-6.9, 1, 3.25), color: palette.coral, rotation: 0.07 },
+    sell: { id: 'sell', name: '賣屋稅務', center: new THREE.Vector3(6.3, 1, 3.8), color: palette.ochre, rotation: -0.05 },
+    legacy: { id: 'legacy', name: '傳承安排', center: new THREE.Vector3(0.05, 1, -7.5), color: palette.jade, rotation: 0.08 },
   };
   const carAnimations = [], boatAnimations = [], cloudAnimations = [], labels = [];
   const citizenAnimations = [], citizenBatches = [], personaLabels = [], personaPickTargets = [];
@@ -913,11 +968,11 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
   let disposed = false, frame = 0, ready = false, nightTarget = 0, nightMix = 0, paused = false, motionTime = 0;
   let selectedId = null, selectedPersonaId = null, selectedResidentId = null, hoveredId = null, hoveredPersonaId = null, hoveredResidentId = null, hoveredRegionId = null;
   let transition = null, previousTime = null, pendingZoom = null;
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const dayColor = new THREE.Color('#F4F1E7'), nightColor = new THREE.Color('#152D35');
   const waterDay = new THREE.Color(palette.water), waterNight = new THREE.Color('#284F59');
   const raycaster = new THREE.Raycaster(), pointer = new THREE.Vector2(), projected = new THREE.Vector3();
   const cameraOffset = new THREE.Vector3(31, 29, 36), viewRight = new THREE.Vector3(36, 0, -31).normalize();
+  const viewUp = new THREE.Vector3().crossVectors(cameraOffset, viewRight).normalize();
   const defaultTarget = new THREE.Vector3();
   const tmpColor = new THREE.Color();
   const citizenPoint = new THREE.Vector3(), citizenTangent = new THREE.Vector3(), citizenWorld = new THREE.Vector3();
@@ -948,7 +1003,7 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
       else bounds.right = Math.min(bounds.right, detail.left - 12);
     }
     // The compact introduction reserves its actual rectangle, not an entire side of the city.
-    for (const rect of [header, dock, intro, detail, visibleRect('.scene-tools')]) {
+    for (const rect of [header, dock, intro, detail, visibleRect('.scene-tools'), visibleRect('.office-strip')]) {
       if (!rect || rect.right <= 0 || rect.left >= width || rect.bottom <= 0 || rect.top >= height) continue;
       bounds.obstacles.push({ x: (rect.left + rect.right) / 2, y: (rect.top + rect.bottom) / 2,
         width: rect.right - rect.left, height: rect.bottom - rect.top });
@@ -957,37 +1012,9 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
   }
 
   function findLabelPosition(idealX, idealY, pixelsWide, pixelsHigh, occupied, previous) {
-    const minX = labelBounds.left + pixelsWide / 2, maxX = labelBounds.right - pixelsWide / 2;
-    const minY = labelBounds.top + pixelsHigh / 2, maxY = labelBounds.bottom - pixelsHigh / 2;
-    if (minX > maxX || minY > maxY) return null;
-    const clamp = THREE.MathUtils.clamp;
-    const candidates = [[clamp(idealX, minX, maxX), clamp(idealY, minY, maxY)]];
-    if (previous) candidates.push([previous.x, previous.y, true]);
-    for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0], [-1, -1], [1, 1], [0, -2], [0, 2]]) {
-      candidates.push([clamp(idealX + dx * (pixelsWide + 10), minX, maxX), clamp(idealY + dy * (pixelsHigh + 10), minY, maxY)]);
-    }
-    const choose = (positions) => {
-      let best = null;
-      for (const [x, y, stable] of positions) {
-        if (x < minX || x > maxX || y < minY || y > maxY) continue;
-        const blocked = occupied.some((other) => Math.abs(x - other.x) < (pixelsWide + other.width) / 2 + 8 && Math.abs(y - other.y) < (pixelsHigh + other.height) / 2 + 8);
-        if (blocked) continue;
-        const score = Math.hypot(x - idealX, y - idealY) - (stable ? 12 : 0);
-        if (!best || score < best.score) best = { x, y, score };
-      }
-      return best;
-    };
-    const nearby = choose(candidates); if (nearby) return nearby;
-    // Reuse the existing safe-area search only when nearby slots are occupied.
-    const xs = new Set([minX, maxX, clamp(idealX, minX, maxX)]), ys = new Set([minY, maxY, clamp(idealY, minY, maxY)]);
-    for (let x = minX; x <= maxX; x += 30) xs.add(x);
-    for (let y = maxY; y >= minY; y -= 30) ys.add(y);
-    for (const other of occupied) for (const side of [-1, 1]) {
-      xs.add(clamp(other.x + side * ((pixelsWide + other.width) / 2 + 10), minX, maxX));
-      ys.add(clamp(other.y + side * ((pixelsHigh + other.height) / 2 + 10), minY, maxY));
-    }
-    const fallback = []; for (const x of xs) for (const y of ys) fallback.push([x, y]);
-    return choose(fallback);
+    return findCityLabelPosition({ idealX, idealY, width: pixelsWide, height: pixelsHigh,
+      bounds: labelBounds, occupied, previous,
+      maxDisplacement: width < 740 || (width < 980 && height < 540) ? Math.min(160, width * 0.4) : Infinity });
   }
 
   function placeSceneLabel(item, anchor, pixelsWide, pixelsHigh, occupied, unitsPerPixel, lift = 34) {
@@ -1013,19 +1040,25 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
   function updatePersonaLabels(now) {
     refreshLabelBounds(now);
     const occupied = [...labelBounds.obstacles], unitsPerPixel = (camera.top - camera.bottom) / camera.zoom / height;
-    // Required service entries reserve space before people, landscape invitations, and small talk.
-    const districtWidth = width < 740 ? 156 : 166;
-    for (const district of Object.values(districts)) {
-      if (!district.label) continue;
+    const mobile = width < 740 || (width < 980 && height < 540);
+    const districtWidth = mobile ? 156 : 166, pixelsWide = mobile ? 140 : 152, pixelsHigh = pixelsWide * 184 / 576;
+    const placeDistrict = (district) => {
+      if (!district?.label) return;
       district.leader.material.opacity = selectedId === district.id || hoveredId === district.id ? 0.8 : 0.5;
       placeSceneLabel(district, district.labelAnchor, districtWidth, districtWidth / 4, occupied, unitsPerPixel, 0);
+    };
+    const placePersona = (persona) => {
+      if (!persona?.label) return;
+      persona.actor.root.getWorldPosition(citizenWorld); citizenWorld.y += persona.actor.height + 0.1;
+      placeSceneLabel(persona, citizenWorld, pixelsWide, pixelsHigh, occupied, unitsPerPixel);
+    };
+    for (const item of [...Object.values(districts), ...Object.values(regions)]) {
+      if (item.label) item.label.visible = false;
+      if (item.leader) item.leader.visible = false;
     }
-    const pixelsWide = width < 740 ? 140 : 152, pixelsHigh = pixelsWide * 184 / 576;
     for (const persona of Object.values(personas)) {
       if (!persona.label) continue;
-      const visible = selectedPersonaId ? selectedPersonaId === persona.id
-        : selectedId ? selectedId === persona.districtId : hoveredPersonaId === persona.id;
-      persona.label.visible = visible; persona.leader.visible = visible;
+      persona.label.visible = false; persona.leader.visible = false;
       persona.ring.material.opacity = selectedPersonaId === persona.id ? 0.86 : hoveredPersonaId === persona.id ? 0.72 : 0.34;
       const moodName = selectedPersonaId === persona.id ? persona.mood || 'neutral' : 'neutral';
       const mood = missionMoods[moodName];
@@ -1034,9 +1067,26 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
       persona.leader.material.color.set(mood.halo || persona.color);
       const pulse = moodName === 'celebrate' ? Math.sin(motionTime * 2.2) * 0.065 : 0;
       persona.ring.scale.setScalar(moodName === 'neutral' ? 1 : 1.62 + pulse);
-      if (!visible) continue;
-      persona.actor.root.getWorldPosition(citizenWorld); citizenWorld.y += persona.actor.height + 0.1;
-      placeSceneLabel(persona, citizenWorld, pixelsWide, pixelsHigh, occupied, unitsPerPixel);
+    }
+    resetResidentLabels();
+    if (mobile) {
+      const plan = cityMobileLabelPlan({ districtIds: Object.keys(districts),
+        personaDistricts: Object.fromEntries(Object.values(personas).map((persona) => [persona.id, persona.districtId])),
+        residentIds: [...residentCharacters.keys()], selectedDistrictId: selectedId, selectedPersonaId, selectedResidentId,
+        hoveredDistrictId: hoveredId, hoveredPersonaId, hoveredResidentId });
+      for (const item of plan) {
+        if (item.type === 'district') placeDistrict(districts[item.id]);
+        else if (item.type === 'persona') placePersona(personas[item.id]);
+        else placeResidentLabel(residentCharacters.get(item.id), occupied, unitsPerPixel);
+      }
+      return;
+    }
+    // Wider screens retain the landscape invitations and ambient neighbourhood talk.
+    for (const district of Object.values(districts)) placeDistrict(district);
+    for (const persona of Object.values(personas)) {
+      const visible = selectedPersonaId ? selectedPersonaId === persona.id
+        : selectedId ? selectedId === persona.districtId : hoveredPersonaId === persona.id;
+      if (visible) placePersona(persona);
     }
     for (const region of Object.values(regions)) {
       if (!region.label) continue;
@@ -1051,7 +1101,7 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
     updateResidentLabels(occupied, unitsPerPixel);
   }
 
-  function updateResidentLabels(occupied, unitsPerPixel) {
+  function resetResidentLabels() {
     for (const character of residentCharacters.values()) {
       const active = selectedResidentId === character.resident.id, hovered = hoveredResidentId === character.resident.id;
       character.label.visible = false; character.leader.visible = false;
@@ -1059,11 +1109,28 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
       character.ring.scale.setScalar(active || hovered ? 1.24 : 1);
       character.label.material.color.set('#FFFFFF');
     }
+  }
+
+  function placeResidentLabel(character, occupied, unitsPerPixel, ambientIndex = 0) {
+    if (!character) return false;
+    const { resident, actor } = character;
+    const bubbleWidth = width < 740 ? 200 : 208, bubbleHeight = bubbleWidth * 210 / 640;
+    actor.root.getWorldPosition(citizenWorld); citizenWorld.y += actor.height + 0.1;
+    personaProjection.copy(citizenWorld).project(camera);
+    if (personaProjection.z < -1 || personaProjection.z > 1 || Math.abs(personaProjection.x) > 1.05 || Math.abs(personaProjection.y) > 1.05) return false;
+    if (!placeSceneLabel(character, citizenWorld, bubbleWidth, bubbleHeight, occupied, unitsPerPixel, 48)) return false;
+    paintResidentBubble(character, ambientIndex);
+    character.label.userData.ambientIndex = ambientIndex;
+    character.label.userData.residentName = resident.name;
+    return true;
+  }
+
+  function updateResidentLabels(occupied, unitsPerPixel) {
     // A mission keeps its existing visual focus. Neighbours remain clickable through their actors.
     if (selectedPersonaId && !hoveredResidentId) return;
     const candidates = residents.map((resident) => residentCharacters.get(resident.id))
       .filter((character) => character && (!selectedId || character.districtId === selectedId));
-    const visible = [], limit = width < 740 ? 2 : 3;
+    const visible = [], limit = 3;
     const include = (character) => { if (character && visible.length < limit && !visible.includes(character)) visible.push(character); };
     include(residentCharacters.get(selectedResidentId)); include(residentCharacters.get(hoveredResidentId));
     // All timing derives from motionTime, which freezes for pause and reduced-motion preferences.
@@ -1075,17 +1142,7 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
         include(candidates[(round + offset) % candidates.length]);
       }
     }
-    const bubbleWidth = width < 740 ? 200 : 208, bubbleHeight = bubbleWidth * 210 / 640;
-    for (const character of visible) {
-      const { resident, actor } = character;
-      actor.root.getWorldPosition(citizenWorld); citizenWorld.y += actor.height + 0.1;
-      personaProjection.copy(citizenWorld).project(camera);
-      if (personaProjection.z < -1 || personaProjection.z > 1 || Math.abs(personaProjection.x) > 1.05 || Math.abs(personaProjection.y) > 1.05) continue;
-      if (!placeSceneLabel(character, citizenWorld, bubbleWidth, bubbleHeight, occupied, unitsPerPixel, 48)) continue;
-      paintResidentBubble(character, ambientIndex);
-      character.label.userData.ambientIndex = ambientIndex;
-      character.label.userData.residentName = resident.name;
-    }
+    for (const character of visible) placeResidentLabel(character, occupied, unitsPerPixel, ambientIndex);
   }
 
   function frameTarget(id = null) {
@@ -1093,8 +1150,22 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
     if (!id || !districts[id]) {
       const target = new THREE.Vector3(0, 0.7, -0.1);
       target.addScaledVector(viewRight, mobile || document.body.classList.contains('city-first') ? 0 : -4.2);
-      // On small screens the city sits a little lower, leaving space for the headline.
-      if (mobile) target.y = 3.1;
+      // Keep the overview between the controls and the introduction. Moving the
+      // camera and its target together keeps meshes, raycasting and labels aligned.
+      if (mobile) {
+        const canvasRect = canvas.getBoundingClientRect();
+        const visibleRect = (selector) => {
+          const element = document.querySelector(selector);
+          if (!element || element.hidden || getComputedStyle(element).display === 'none') return null;
+          const rect = element.getBoundingClientRect();
+          return rect.width && rect.height ? rect : null;
+        };
+        const topRects = [visibleRect('.masthead'), visibleRect('.scene-tools')].filter(Boolean);
+        const bottomRects = [visibleRect('#intro'), visibleRect('.office-strip')].filter(Boolean);
+        const top = Math.max(18, ...topRects.map((rect) => rect.bottom - canvasRect.top + 12));
+        const bottom = Math.min(height - 18, ...bottomRects.map((rect) => rect.top - canvasRect.top - 14));
+        if (bottom > top) target.addScaledVector(viewUp, ((top + bottom) / 2 - height / 2) * (camera.top - camera.bottom) / height);
+      }
       return { target, zoom: 1 };
     }
     const target = districts[id].center.clone(); target.y = mobile ? -6.5 : 1.2;
@@ -1231,6 +1302,16 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
   function onPointerCancel(event) { pointers.delete(event.pointerId); pointerDown = null; }
   function onPointerLeave() { hoveredId = null; hoveredPersonaId = null; hoveredResidentId = null; hoveredRegionId = null; canvas.style.cursor = 'grab'; }
   function onControlStart() { transition = null; pendingZoom = null; }
+  function onMotionPreferenceChange() {
+    controls.enableDamping = !reducedMotion.matches;
+    if (!reducedMotion.matches) return;
+    if (transition) {
+      controls.target.copy(transition.toTarget); camera.position.copy(transition.toPosition); camera.zoom = transition.toZoom;
+      transition = null;
+    }
+    if (pendingZoom !== null) { camera.zoom = pendingZoom; pendingZoom = null; }
+    camera.updateProjectionMatrix(); controls.update();
+  }
   function onContextLost(event) { event.preventDefault(); onError(new Error('WebGL context lost. Please reload to restore the city.')); }
   canvas.addEventListener('pointerdown', onPointerDown);
   canvas.addEventListener('pointerup', onPointerUp);
@@ -1239,6 +1320,7 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
   canvas.addEventListener('pointerleave', onPointerLeave);
   canvas.addEventListener('webglcontextlost', onContextLost);
   controls.addEventListener('start', onControlStart);
+  reducedMotion.addEventListener('change', onMotionPreferenceChange);
   canvas.style.touchAction = 'none'; canvas.style.cursor = 'grab';
   const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(resize) : null;
   if (observer) observer.observe(canvas); else window.addEventListener('resize', resize);
@@ -1349,6 +1431,7 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
   function dispose() {
     if (disposed) return; disposed = true; cancelAnimationFrame(frame); observer?.disconnect();
     window.removeEventListener('resize', resize); controls.removeEventListener('start', onControlStart); controls.dispose();
+    reducedMotion.removeEventListener('change', onMotionPreferenceChange);
     canvas.removeEventListener('pointerdown', onPointerDown); canvas.removeEventListener('pointerup', onPointerUp);
     canvas.removeEventListener('pointermove', onPointerMove); canvas.removeEventListener('pointercancel', onPointerCancel);
     canvas.removeEventListener('pointerleave', onPointerLeave); canvas.removeEventListener('webglcontextlost', onContextLost);
@@ -1359,6 +1442,11 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
     select, focusPersona, focusResident, setMissionMood, reset, resize, dispose, getSceneAnchor,
     setNight(value) { nightTarget = value ? 1 : 0; },
     setPaused(value) { paused = Boolean(value); },
-    zoom(delta) { transition = null; pendingZoom = THREE.MathUtils.clamp((pendingZoom ?? camera.zoom) + Number(delta || 0), controls.minZoom, controls.maxZoom); },
+    zoom(delta) {
+      transition = null;
+      const target = THREE.MathUtils.clamp((pendingZoom ?? camera.zoom) + Number(delta || 0), controls.minZoom, controls.maxZoom);
+      if (reducedMotion.matches) { camera.zoom = target; pendingZoom = null; camera.updateProjectionMatrix(); controls.update(); }
+      else pendingZoom = target;
+    },
   };
 }
