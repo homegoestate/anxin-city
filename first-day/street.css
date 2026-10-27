@@ -1,4 +1,4 @@
-/* V15: an original walkable, fictional learning map. */
+/* V16: an original walkable, fictional learning map. */
 .street-screen{--street-ink:#235b4e;--street-soft:#edf0df;--street-gold:#d7a14e;display:grid;gap:22px;padding-top:8px}
 .street-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:24px}
 .street-heading h1{font-size:clamp(1.8rem,3.9vw,3rem);margin:0 0 9px;letter-spacing:.01em}
@@ -176,6 +176,32 @@ body:has(.street-screen) .shell{padding-top:12px}
   .street-destinations{grid-template-columns:1fr}
   .street-destination{padding:11px 13px;gap:10px;min-height:68px}
   .street-destination-icon{width:27px;height:27px;font-size:.8rem}
+}
+/* Brand names stay in HTML so they remain readable at every map scale. */
+.street-stop-button.is-office .street-stop-label{max-width:none;background:#245c48;border-color:#174434;color:#fff5d8;padding:6px 10px;box-shadow:0 3px 0 #163f3338}
+.street-stop-button.is-office .street-stop-label>span{overflow:visible;text-overflow:clip;white-space:normal}
+.street-stop-button.is-office .street-stop-label>i{color:#edcd8b;font-size:1rem}
+.street-office-name{display:flex;align-items:baseline;gap:.3em;white-space:nowrap}
+.street-office-name>span{white-space:nowrap}
+.street-office-times{font-weight:400;color:#e0c58b}
+.street-stop-button.is-office.is-near .street-stop-label{border-color:#e4b65f;box-shadow:0 0 0 2px #e4b65f,0 3px 0 #163f3338}
+.street-stop-button.is-office:hover .street-stop-label,.street-stop-button.is-office:focus-visible .street-stop-label{background:#1b4b3a}
+.street-destination.is-office strong{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+.street-destination.is-office .street-destination-icon{background:#245c48;color:#fff2c9;font-size:1.1rem}
+.street-clue-ring{display:none}
+.street-npc.is-clue .street-clue-ring{display:inline}
+.street-stop-button.is-clue .street-stop-label{outline:2px solid #ac772d;outline-offset:3px}
+.street-clue-label{position:absolute;right:4px;top:-7px;padding:2px 5px;border:1px solid #ac772d;border-radius:6px;background:#fff0bf;color:#71501e;font-size:.65rem;font-weight:700;line-height:1.25;pointer-events:none;white-space:nowrap}
+.street-clue-label[hidden],.street-destination-clue[hidden]{display:none}
+.street-destination.is-clue{border-color:#b58a43;box-shadow:inset 0 0 0 1px #b58a43;background:#fff5d9}
+.street-destination-clue{display:inline-block;margin-top:5px;font-size:.76rem;font-weight:700;line-height:1.4;color:#785725}
+@media(max-width:760px){
+  .street-stop-button.is-office{transform:translate(-100%,-100%);text-align:right}
+  .street-stop-button.is-office .street-stop-label{padding:5px 8px;font-size:.74rem;line-height:1.4}
+  .street-office-name{flex-direction:column;align-items:flex-end;gap:0}
+  .street-stop-button.is-office .street-stop-label>i{align-self:center;font-size:.95rem}
+  .street-clue-label{font-size:.62rem}
+  .street-destination-clue{font-size:.85rem}
 }
 @media(prefers-reduced-motion:reduce){.street-player *{animation:none!important;transition:none!important}.street-dpad button.is-held{transform:none}}
 @media print{.street-world,.street-toolbar,.street-goal,.street-dialog{display:none!important}.street-screen,.street-bottom{display:block}.street-notebook,.street-result{border:0;background:white;box-shadow:none;break-inside:avoid}}

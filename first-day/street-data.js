@@ -1,4 +1,4 @@
-// V15：角色、對話與街區位置皆為原創虛構；文化與查證知識另列官方來源。
+// V16：角色、對話與街區位置皆為原創虛構；文化與查證知識另列官方來源。
 // 這是三張拼合的學習場景，不是實際步行距離、行政分區或景點開放承諾。
 // checkedAt 只表示下列摘要在當日重新對照來源；不改寫既有 culture-data 的查核日期。
 const checkedAt = '2026-10-27';
@@ -35,7 +35,7 @@ export const stops = [
   { id: 'lane-aho', district: 'lane', kind: 'resident', name: '阿荷', role: '文具店老闆', portrait: 'guide', x: 130, y: 440 },
   { id: 'lane-abo', district: 'lane', kind: 'resident', name: '博伯', role: '整理舊照片的鄰居', portrait: 'elder', x: 360, y: 440 },
   { id: 'lane-momo', district: 'lane', kind: 'resident', name: '沫沫', role: '借走速寫本的街坊', portrait: 'child', x: 870, y: 220, requires: 'lane-sketch' },
-  { id: 'lane-office', district: 'lane', kind: 'office', name: '楊代書相談所', role: '把問題帶進下一段學習', portrait: 'yang', x: 870, y: 440 },
+  { id: 'lane-office', district: 'lane', kind: 'office', name: '宏國地政 × 易丞地政', role: '街坊的問題，一起問清楚', portrait: 'yang', x: 870, y: 440 },
   { id: 'coast-salt', district: 'coast', kind: 'place', name: '瓦盤鹽田角', role: '把夕陽與勞動一起看', x: 130, y: 220 },
   { id: 'coast-tree', district: 'coast', kind: 'place', name: '樹影倉庫', role: '先找樹，再找貨物', x: 360, y: 220 },
   { id: 'coast-fan', district: 'coast', kind: 'place', name: '扇形水路', role: '跟著工作動線想一想', x: 620, y: 220 },

@@ -1,4 +1,4 @@
-import { districts, stops, discoveries, stories } from './street-data.js?v=15.0.0';
+import { districts, stops, discoveries, stories } from './street-data.js?v=16.0.0';
 
 export const STREET_KEY = 'anxin-first-day-street-v1';
 const districtById = new Map(districts.map(item => [item.id, item]));

@@ -80,7 +80,7 @@ export function createExperienceUI({
   firstDayLink.className = 'menu-action first-day-menu-link';
   firstDayLink.setAttribute('data-menu-action', '');
   firstDayLink.href = './first-day/';
-  firstDayLink.textContent = '街區冒險｜小安在台南的第一天 →';
+  firstDayLink.textContent = '街坊互助｜小安在台南的第一天 →';
   menu.querySelector('[data-menu-primary]').prepend(firstDayLink);
   const cultureButton = document.createElement('button');
   cultureButton.type = 'button';

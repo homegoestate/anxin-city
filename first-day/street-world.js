@@ -1,10 +1,11 @@
-import { streetSceneArt, personArt, stopArt } from './street-art.js?v=15.0.0';
+import { streetSceneArt, personArt, stopArt } from './street-art.js?v=16.0.0';
 
 const X_ROADS = [130,360,500,620,870];
 const Y_ROADS = [220,440,540];
 const BOUNDS = {left:60,right:940,top:175,bottom:565};
 const SPEED = 205;
 const TALK_DISTANCE = 68;
+const APPROACH_DISTANCE = 48;
 const EPSILON = 0.05;
 const DIRECTIONS = {up:{x:0,y:-1},down:{x:0,y:1},left:{x:-1,y:0},right:{x:1,y:0}};
 const KEYS = {ArrowUp:'up',w:'up',W:'up',ArrowDown:'down',s:'down',S:'down',ArrowLeft:'left',a:'left',A:'left',ArrowRight:'right',d:'right',D:'right'};
@@ -53,6 +54,20 @@ export function planStreetRoute(from,to) {
   return route.filter((p,i)=>i===0||i===route.length-1||!((same(route[i-1].x,p.x)&&same(p.x,route[i+1].x))||(same(route[i-1].y,p.y)&&same(p.y,route[i+1].y))));
 }
 
+/** Leave room for two full sprites while staying within the existing talk radius. */
+export function approachStopPosition(stop) {
+  const location=projectToStreet(stop);
+  return Y_ROADS.some(y=>same(y,location.y))
+    ? {x:clamp(location.x-APPROACH_DISTANCE,BOUNDS.left,BOUNDS.right),y:location.y}
+    : {x:location.x,y:clamp(location.y+APPROACH_DISTANCE,BOUNDS.top,BOUNDS.bottom)};
+}
+
+function mapStopName(stop) {
+  if(stop.kind!=='office')return esc(stop.name);
+  const brands=String(stop.name??'').split(/\s*×\s*/);
+  return `<span class="street-office-name">${brands.map((brand,index)=>`<span>${index?'<b class="street-office-times" aria-hidden="true">×</b> ':''}${esc(brand)}</span>`).join('')}</span>`;
+}
+
 function stepOnRoad(position,direction,amount) {
   const d=DIRECTIONS[direction];
   if(!d)return {...position};
@@ -71,13 +86,14 @@ function cleanStops(stops,district) {
 }
 
 /** The host owns story/state. This world emits settled movement and explicit interactions only. */
-export function mountStreetWorld(container,{district,position,stops=[],onMove=()=>{},onInteract=()=>{},reducedMotion=false}={}) {
+export function mountStreetWorld(container,{district,position,stops=[],onMove=()=>{},onInteract=()=>{},reducedMotion=false,highlightStopId=null}={}) {
   if(!container||typeof container.replaceChildren!=='function')throw new TypeError('A street map host is required.');
   const doc=container.ownerDocument,win=doc.defaultView;
   const prefix=`street-world-${++worldNumber}`;
   let currentDistrict=district||{id:'lane',title:'府城巷弄',spawn:{x:500,y:540}};
   let player=projectToStreet(position||currentDistrict.spawn),lastEmitted={...player};
   let visibleStops=cleanStops(stops,currentDistrict.id),targetId=null,route=[],routeIndex=0;
+  let highlightedStopId=typeof highlightStopId==='string'?highlightStopId:null;
   let destroyed=false,raf=0,lastTime=0,nearId=null,moving=false,facing='right',lastManualDirection=null;
   let held=new Map(),pointerDirections=new Map(),listeners=[],stage,svg,actors,playerGroup,routeLine,routeDot,nearButton,live,status,destinationList,stopLayer;
   const media=win.matchMedia?.('(prefers-reduced-motion: reduce)');
@@ -110,6 +126,17 @@ export function mountStreetWorld(container,{district,position,stops=[],onMove=()
     nearButton.setAttribute('aria-label',stop?`${stop.kind==='place'?'觀察':'和'}${stop.name}${stop.kind==='place'?'':'交談'}`:'走近人物或地標後互動');
     stopLayer.querySelectorAll('[data-stop]').forEach(button=>button.classList.toggle('is-near',button.dataset.stop===next));
     if(stop&&!route.length)say(`附近有${stop.name}。按 E、Enter 或空白鍵${stop.kind==='place'?'觀察':'交談'}。`);
+  }
+  function refreshHighlight(){
+    const activeId=visibleStops.some(stop=>stop.id===highlightedStopId)?highlightedStopId:null;
+    for(const button of [...stopLayer.querySelectorAll('[data-stop]'),...destinationList.querySelectorAll('[data-stop]')]){
+      const active=button.dataset.stop===activeId;
+      button.classList.toggle('is-clue',active);
+      const badge=button.querySelector('.street-clue-label,.street-destination-clue');
+      if(badge)badge.hidden=!active;
+      button.setAttribute('aria-label',`${active?'目前任務線索；':''}${button.dataset.label}`);
+    }
+    actors.querySelectorAll('[data-actor-stop]').forEach(actor=>actor.classList.toggle('is-clue',actor.dataset.actorStop===activeId));
   }
   function renderPlayer(){
     playerGroup.setAttribute('transform',`translate(${player.x.toFixed(2)} ${player.y.toFixed(2)})`);
@@ -166,9 +193,7 @@ export function mountStreetWorld(container,{district,position,stops=[],onMove=()
   function walkTo(id){
     const stop=visibleStops.find(item=>item.id===id);
     if(!stop||destroyed)return false;
-    // Stand just beside the person, leaving both sprites readable.
-    const location=projectToStreet(stop);
-    const approach=Y_ROADS.some(y=>same(y,location.y))?{x:clamp(location.x-26,BOUNDS.left,BOUNDS.right),y:location.y}:{x:location.x,y:clamp(location.y+26,BOUNDS.top,BOUNDS.bottom)};
+    const approach=approachStopPosition(stop);
     stage.focus({preventScroll:true});beginRoute(approach,id);return true;
   }
   function manualDirections(){return [...pointerDirections.values(),...held.values()];}
@@ -217,13 +242,14 @@ export function mountStreetWorld(container,{district,position,stops=[],onMove=()
     beginRoute(next);
   }
   function populateStops(){
-    const actorMarkup=[...visibleStops].sort((a,b)=>a.y-b.y).map((stop,i)=>`<g class="street-npc" data-y="${stop.y}" transform="translate(${stop.x} ${stop.y})">${stopArt(stop,i)}</g>`).join('');
+    const actorMarkup=[...visibleStops].sort((a,b)=>a.y-b.y).map((stop,i)=>`<g class="street-npc" data-actor-stop="${esc(stop.id)}" data-y="${stop.y}" transform="translate(${stop.x} ${stop.y})"><ellipse class="street-clue-ring" cy="3" rx="28" ry="12" fill="#f8e8b3" fill-opacity=".5" stroke="#b17d2e" stroke-width="4"/>${stopArt(stop,i)}</g>`).join('');
     actors.innerHTML=actorMarkup;
     playerGroup=doc.createElementNS('http://www.w3.org/2000/svg','g');
     playerGroup.setAttribute('class','street-player');playerGroup.innerHTML=`<ellipse class="street-player-ring" cy="4" rx="24" ry="10" fill="none" stroke="#f8f3d2" stroke-width="4"/>${personArt('guide',true)}<path d="M-6-107 0-100l6-7z" fill="#2b7460"/>`;
     actors.append(playerGroup);
-    stopLayer.innerHTML=visibleStops.map(stop=>`<button type="button" class="street-stop-button ${stop.kind==='place'?'is-place':''}" data-stop="${esc(stop.id)}" style="left:${stop.x/10}%;top:${(stop.y-78)/6.2}%" aria-label="走到${esc(stop.name)}${stop.kind==='place'?'，閱讀地方故事':'，和他交談'}"><span class="street-stop-label"><i aria-hidden="true">${stop.kind==='place'?'◇':'●'}</i><span>${esc(stop.name)}</span></span></button>`).join('');
-    destinationList.innerHTML=visibleStops.map(stop=>`<button type="button" class="street-destination" data-stop="${esc(stop.id)}"><span class="street-destination-icon" aria-hidden="true">${stop.kind==='place'?'◇':stop.kind==='office'?'▣':'●'}</span><span><strong>${esc(stop.name)}</strong><small>${esc(stop.role|| (stop.kind==='place'?'地方故事':'街區居民'))}</small></span><span aria-hidden="true">↗</span></button>`).join('');
+    stopLayer.innerHTML=visibleStops.map(stop=>`<button type="button" class="street-stop-button ${stop.kind==='place'?'is-place':''} ${stop.kind==='office'?'is-office':''}" data-stop="${esc(stop.id)}" data-label="走到${esc(stop.name)}${stop.kind==='place'?'，閱讀地方故事':'，和他交談'}" style="left:${stop.x/10}%;top:${(stop.y-78)/6.2}%"><span class="street-clue-label" aria-hidden="true" hidden>線索</span><span class="street-stop-label"><i aria-hidden="true">${stop.kind==='place'?'◇':stop.kind==='office'?'⌂':'●'}</i><span>${mapStopName(stop)}</span></span></button>`).join('');
+    destinationList.innerHTML=visibleStops.map(stop=>`<button type="button" class="street-destination ${stop.kind==='office'?'is-office':''}" data-stop="${esc(stop.id)}" data-label="走到${esc(stop.name)}，${esc(stop.role|| (stop.kind==='place'?'地方故事':'街區居民'))}"><span class="street-destination-icon" aria-hidden="true">${stop.kind==='place'?'◇':stop.kind==='office'?'⌂':'●'}</span><span><strong>${esc(stop.name)}</strong><small>${esc(stop.role|| (stop.kind==='place'?'地方故事':'街區居民'))}</small><span class="street-destination-clue" aria-hidden="true" hidden>目前任務線索</span></span><span aria-hidden="true">↗</span></button>`).join('');
+    refreshHighlight();
     nearId=null;delete nearButton.dataset.ready;renderPlayer();
     playerGroup.classList.toggle('is-walking',moving&&!reduce);
   }
@@ -285,6 +311,7 @@ export function mountStreetWorld(container,{district,position,stops=[],onMove=()
     walkTo,
     update(next={}){
       if(destroyed)return;
+      if(Object.prototype.hasOwnProperty.call(next,'highlightStopId'))highlightedStopId=typeof next.highlightStopId==='string'?next.highlightStopId:null;
       const changed=next.district&&next.district.id!==currentDistrict.id;
       if(changed){
         stopMovement(false);
@@ -295,6 +322,7 @@ export function mountStreetWorld(container,{district,position,stops=[],onMove=()
         if(next.district)currentDistrict=next.district;
         if(next.stops){visibleStops=cleanStops(next.stops,currentDistrict.id);populateStops();}
         if(targetId&&!visibleStops.some(stop=>stop.id===targetId))stopMovement();
+        refreshHighlight();
       }
     },
     destroy(){

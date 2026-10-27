@@ -3,7 +3,7 @@ import { priorities, homes, timings, shocks, clues, verification, places, lesson
 import { streetScene, houseArt, placeArt } from './art.js?v=14.0.0';
 import { companionTools } from '../tool-routes.js?v=6.0.0';
 import { createFeedbackDialog } from '../feedback-client.js?v=11.0.0';
-import { createStreetExperience } from './street-ui.js?v=15.0.0';
+import { createStreetExperience } from './street-ui.js?v=16.0.0';
 
 const $ = selector => document.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -26,7 +26,7 @@ let state = loadState(storage), introVisible = true, expandedClue = null, status
 let summaryDraft = null, summaryDirty = false, memoryOnly = false;
 let view = 'street';
 const feedback = createFeedbackDialog({
-  endpoint:'https://hongguo-anxin-feedback-20261024.yang-ceo.chatgpt.site/api/feedback',siteVersion:'15.0.0',
+  endpoint:'https://hongguo-anxin-feedback-20261024.yang-ceo.chatgpt.site/api/feedback',siteVersion:'16.0.0',
   getCurrentScene:()=> 'buy',getCurrentPersona:()=> 'first-home',toast:notify,
 });
 const street = createStreetExperience({storage,onLesson:openLesson,onFeedback:()=>$('#open-feedback').click(),toast:notify});

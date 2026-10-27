@@ -35,6 +35,10 @@ function cloud(x,y,scale=1) {
   return group(x,y,'<path d="M-43 9q-13-21 8-26 5-27 30-17 19-17 33 7 22-4 27 17 4 19-18 19z" fill="#fff9e9" opacity=".83"/>',scale);
 }
 
+function officeEmblem(x,y,scale=1) {
+  return group(x,y,'<g class="street-office-emblem"><rect x="-16" y="-18" width="32" height="36" rx="6" fill="#245c48" stroke="#e6cf91" stroke-width="2"/><path d="M-10-2 0-11 10-2M-7-4v15H7V-4" fill="none" stroke="#fff3ce" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M-2 11V3h4v8" fill="none" stroke="#fff3ce" stroke-width="2.4"/></g>',scale);
+}
+
 function roads(p) {
   const network='M60 220H940M60 440H940M60 540H940M130 175V565M360 175V565M500 175V565M620 175V565M870 175V565';
   return `<g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="${network}" stroke="${p.edge}" stroke-width="42"/><path d="${network}" stroke="${p.road}" stroke-width="34"/><path d="M65 540H935" stroke="#dbcca3" stroke-width="2" stroke-dasharray="3 12"/><path d="M500 177V555" stroke="#d5c9a8" stroke-width="2" stroke-dasharray="3 12" opacity=".6"/></g><g stroke="#fffaf0" stroke-width="7" opacity=".75">${[130,360,620,870].map(x=>`<path d="M${x-13} 516v9m9-9v9m9-9v9m9-9v9"/>`).join('')}</g>`;
@@ -42,7 +46,7 @@ function roads(p) {
 
 function laneScene(p) {
   return `<path d="M0 110q130-21 247-3t255-8 250 7 248-13v80H0" fill="#b9c9a6"/><g opacity=".62">${house(40,160,{w:75,h:64,wall:'#c2cba9',roof:'#94a586'})}${house(855,155,{w:92,h:73,wall:'#c7ceb0',roof:'#9eae8d'})}</g>${temple(236,167,1.02)}${house(555,166,{w:103,h:79})}${house(680,170,{w:131,h:94,wall:'#ead8b2',roof:'#ae7862',shop:true})}${tree(420,170,.93,p.leaf)}
-    ${house(176,386,{w:123,h:105,wall:'#e2bd91',roof:'#a65c4c',shop:true})}${house(678,388,{w:122,h:98,wall:'#eddbb5',roof:'#b37159'})}${house(23,392,{w:65,h:80,wall:'#dac6a2',roof:'#b78065'})}${tree(550,370,1.02,p.leaf)}${tree(948,340,.9,p.leaf)}
+    ${house(176,386,{w:123,h:105,wall:'#e2bd91',roof:'#a65c4c',shop:true})}${house(678,388,{w:122,h:98,wall:'#eddbb5',roof:'#b37159'})}${officeEmblem(782,367,.8)}${house(23,392,{w:65,h:80,wall:'#dac6a2',roof:'#b78065'})}${tree(550,370,1.02,p.leaf)}${tree(948,340,.9,p.leaf)}
     <g stroke="#b48065" stroke-width="3" fill="none"><path d="M170 256q60 22 132-2"/><path d="M682 258q57 16 121-4"/></g><g fill="#d58d61"><ellipse cx="193" cy="270" rx="8" ry="13"/><ellipse cx="230" cy="274" rx="8" ry="13"/><ellipse cx="275" cy="270" rx="8" ry="13"/><ellipse cx="715" cy="271" rx="8" ry="13"/><ellipse cx="767" cy="269" rx="8" ry="13"/></g>
     ${bench(240,486)}${bench(745,485)}${lamp(86,479)}${lamp(911,480)}${tree(38,552,.83,p.leaf)}${tree(969,548,.9,p.leaf)}<path d="M157 590q160-25 283-3t240-4 207 8" fill="none" stroke="#bbca9c" stroke-width="15" stroke-linecap="round"/>`;
 }
@@ -79,7 +83,8 @@ export function personArt(portrait='guide',player=false) {
 }
 
 export function stopArt(stop,index=0) {
-  if(stop.kind==='resident'||stop.kind==='office') return personArt(stop.portrait || (stop.kind==='office'?'yang':'guide'));
+  if(stop.kind==='office')return `<path d="M38-42v25" stroke="#8b805e" stroke-width="4"/>${officeEmblem(38,-60)}${personArt(stop.portrait||'yang')}`;
+  if(stop.kind==='resident')return personArt(stop.portrait||'guide');
   const motifs=[
     '<path d="M-12-23h24v-22h-24z" fill="#ddc487"/><path d="M-20-44 0-59l20 15z" fill="#ab7158"/><path d="M-17-21h34" stroke="#b49764" stroke-width="5"/><path d="M-4-23v-13h8v13" fill="#6c8d77"/>',
     '<path d="M-17-27q17-33 34 0v12h-34z" fill="#76967b"/><path d="M0-43v33" stroke="#c4a26c" stroke-width="5"/><path d="M-13-30 0-21l12-11" fill="none" stroke="#d4c68f" stroke-width="3"/>',
