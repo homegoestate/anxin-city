@@ -5,7 +5,7 @@ import { nextServiceHtml, readingButtonHtml } from './service-hub.js?v=11.0.0';
 
 import { createMissionGame } from './game-ui.js?v=13.0.0';
 
-export const SITE_VERSION='14.0.0';
+export const SITE_VERSION='15.0.0';
 const FEEDBACK_URL='https://hongguo-anxin-feedback-20261024.yang-ceo.chatgpt.site/api/feedback';
 const people={
  'first-home':{name:'首購小安',role:'第一次成家',scene:'buy',color:'#d77a5c',initial:'安',line:'我第一次買房，現在的新青安怎麼看？',intro:'和小安一起把政策條件、自備款與每月生活開銷分開想清楚。',topics:[['firstHome','新青安／青安政策'],['firstHomeBank','申請前先確認']],loan:{principalWan:800,annualRate:2.3,years:30,income:80000,otherDebt:0}},

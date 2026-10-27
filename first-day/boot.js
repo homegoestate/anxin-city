@@ -11,7 +11,7 @@ const timeout = setTimeout(() => {
   showFallback('網路較慢，故事仍在準備中。');
 }, 8000);
 try {
-  await import('./app.js?v=14.0.0');
+  await import('./app.js?v=15.0.0');
   document.documentElement.dataset.storyReady = 'true';
 } catch (error) {
   console.error('Story could not start', error);

@@ -1,6 +1,6 @@
-import { createExperienceUI } from './experience-ui.js?v=14.0.0';
+import { createExperienceUI } from './experience-ui.js?v=15.0.0';
 import { createServiceHub } from './service-hub.js?v=11.0.0';
-import { createEnhancements } from './enhancements.js?v=14.0.0';
+import { createEnhancements } from './enhancements.js?v=15.0.0';
 import { lazyFeature } from './lazy-feature.js?v=13.0.0';
 import { createCityGuide } from './city-guide.js?v=13.0.0';
 let enhancements, experienceUI, cityGuide;

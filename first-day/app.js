@@ -3,6 +3,7 @@ import { priorities, homes, timings, shocks, clues, verification, places, lesson
 import { streetScene, houseArt, placeArt } from './art.js?v=14.0.0';
 import { companionTools } from '../tool-routes.js?v=6.0.0';
 import { createFeedbackDialog } from '../feedback-client.js?v=11.0.0';
+import { createStreetExperience } from './street-ui.js?v=15.0.0';
 
 const $ = selector => document.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -23,11 +24,14 @@ let storage;
 try { storage = window.localStorage; } catch { storage = null; }
 let state = loadState(storage), introVisible = true, expandedClue = null, statusTimer;
 let summaryDraft = null, summaryDirty = false, memoryOnly = false;
+let view = 'street';
 const feedback = createFeedbackDialog({
-  endpoint:'https://hongguo-anxin-feedback-20261024.yang-ceo.chatgpt.site/api/feedback',siteVersion:'14.0.0',
+  endpoint:'https://hongguo-anxin-feedback-20261024.yang-ceo.chatgpt.site/api/feedback',siteVersion:'15.0.0',
   getCurrentScene:()=> 'buy',getCurrentPersona:()=> 'first-home',toast:notify,
 });
-$('#open-feedback').onclick = () => feedback.open({scene:'buy',persona:'first-home',contextLabel:`小安的一天｜${shortTitles[state.step] || '開場'}`});
+const street = createStreetExperience({storage,onLesson:openLesson,onFeedback:()=>$('#open-feedback').click(),toast:notify});
+$('#open-feedback').onclick = () => feedback.open({scene:'buy',persona:'first-home',contextLabel:`小安的一天｜${view==='street'?street.context():shortTitles[state.step] || '開場'}`});
+$('#street-mode').onclick = () => view==='street'?openLesson():openStreet();
 try { if(storage?.getItem('anxin-first-day-large') === 'true') document.documentElement.classList.add('font-large'); } catch {}
 $('#text-size').setAttribute('aria-pressed',String(document.documentElement.classList.contains('font-large')));
 $('#text-size').onclick = () => {
@@ -39,6 +43,18 @@ $('#text-size').onclick = () => {
 function notify(message) {
   clearTimeout(statusTimer); $('#page-status').textContent = message;
   statusTimer = setTimeout(() => { $('#page-status').textContent = ''; },6000);
+}
+function openStreet() {
+  view='street';render({focus:true});
+  window.history.pushState({streetMode:true},'','#street');
+}
+function openLesson() {
+  view='story';introVisible=true;render({focus:true});
+  window.history.pushState({storyStep:state.step},'','#'+state.step);
+}
+function buildCombinedSummary() {
+  const base=buildSummary(state);
+  return street.progress().discoveries ? (base+'\n\n街區探索補充：\n'+street.summary()).slice(0,1600) : base;
 }
 function persist() {
   memoryOnly = !saveState(storage,state);
@@ -103,12 +119,19 @@ function previousComparison(result) {
 }
 function resultPage() {
   const result=getResult(state),place=pick(places,state.place);
-  const text=summaryDirty?summaryDraft:buildSummary(state);
+  const text=summaryDirty?summaryDraft:buildCombinedSummary();
   return `${stepper()}<div class="result-page"><section class="result-card" data-print-card><div class="result-hero"><p class="eyebrow">宏國・易丞 · 人生練習簿 01</p><span class="stamp">✓ 今天的探索已完成</span><h1 id="chapter-title" tabindex="-1">${titles.result}</h1><p class="lead">${esc(pick(priorities,state.priority).title)}，<br>是你替小安留下的生活方向。</p></div>${moneyStrip(result)}<p><b>${esc(result.ending.title)}</b><br>${esc(result.ending.summary)}</p><div class="two-col"><div><h2>帶走一個地方的故事</h2><p>${esc(place.title)} · ${esc(place.district)}</p><p>${esc(place.subtitle)}</p><span class="chip">文化選讀印記 · 非到訪紀錄</span></div><div><h2>也帶走三個準備方向</h2><ol><li>整理產權、權利範圍與抵押權問題。</li><li>把屋況、使用範圍和文件一起核對。</li><li>確認銀行條件，再看自己的現金與生活預算。</li></ol></div></div><p class="note">你的路線：${esc(pick(homes,state.price).title)} · ${esc(pick(timings,state.timing).title)} · ${esc(pick(shocks,state.shock).title)}。</p><p class="note">虛構情境：貸款75%、30年；其他取得費用30萬元、保留預備金60萬元。完整假設可在下方展開；本卡不代表核貸、個案稅額或法律判斷。</p><p class="print-only">宏國地政｜易丞地政　06-258-2589　LINE：@604gpqef<br>https://homegoestate.github.io/anxin-city/first-day/</p></section><div class="result-actions"><button class="primary" type="button" id="download-card">保存成果卡圖片 ↓</button><button class="secondary" type="button" id="copy-card">複製學習摘要</button><button class="text-link" type="button" id="print-card">列印成果卡</button></div>${previousComparison(result)}${assumptions(result)}<div class="quick-actions"><button class="secondary" type="button" data-replay="home">換一間房，再走一次 ↺</button><button class="text-link" type="button" data-replay="explore">換個地方，認識另一段台南 →</button></div><section class="office-mini"><p class="eyebrow">故事裡的問題，現實中也能一起整理</p><h2>楊代書陪你把下一步問清楚。</h2><p>宏國地政｜易丞地政協助產權、登記、稅務與交易安全相關事務。從要準備哪些資料開始，把你的問題一步步說清楚。</p><a class="text-link" href="https://homegoestate.github.io/about.html#practice-disclosure" target="_blank" rel="noopener noreferrer">認識我們與執業說明 ↗</a></section><section class="summary-box"><h2>把這次發現，帶回官方 LINE。</h2><label for="line-summary">先確認或修改要帶上的文字</label><textarea id="line-summary" maxlength="1600" rows="7">${esc(text)}</textarea><p class="draft-note">此處文字不會自動儲存或傳送；重新整理會回到遊戲摘要。請勿填入身分證字號、完整地址或帳戶資料。</p><a class="primary" id="send-line" href="${lineUrl(text)}" target="_blank" rel="noopener noreferrer">前往官方 LINE，帶上問題 <span aria-hidden="true">↗</span></a><div class="quick-actions"><button class="text-link" type="button" id="copy-line">複製這份文字</button><a class="text-link" href="https://line.me/R/ti/p/%40604gpqef" target="_blank" rel="noopener noreferrer">官方帳號／QR Code ↗</a></div><p class="note">手機開啟後由你確認並按送出；電腦可複製文字，再掃官方 QR Code。尚未送出訊息或成立委託。</p></section><section class="result-tools"><h2>接著，把自己的條件整理進工具。</h2><a class="tool-link" href="${companionTools.loan.url}" target="_blank" rel="noopener noreferrer"><span><small>首購・換屋</small><strong>房貸規劃</strong>月收入、負債與購屋預算，放在一起看。</span><span aria-hidden="true">↗</span></a><details><summary>也想了解賣屋或傳承？</summary>${['property','inheritance'].map(key=>`<a class="tool-link" href="${companionTools[key].url}" target="_blank" rel="noopener noreferrer"><span><strong>${esc(companionTools[key].name)}</strong>${esc(companionTools[key].prepare.join('／'))}</span><span aria-hidden="true">↗</span></a>`).join('')}</details><p class="note">會另開原有工具，保留原本驗證與試算流程。遊戲數字不會自動帶入，請在工具中確認自己的資料。</p></section><div class="result-actions"><a class="secondary" href="../">回安心城，探索其他人生任務 →</a><button type="button" class="text-link" id="result-feedback">告訴我們哪裡好玩、哪裡卡住</button></div></div>`;
 }
 function lineUrl(text) { return `https://line.me/R/oaMessage/%40604gpqef/?${encodeURIComponent(text)}`; }
 function render({focus=false,keepScroll=false}={}) {
   const y=window.scrollY;
+  street.destroy();
+  $('#street-mode').textContent=view==='street'?'買房練習':'回街區散步';
+  if(view==='street'){
+    street.mount($('#app'));
+    if(focus){$('#chapter-title')?.focus({preventScroll:true});window.scrollTo({top:0,behavior:'instant'});}
+    return;
+  }
   if(introVisible || state.step==='welcome') $('#app').innerHTML=opening();
   else if(state.step==='result') $('#app').innerHTML=resultPage();
   else {
@@ -121,6 +144,7 @@ function render({focus=false,keepScroll=false}={}) {
   else if(keepScroll) window.scrollTo({top:y,behavior:'instant'});
 }
 function go(step,{history=true}={}) {
+  view='story';
   const old=state.step;
   state=goToStep(state,step); introVisible=state.step==='welcome';
   if(state.step!==old){summaryDirty=false;summaryDraft=null;}
@@ -145,7 +169,7 @@ function bind() {
   });
   $('#line-summary')?.addEventListener('input',event=>{summaryDraft=event.target.value;summaryDirty=true;$('#send-line').href=lineUrl(summaryDraft);});
   $('#copy-line')?.addEventListener('click',()=>copyText($('#line-summary').value,$('#line-summary')));
-  $('#copy-card')?.addEventListener('click',()=>copyText(buildSummary(state),$('#line-summary')));
+  $('#copy-card')?.addEventListener('click',()=>copyText(buildCombinedSummary(),$('#line-summary')));
   $('#download-card')?.addEventListener('click',downloadCard);
   $('#print-card')?.addEventListener('click',()=>window.print());
   $('#result-feedback')?.addEventListener('click',()=>$('#open-feedback').click());
@@ -173,6 +197,6 @@ function downloadCard() {
     const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='小安在台南的第一天_學習成果卡.png';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);notify('已開始保存成果卡；若手機改為預覽圖片，可長按儲存。');
   },'image/png');
 }
-window.addEventListener('popstate',event=>{const step=event.state?.storyStep;if(STEPS.includes(step))go(step,{history:false});});
-window.history.replaceState({storyStep:'welcome'},'','#welcome');
+window.addEventListener('popstate',event=>{if(event.state?.streetMode){view='street';render({focus:true});return;}const step=event.state?.storyStep;if(STEPS.includes(step))go(step,{history:false});});
+window.history.replaceState({streetMode:true},'','#street');
 render();
