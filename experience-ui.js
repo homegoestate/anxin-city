@@ -76,6 +76,12 @@ export function createExperienceUI({
   label('#feedback-button', '使用回饋');
   label('#help-button', '操作說明');
   $('#help-button')?.classList.remove('icon-button');
+  const firstDayLink = document.createElement('a');
+  firstDayLink.className = 'menu-action first-day-menu-link';
+  firstDayLink.setAttribute('data-menu-action', '');
+  firstDayLink.href = './first-day/';
+  firstDayLink.textContent = '新故事｜小安在台南的第一天 →';
+  menu.querySelector('[data-menu-primary]').prepend(firstDayLink);
   const cultureButton = document.createElement('button');
   cultureButton.type = 'button';
   cultureButton.className = 'menu-action';
