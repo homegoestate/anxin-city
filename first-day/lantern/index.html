@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#234d43">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<title>安心城｜巷口有你・宏國地政｜易丞地政</title>
+<meta name="description" content="陪小安走進台南街坊，與阿荷、博伯、沫沫、楊代書相遇。在可步行的街區裡，一起完成今晚的故事。">
+<link rel="stylesheet" href="./style.css"><link rel="stylesheet" href="./walk.css?v=17.0.0"><link rel="stylesheet" href="./mission.css"><script type="module" src="./app.js?v=17.0.0"></script>
+</head>
+<body>
+<main id="lantern-story" data-persist="true">
+  <div class="ls-frame">
+    <header class="ls-header"><div class="ls-wordmark"><span class="ls-city-mark">安心城</span><div><strong>宏國地政｜易丞地政</strong><span>在台南，遇見家的故事</span></div></div><button id="ls-book" type="button" class="ls-icon-button cursor-interaction" aria-label="打開街坊手帳">手帳</button></header>
+    <nav class="ls-original-nav" aria-label="延伸故事與既有功能"><a href="../../fucheng/">府城四段散步 · 收集地方明信片 →</a><a href="../../" target="_blank" rel="noopener noreferrer">完整安心城 ↗</a></nav>
+    <section id="ls-walk-view" aria-label="可步行的台南街坊">
+      <div class="ls-walk-heading"><div><p class="ls-eyebrow">府城巷弄 · 第一章</p><h1>今晚，巷口留一盞燈</h1></div><span class="ls-weather-tag">雨後 · 傍晚</span></div>
+      <section class="ls-resident-shelf" aria-label="四個原有主角"><div class="ls-roster-heading"><p class="ls-eyebrow">家的四個主角</p><span>選一位，試試你的選擇</span></div><div id="ls-residents" class="ls-residents"></div></section>
+      <div id="ls-world"></div>
+      <div class="ls-mission"><img class="ls-mini-portrait ls-sprite" src="./assets/aho-happy.webp" alt="" width="246" height="410" aria-hidden="true"><div><p class="ls-eyebrow" id="ls-mission-tag">巷口有人在等你</p><p id="ls-mission-text">阿荷的邀請卡，好像還少了一點什麼。</p></div><button type="button" class="cursor-interaction" id="ls-guide">走去看看 →</button></div>
+    </section>
+    <section id="ls-life-view" hidden aria-label="家的四個主角情境體驗"></section>
+    <section id="ls-conversation" hidden aria-label="與街坊交談">
+      <div class="ls-conversation-nav"><button id="ls-back-map" type="button" class="ls-small-button cursor-interaction">← 回街上</button><p id="ls-chapter">序幕</p><button id="ls-scene-only" type="button" class="ls-small-button cursor-interaction" aria-pressed="false">欣賞畫面</button></div>
+      <div class="ls-conversation-grid">
+        <div class="ls-scene" id="ls-scene" data-camera="wide">
+          <img class="ls-art" src="./assets/tainan-lane.webp" alt="虛構台南巷弄：文具店、木窗、長椅和暖燈。非實景復刻。" width="1672" height="940">
+          <div class="ls-scene-shade" aria-hidden="true"></div>
+          <div class="ls-location"><span id="ls-place">台南・巷口</span><small id="ls-scene-caption">有故事的地方，也有人在過日子。</small></div>
+          <div id="ls-cast" class="ls-cast" aria-label="在場人物"></div>
+          <p id="ls-greeting" class="ls-greeting" role="status" hidden></p>
+          <div id="ls-scene-card" class="ls-scene-card" hidden><span>今夜，等你來坐</span><strong id="ls-scene-card-title"></strong></div>
+        </div>
+        <section id="ls-talk-panel" class="ls-talk-panel" aria-live="polite" aria-atomic="true">
+          <div class="ls-talk-meta"><span id="ls-speaker" class="ls-speaker">小安</span><span id="ls-page-indicator" class="ls-page-indicator"></span></div>
+          <h2 id="ls-title"></h2><p id="ls-line" class="ls-line"></p>
+          <button id="ls-fact-open" class="ls-fact-button cursor-interaction" type="button" hidden>這裡的台南 ↗</button>
+          <div id="ls-choices" class="ls-choices"></div>
+          <div class="ls-talk-bottom"><button id="ls-back" class="ls-text-button cursor-interaction" type="button">上一句</button><span id="ls-progress-note"></span></div>
+        </section>
+      </div>
+    </section>
+    <section id="ls-notebook" class="ls-notebook" hidden aria-label="街坊手帳"><div class="ls-book-heading"><div><p class="ls-eyebrow">把今天帶回家</p><h2>我的街坊手帳</h2></div><button id="ls-book-close" class="ls-small-button cursor-interaction" type="button">收起手帳</button></div><div id="ls-book-content"></div><div class="ls-book-actions"><button id="ls-copy" type="button" class="cursor-interaction">複製今天的故事</button><button id="ls-replay" type="button" class="ls-text-button cursor-interaction">重新散步</button></div><p id="ls-copy-status" role="status"></p><textarea id="ls-copy-fallback" aria-label="可手動複製的故事" readonly hidden rows="5"></textarea><p id="ls-save-note" class="ls-note"></p><p class="ls-note">虛構人物與想像街區；地方知識附來源，非導航路線。角色為遊戲創作，楊代書立繪不代表本人肖像。本章不進行個案法律或財務判斷。</p><a href="../" target="_blank" rel="noopener noreferrer">另開原版完整街區與買房練習 ↗</a></section>
+    <footer class="ls-footer"><span>宏國地政｜易丞地政<small> · 街坊試玩</small></span><button id="ls-office-shortcut" type="button" class="ls-text-button cursor-interaction">去找楊代書 →</button></footer>
+  </div>
+  <noscript>此步行故事需要 JavaScript。<a href="../">回原版安心城</a></noscript>
+</main>
+</body>
+</html>
