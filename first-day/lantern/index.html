@@ -11,7 +11,25 @@
 <body>
 <main id="lantern-story" data-persist="true">
   <div class="ls-frame">
-    <header class="ls-top"><div><p class="ls-brand">安心城 · 台南街坊故事</p><p class="ls-credit">宏國地政｜易丞地政 · 故事試作</p></div><a href="../" class="ls-return">回原街區</a></header>
+    <header class="ls-top"><div><p class="ls-brand">安心城 · 台南街坊故事</p><p class="ls-credit">宏國地政｜易丞地政 · 故事試作</p></div><button type="button" id="ls-map-return" class="ls-quiet cursor-interaction" hidden>← 回街區地圖</button></header>
+    <section id="ls-map-view" aria-label="街區地圖與故事入口">
+      <div class="ls-map-heading"><p class="ls-chapter">台南 · 巷弄街區</p><h1>今天起，這裡也是你的街坊。</h1><p>陪小安走一段路，認識這裡的人，也認識這裡的台南。</p></div>
+      <div class="ls-map-stage">
+        <img class="ls-map-art" src="./assets/street-map.svg" alt="安心城原有巷弄街區插畫：街屋、店鋪、廟宇和長椅。虛構地圖，非實際導航路線。" width="1000" height="620">
+        <button id="ls-map-aho" data-neighbor="aho" type="button" class="ls-map-person ls-map-aho cursor-interaction"><img src="./assets/aho.svg" alt="阿荷" width="68" height="118"><span>阿荷 · 文具店</span></button>
+        <button id="ls-map-bo" data-neighbor="bo" type="button" class="ls-map-person ls-map-bo cursor-interaction"><img src="./assets/bo.svg" alt="博伯" width="68" height="118"><span>博伯 · 舊街故事</span></button>
+        <button id="ls-map-momo" data-neighbor="momo" type="button" class="ls-map-person ls-map-momo cursor-interaction"><img src="./assets/momo.svg" alt="沫沫" width="68" height="118"><span>沫沫 · 街坊畫板</span></button>
+        <div class="ls-map-player"><img src="./assets/xiaoan.svg" alt="你陪伴的小安" width="68" height="118"><span>小安 · 你在這裡</span></div>
+      </div>
+      <div class="ls-map-bottom">
+        <section class="ls-welcome" aria-live="polite" aria-atomic="true"><img id="ls-welcome-portrait" src="./assets/xiaoan.svg" alt="小安" width="68" height="118"><div><p class="ls-speaker" id="ls-map-speaker">小安 · 剛搬來的新鄰居</p><h2 id="ls-map-title">巷口那張畫，好像還沒畫完。</h2><p id="ls-map-text">行李先放下了。文具店的阿荷正在搬椅子，博伯和沫沫也在。先走過去看看吧。</p></div></section>
+        <button type="button" id="ls-enter" class="ls-enter cursor-interaction">走到文具店，故事開始 →</button>
+        <div class="ls-local-intro"><p class="ls-chapter">這一帶的台南，邊走邊看</p><div class="ls-local-actions"><button id="ls-culture-street" type="button" class="cursor-interaction" aria-expanded="false">神農街，為什麼也叫北勢街？</button><button id="ls-culture-temple" type="button" class="cursor-interaction" aria-expanded="false">金華府：住在街屋裡的廟</button></div><section id="ls-culture" class="ls-fact" hidden aria-live="polite"></section></div>
+        <p class="ls-map-foot">沿用原街區與人物的故事入口試作 · 虛構街區，非實際地理位置</p>
+        <a class="ls-original" href="../" target="_blank" rel="noopener noreferrer">另外開啟原版街區 ↗</a>
+      </div>
+    </section>
+    <div id="ls-story-view" hidden>
     <section class="ls-scene" data-camera="wide" aria-label="以神農街為靈感的原創巷弄插畫">
       <img class="ls-art" src="./assets/tainan-lane.webp" alt="雨後傍晚的台南風格巷弄：文具店、木窗、長椅與暖燈。這是原創想像場景。" width="1672" height="940">
       <div class="ls-weather" aria-hidden="true"></div>
@@ -19,17 +37,19 @@
       <p class="ls-moment" id="ls-moment">雨後，傍晚的巷口</p>
       <div class="ls-spots" id="ls-spots" hidden></div>
       <div class="ls-lantern-light" aria-hidden="true"></div>
+      <div class="ls-cast" id="ls-cast" aria-label="在場的人物"></div>
       <div class="ls-hanging" id="ls-hanging" hidden><span>今晚，等你來坐</span><strong id="ls-card-caption"></strong></div>
     </section>
     <div class="ls-reading">
       <div class="ls-chapter-row"><p class="ls-chapter" id="ls-chapter">序幕</p><button type="button" class="ls-quiet cursor-interaction" id="ls-back" disabled>回上一刻</button></div>
-      <section class="ls-dialogue" aria-live="polite" aria-atomic="true"><p class="ls-speaker" id="ls-speaker">小安</p><h1 id="ls-title">今晚，巷口留一盞燈</h1><div class="ls-lines" id="ls-lines"><p>行李還在新家的玄關，小安先走出來透口氣。巷口有人在搬椅子，一張畫著街屋的紙，被風吹到鞋尖前。</p></div><div class="ls-fact" id="ls-fact" hidden></div></section>
+      <section class="ls-dialogue" aria-live="polite" aria-atomic="true"><div class="ls-speaker-row"><img id="ls-speaker-portrait" src="./assets/xiaoan.svg" alt="小安" width="68" height="118"><p class="ls-speaker" id="ls-speaker">小安</p></div><h1 id="ls-title">今晚，巷口留一盞燈</h1><div class="ls-lines" id="ls-lines"><p>行李還在新家的玄關，小安先走出來透口氣。巷口有人在搬椅子，一張畫著街屋的紙，被風吹到鞋尖前。</p></div><div class="ls-fact" id="ls-fact" hidden></div></section>
       <div class="ls-inventory" id="ls-inventory" hidden></div>
       <section class="ls-postcard" id="ls-postcard" hidden aria-label="你和街坊完成的邀請卡"><p class="ls-card-kicker">小安與街坊一起完成</p><h2 id="ls-card-title"></h2><p id="ls-card-past"></p><p id="ls-card-today"></p><p id="ls-card-place"></p></section>
       <div class="ls-choices" id="ls-choices"></div>
       <button class="ls-pause cursor-interaction" id="ls-pause" type="button" hidden>先在街邊坐一下</button>
       <section class="ls-ending" id="ls-ending" hidden><p>這次留下的是一段共同經過的日常。</p><div class="ls-ending-actions"><button type="button" class="cursor-interaction" id="ls-replay">換一個選擇，再走一次</button><button type="button" class="cursor-interaction" id="ls-copy">複製這張邀請卡</button></div><p class="ls-muted" id="ls-copy-status" role="status"></p><textarea id="ls-copy-fallback" aria-label="可手動複製的邀請卡文字" readonly rows="6" hidden></textarea></section>
       <footer class="ls-notes"><p>原創虛構人物與巷弄；地方知識有來源。非實景復刻或步行路線。</p><p id="ls-save-note"></p><details><summary class="cursor-interaction">故事裡的台南，從哪裡來？</summary><p>「神農街舊稱北勢街」、河港商業背景與街屋風貌，依國家文化記憶庫的臺南市政府文化局建檔資料摘要；金華府的街屋型態依內政部臺灣宗教文化地圖摘要。查核日期：2026-10-31。人物、文具店、邀請卡、聚會及天候皆為創作，不代表真實店家、活動或歷史人物。</p><a href="https://tcmb.culture.tw/zh-tw/detail?id=273628&amp;indexCode=Culture_Place" target="_blank" rel="noopener noreferrer">神農街｜國家文化記憶庫 ↗</a><a href="https://taiwangods.moi.gov.tw/Religious_Culture/html/Cultural/3_0011.aspx?i=240" target="_blank" rel="noopener noreferrer">金華府｜內政部 ↗</a><p>本章沒有貸款、稅務或法律判斷，也不讀寫原安心城的遊戲進度及試算資料。故事試作由宏國地政｜易丞地政提供。</p></details></footer>
+    </div>
     </div>
   </div>
   <noscript>故事需要 JavaScript。您仍可閱讀上方地方來源，或<a href="../">回原街區</a>。</noscript>
