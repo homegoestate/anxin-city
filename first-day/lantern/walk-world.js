@@ -17,6 +17,12 @@ const finite = (n,fallback) => Number.isFinite(Number(n)) ? Number(n) : fallback
 const same = (a,b) => Math.abs(a-b)<EPSILON;
 let worldNumber=0;
 
+/** Paint full decoded images on whole CSS pixels; gameplay coordinates stay unchanged. */
+export function actorPaintBox(point, landWidth, landHeight) {
+  const width=Math.round(landWidth*.088),height=Math.round(landHeight*.2371);
+  return {width,height,left:Math.round(point.x*landWidth/1000-width*.5),top:Math.round(point.y*landHeight/620-height*.973)};
+}
+
 /** Return a point on the shared, fully connected street network. */
 export function projectToStreet(point={x:500,y:540}) {
   if(!point||typeof point!=='object')point={x:500,y:540};
@@ -140,12 +146,23 @@ export function mountStreetWorld(container,{district,position,stops=[],onMove=()
     htmlActors.querySelectorAll('[data-actor-stop]').forEach(actor=>actor.classList.toggle('is-clue',actor.dataset.actorStop===activeId));
   }
   function renderPlayer(){
-    playerGroup.style.left=`${player.x/10}%`;
-    playerGroup.style.top=`${player.y/6.2}%`;
     playerGroup.style.zIndex=String(Math.round(player.y));
     playerGroup.dataset.facing=facing;
     const land=container.querySelector('.street-land');
-    if(land){const scale=land.clientWidth/1000;const x=clamp(player.x*scale-stage.clientWidth*.5,0,Math.max(0,land.clientWidth-stage.clientWidth));const y=clamp(player.y*scale-stage.clientHeight*.72,0,Math.max(0,land.clientHeight-stage.clientHeight));land.style.transform=`translate(${-x}px,${-y}px)`;}
+    if(land){
+      const width=land.clientWidth,height=land.clientHeight;
+      const paint=(actor,point)=>{const box=actorPaintBox(point,width,height);for(const key of ['left','top','width','height'])actor.style[key]=`${box[key]}px`;};
+      paint(playerGroup,player);
+      if(land.dataset.paintSize!==`${width}x${height}`){
+        land.dataset.paintSize=`${width}x${height}`;
+        htmlActors.querySelectorAll('[data-actor-stop]').forEach(actor=>{const stop=visibleStops.find(s=>s.id===actor.dataset.actorStop);if(stop)paint(actor,stop);});
+        stopLayer.querySelectorAll('[data-stop]').forEach(button=>{const stop=visibleStops.find(s=>s.id===button.dataset.stop);if(stop&&actorAsset?.(stop,false))button.style.height=`${Math.ceil(actorPaintBox(stop,width,height).height*.973+(button.querySelector('.street-stop-label')?.offsetHeight||28)+4)}px`;});
+      }
+      const x=clamp(player.x*width/1000-stage.clientWidth*.5,0,Math.max(0,width-stage.clientWidth));
+      const y=clamp(player.y*height/620-stage.clientHeight*.72,0,Math.max(0,height-stage.clientHeight));
+      // Position the entire map on the same pixel grid, without a transformed ancestor layer.
+      land.style.left=`${-Math.round(x)}px`;land.style.top=`${-Math.round(y)}px`;
+    }
     // Stable HTML image nodes: moving changes position and z-index, never sprite cropping or DOM order.
     refreshNear();
   }
@@ -245,6 +262,7 @@ export function mountStreetWorld(container,{district,position,stops=[],onMove=()
   }
   function populateStops(){
     htmlActors.replaceChildren();
+    const land=container.querySelector('.street-land');if(land)delete land.dataset.paintSize;
     actors.innerHTML=visibleStops.filter(stop=>!actorAsset?.(stop,false)).map((stop,i)=>`<g class="street-npc" data-actor-stop="${esc(stop.id)}" transform="translate(${stop.x} ${stop.y})">${stopArt(stop,i)}</g>`).join('');
     function makeActor(stop,isPlayer){
       const actor=doc.createElement('div');actor.className='ls-map-actor '+(isPlayer?'street-player':'street-npc');

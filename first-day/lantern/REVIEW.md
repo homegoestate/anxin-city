@@ -65,3 +65,12 @@
 - 瀏覽器確認桌面／320 像素 iframe：四角色顯示、首購條件修改、首購與換屋完整路徑、客戶問題帶入摘要、17 列換屋時間線、方向鍵移動、走到公司並進入四條主線。圖片均完成解碼；沒有見到原先裁切破圖。
 - 尚未在使用者發生問題的手機重現並確認根因，不能保證所有裝置皆已解決。仍需實際 iPhone／Android Safari／Chrome 驗證觸控和長時間移動。本輪沒有更動計算或作新的法律適用判定。
 - 單獨回復本輪提交即可退回 v3 試玩；原有程式與正式主線不變。
+
+
+## Approved publication update · 2026-10-31
+
+The owner explicitly authorized improving the Tainan introduction and publishing this version. The shared `/fucheng/` four-chapter illustrated journey is integrated into the original Tainan explorer, culture directory, homepage and lantern navigation. Original calculation and content datasets are unchanged. Full character image boxes and camera positions now align to whole CSS pixels; the transformed camera layer and rotating walk animation are removed.
+
+Validation: 256 story routes; 1,023 presentation states and 81 road routes; 486 mission paths against the original engine; 16 culture routes, all original culture deep links and 280 image-layout cases. Browser QA covers a complete culture playthrough, feedback preview/LINE encoding without sending, original Tainan tabs and culture navigation, narrow 320px culture layout and 390px character movement. Physical iOS/Android hardware has not been tested.
+
+Pre-release main: `f5a837367a14af5ddd115febbc20f11e7509be63`. Keep the normal merge history so this release can be reverted without force-push or deleting saved progress.

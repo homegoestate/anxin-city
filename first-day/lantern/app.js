@@ -1,5 +1,5 @@
 import {fresh,view,advance,replay,restore,postcard,SOURCES,STORAGE_KEY} from './model.js';
-import {mountStreetWorld,projectToStreet} from './walk-world.js';
+import {mountStreetWorld,projectToStreet} from './walk-world.js?v=17.0.0';
 import {CAST,STOPS,dialoguePages,sceneCast,nextDestination} from './presentation.js';
 const root=document.getElementById('lantern-story');
 import {CHARACTER_ASSETS} from './character-assets.js';

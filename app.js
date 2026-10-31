@@ -11,6 +11,7 @@ function featureProxy(label,load,create,methods){
  return Object.fromEntries(methods.map(method=>[method,(...args)=>{toast('正在準備'+label+'…');return get().then(feature=>{clearTimeout(toastTimer);$('#toast').classList.remove('show');return feature[method](...args);}).catch(error=>{console.error(label+'載入失敗',error);toast(label+'暫時載入不完整，請再點一次重試；其他功能仍可使用。');});}]));
 }
 async function exploreAction(action){
+ if(action.kind==='journey')return tainanExplorer.open();
  if(action.kind==='culture')return cultureWalk.open({placeId:action.id});
  if(action.kind==='district'||action.kind==='future')return tainanExplorer.openTarget({districtId:action.id,phase:action.kind==='future'?'future':'past'});
  try {
@@ -25,9 +26,9 @@ async function exploreAction(action){
   }
  }catch(error){console.error(error);toast('這段散步資料暫時無法載入，請稍後再試。');}
 }
-const tainanExplorer=featureProxy('台南散步',()=>import('./tainan-ui.js?v=13.0.0'),m=>m.createTainanExplorer({onStartMission:id=>enhancements.showPersona(id),onFeedback:context=>enhancements.openFeedback(context),onExploreCulture:target=>cultureWalk.open(target),toast}),['open','openTarget']);
+const tainanExplorer=featureProxy('台南散步',()=>import('./tainan-ui.js?v=17.0.0'),m=>m.createTainanExplorer({onStartMission:id=>enhancements.showPersona(id),onFeedback:context=>enhancements.openFeedback(context),onExploreCulture:target=>cultureWalk.open(target),toast}),['open','openTarget']);
 let cultureInstance;
-const cultureWalk=featureProxy('文化走讀',()=>import('./culture-ui.js?v=13.0.0'),m=>cultureInstance=m.createCultureWalk({onExplore:action=>{cultureInstance.close();exploreAction(action);},onFeedback:context=>{cultureInstance.close();enhancements.openFeedback(context);},onResidents:()=>{cultureInstance.close();residentChat.open();},toast}),['open']);
+const cultureWalk=featureProxy('文化走讀',()=>import('./culture-ui.js?v=17.0.0'),m=>cultureInstance=m.createCultureWalk({onExplore:action=>{cultureInstance.close();exploreAction(action);},onFeedback:context=>{cultureInstance.close();enhancements.openFeedback(context);},onResidents:()=>{cultureInstance.close();residentChat.open();},toast}),['open']);
 const residentChat=featureProxy('街坊聊聊',()=>import('./resident-ui.js?v=13.0.0'),m=>m.createResidentChat({onExplore:exploreAction,onMission:()=>enhancements.openPeople(),onFeedback:context=>enhancements.openFeedback({scene:'general',persona:'none',contextLabel:'街坊聊聊｜'+(context.residentName||'日常對話')}),toast}),['open']);
 
 const journeys = {
@@ -99,4 +100,4 @@ updateCount();
 
 
 const entryParams=new URLSearchParams(location.search),entry=entryParams.get('start');
-if(['first-home','move-home','seller','legacy-family','tainan','policy','services','residents','culture','seasons','events'].includes(entry))requestAnimationFrame(()=>{if(entry==='culture')cultureWalk.open({placeId:entryParams.get('place')});else if(entry==='residents')residentChat.open(entryParams.get('resident'));else if(entry==='tainan')tainanExplorer.open();else if(entry==='seasons'||entry==='events')tainanExplorer.openTarget({tab:'seasons',month:Number(entryParams.get('month')||0),seasonMode:entry});else if(entry==='policy')enhancements.openGuide('first-home');else if(entry==='services')serviceHub.open();else enhancements.showPersona(entry);});
+if(['first-home','move-home','seller','legacy-family','tainan','policy','services','residents','culture','seasons','events'].includes(entry))requestAnimationFrame(()=>{if(entry==='culture')cultureWalk.open({placeId:entryParams.get('place')});else if(entry==='residents')residentChat.open(entryParams.get('resident'));else if(entry==='tainan'){const districtId=entryParams.get('district');if(districtId)tainanExplorer.openTarget({districtId});else tainanExplorer.open();}else if(entry==='seasons'||entry==='events')tainanExplorer.openTarget({tab:'seasons',month:Number(entryParams.get('month')||0),seasonMode:entry});else if(entry==='policy')enhancements.openGuide('first-home');else if(entry==='services')serviceHub.open();else enhancements.showPersona(entry);});
