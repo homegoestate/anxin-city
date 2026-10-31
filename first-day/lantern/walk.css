@@ -56,3 +56,19 @@
 #lantern-story .street-visually-hidden{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip-path:inset(50%);white-space:nowrap}
 @container(max-width:620px){#lantern-story .street-stage{aspect-ratio:1.12}#lantern-story .street-land{width:165%;height:auto;aspect-ratio:1000/620}#lantern-story .street-map-top{padding:4px 13px}#lantern-story .street-stop-button{height:calc(23.6cqw + 27px);width:75px}#lantern-story .street-stop-button.is-office{height:calc(23.6cqw + 46px)}#lantern-story .street-stop-button.is-place{height:73px}#lantern-story .street-stop-label{font-size:11px;padding:3px 6px}#lantern-story .street-clue-label{font-size:11px;top:-21px}#lantern-story .street-world-controls{gap:9px;padding:8px 12px}#lantern-story .street-control-copy p{font-size:11px}#lantern-story .street-control-copy p span{display:none}#lantern-story .street-near-button{font-size:11px;padding:6px 8px}#lantern-story .street-destinations{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @container(max-width:350px){#lantern-story .street-stop-button.is-place{height:67px}}
+
+/* A stable, decoded image per actor avoids nested-SVG atlas clipping on movement. */
+#lantern-story .ls-html-actors{position:absolute;inset:0;pointer-events:none}
+#lantern-story .ls-map-actor{position:absolute;width:8.8%;height:23.71%;transform:translate(-50%,-97.3%);pointer-events:none}
+#lantern-story .ls-actor-facing,#lantern-story .ls-actor-bob{position:relative;width:100%;height:100%}
+#lantern-story .ls-actor-bob>img,#lantern-story .ls-actor-fallback{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+#lantern-story .ls-actor-bob>img{visibility:hidden}
+#lantern-story .ls-map-actor[data-loaded=true] .ls-actor-bob>img{visibility:visible}
+#lantern-story .ls-map-actor[data-loaded=true] .ls-actor-fallback{visibility:hidden}
+#lantern-story .street-player[data-facing=left] .ls-actor-facing{transform:scaleX(-1)}
+#lantern-story .street-player.is-walking .ls-actor-bob{animation:ls-step .28s ease-in-out infinite alternate;transform-origin:50% 98%}
+#lantern-story .ls-map-feet{position:absolute;bottom:1%;left:20%;width:60%;height:8%;border-radius:50%;background:#254a4033}
+#lantern-story .street-player .ls-map-feet{border:2px solid #fff5c3;background:#254a4055}
+#lantern-story .street-stop-layer{z-index:1000}
+@keyframes ls-step{from{transform:translateY(-1px) rotate(-1.2deg)}to{transform:translateY(1px) rotate(1.2deg)}}
+@media(prefers-reduced-motion:reduce){#lantern-story .street-player.is-walking .ls-actor-bob{animation:none}}

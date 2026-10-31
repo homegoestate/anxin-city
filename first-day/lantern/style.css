@@ -19,12 +19,7 @@ body:has(> #lantern-story){margin:0;padding:20px 10px;background:light-dark(#e7e
 #lantern-story .ls-eyebrow{font-size:11px;letter-spacing:.09em;color:var(--ls-gold)}
 #lantern-story h1{font-family:"Noto Serif TC","Songti TC",serif;font-size:25px;font-weight:600;letter-spacing:.03em}
 #lantern-story .ls-weather-tag{font-size:11px;color:var(--ls-muted);white-space:nowrap}
-#lantern-story .ls-sprite{display:block;background-image:url('./assets/characters-v3.webp');background-repeat:no-repeat;background-size:500% 200%;aspect-ratio:3/5;background-position:0 0}
-#lantern-story .ls-sprite[data-person="aho"]{background-position-x:25%}
-#lantern-story .ls-sprite[data-person="bo"]{background-position-x:50%}
-#lantern-story .ls-sprite[data-person="momo"]{background-position-x:75%}
-#lantern-story .ls-sprite[data-person="yang"]{background-position-x:100%}
-#lantern-story .ls-sprite[data-pose="happy"]{background-position-y:100%}
+#lantern-story .ls-sprite{display:block;object-fit:contain;aspect-ratio:3/5;height:auto}
 #lantern-story .ls-mission{display:flex;gap:11px;align-items:center;border-top:1px solid var(--ls-line);padding:10px 18px}
 #lantern-story .ls-mini-portrait{width:35px;flex:0 0 35px}
 #lantern-story .ls-mission>div{flex:1;min-width:0}

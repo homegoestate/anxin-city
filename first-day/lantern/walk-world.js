@@ -87,7 +87,7 @@ function cleanStops(stops,district) {
 }
 
 /** The host owns story/state. This world emits settled movement and explicit interactions only. */
-export function mountStreetWorld(container,{district,position,stops=[],onMove=()=>{},onInteract=()=>{},reducedMotion=false,highlightStopId=null,actorArt=null}={}) {
+export function mountStreetWorld(container,{district,position,stops=[],onMove=()=>{},onInteract=()=>{},reducedMotion=false,highlightStopId=null,actorAsset=null}={}) {
   if(!container||typeof container.replaceChildren!=='function')throw new TypeError('A street map host is required.');
   const doc=container.ownerDocument,win=doc.defaultView;
   const prefix=`street-world-${++worldNumber}`;
@@ -96,7 +96,7 @@ export function mountStreetWorld(container,{district,position,stops=[],onMove=()
   let visibleStops=cleanStops(stops,currentDistrict.id),targetId=null,route=[],routeIndex=0;
   let highlightedStopId=typeof highlightStopId==='string'?highlightStopId:null;
   let destroyed=false,raf=0,lastTime=0,nearId=null,moving=false,facing='right',lastManualDirection=null;
-  let held=new Map(),pointerDirections=new Map(),listeners=[],stage,svg,actors,playerGroup,routeLine,routeDot,nearButton,live,status,destinationList,stopLayer;
+  let held=new Map(),pointerDirections=new Map(),listeners=[],stage,svg,actors,playerGroup,routeLine,routeDot,nearButton,live,status,destinationList,stopLayer,htmlActors;
   const media=win.matchMedia?.('(prefers-reduced-motion: reduce)');
   let reduce=Boolean(reducedMotion||media?.matches);
   const listen=(element,type,handler,options)=>{element.addEventListener(type,handler,options);listeners.push(()=>element.removeEventListener(type,handler,options));};
@@ -137,17 +137,16 @@ export function mountStreetWorld(container,{district,position,stops=[],onMove=()
       if(badge)badge.hidden=!active;
       button.setAttribute('aria-label',`${active?'目前任務線索；':''}${button.dataset.label}`);
     }
-    actors.querySelectorAll('[data-actor-stop]').forEach(actor=>actor.classList.toggle('is-clue',actor.dataset.actorStop===activeId));
+    htmlActors.querySelectorAll('[data-actor-stop]').forEach(actor=>actor.classList.toggle('is-clue',actor.dataset.actorStop===activeId));
   }
   function renderPlayer(){
-    playerGroup.setAttribute('transform',`translate(${player.x.toFixed(2)} ${player.y.toFixed(2)})`);
+    playerGroup.style.left=`${player.x/10}%`;
+    playerGroup.style.top=`${player.y/6.2}%`;
+    playerGroup.style.zIndex=String(Math.round(player.y));
     playerGroup.dataset.facing=facing;
     const land=container.querySelector('.street-land');
     if(land){const scale=land.clientWidth/1000;const x=clamp(player.x*scale-stage.clientWidth*.5,0,Math.max(0,land.clientWidth-stage.clientWidth));const y=clamp(player.y*scale-stage.clientHeight*.72,0,Math.max(0,land.clientHeight-stage.clientHeight));land.style.transform=`translate(${-x}px,${-y}px)`;}
-    // Depth follows feet; destination labels stay in an independent HTML layer.
-    const after=[...actors.children].find(child=>child!==playerGroup&&Number(child.dataset.y)>player.y);
-    if(after){if(playerGroup.nextElementSibling!==after)actors.insertBefore(playerGroup,after);}
-    else if(actors.lastElementChild!==playerGroup)actors.append(playerGroup);
+    // Stable HTML image nodes: moving changes position and z-index, never sprite cropping or DOM order.
     refreshNear();
   }
   function drawRoute(){
@@ -245,11 +244,25 @@ export function mountStreetWorld(container,{district,position,stops=[],onMove=()
     beginRoute(next);
   }
   function populateStops(){
-    const actorMarkup=[...visibleStops].sort((a,b)=>a.y-b.y).map((stop,i)=>`<g class="street-npc" data-actor-stop="${esc(stop.id)}" data-y="${stop.y}" transform="translate(${stop.x} ${stop.y})"><ellipse class="street-clue-ring" cy="3" rx="28" ry="12" fill="#f8e8b3" fill-opacity=".5" stroke="#b17d2e" stroke-width="4"/>${actorArt?.(stop,false)||stopArt(stop,i)}</g>`).join('');
-    actors.innerHTML=actorMarkup;
-    playerGroup=doc.createElementNS('http://www.w3.org/2000/svg','g');
-    playerGroup.setAttribute('class','street-player');playerGroup.innerHTML=`<ellipse class="street-player-ring" cy="4" rx="24" ry="10" fill="none" stroke="#f8f3d2" stroke-width="4"/>${actorArt?.(null,true)||personArt('guide',true)}`;
-    actors.append(playerGroup);
+    htmlActors.replaceChildren();
+    actors.innerHTML=visibleStops.filter(stop=>!actorAsset?.(stop,false)).map((stop,i)=>`<g class="street-npc" data-actor-stop="${esc(stop.id)}" transform="translate(${stop.x} ${stop.y})">${stopArt(stop,i)}</g>`).join('');
+    function makeActor(stop,isPlayer){
+      const actor=doc.createElement('div');actor.className='ls-map-actor '+(isPlayer?'street-player':'street-npc');
+      if(stop){actor.dataset.actorStop=stop.id;actor.style.left=`${stop.x/10}%`;actor.style.top=`${stop.y/6.2}%`;actor.style.zIndex=String(Math.round(stop.y));}
+      actor.innerHTML=`<div class="ls-map-feet"></div><div class="ls-actor-facing"><div class="ls-actor-bob"><svg class="ls-actor-fallback" viewBox="-44 -143 88 147" aria-hidden="true">${isPlayer?personArt('guide',true):stopArt(stop,0)}</svg></div></div>`;
+      const src=actorAsset?.(stop,isPlayer);
+      if(src){
+        const img=doc.createElement('img');img.alt='';img.draggable=false;img.decoding='async';img.width=246;img.height=410;
+        const ready=()=>{if(!destroyed&&img.naturalWidth){actor.dataset.loaded='true';}};
+        img.addEventListener('load',()=>{if(img.decode)img.decode().then(ready,ready);else ready();},{once:true});
+        img.addEventListener('error',()=>{actor.dataset.loaded='false';},{once:true});
+        img.src=src;actor.querySelector('.ls-actor-bob').append(img);
+        if(img.complete&&img.naturalWidth)ready();
+      }
+      htmlActors.append(actor);return actor;
+    }
+    visibleStops.filter(stop=>actorAsset?.(stop,false)).forEach(stop=>makeActor(stop,false));
+    playerGroup=makeActor(null,true);
     stopLayer.innerHTML=visibleStops.map(stop=>`<button type="button" class="street-stop-button ${stop.kind==='place'?'is-place':''} ${stop.kind==='office'?'is-office':''}" data-stop="${esc(stop.id)}" data-label="走到${esc(stop.name)}${stop.kind==='place'?'，閱讀地方故事':'，和他交談'}" style="left:${stop.x/10}%;top:${stop.y/6.2}%"><span class="street-clue-label" aria-hidden="true" hidden>線索</span><span class="street-stop-label"><i aria-hidden="true">${stop.kind==='place'?'◇':stop.kind==='office'?'⌂':'●'}</i><span>${mapStopName(stop)}</span></span></button>`).join('');
     destinationList.innerHTML=visibleStops.map(stop=>`<button type="button" class="street-destination ${stop.kind==='office'?'is-office':''}" data-stop="${esc(stop.id)}" data-label="走到${esc(stop.name)}，${esc(stop.role|| (stop.kind==='place'?'地方故事':'街區居民'))}"><span class="street-destination-icon" aria-hidden="true">${stop.kind==='place'?'◇':stop.kind==='office'?'⌂':'●'}</span><span><strong>${esc(stop.name)}</strong><small>${esc(stop.role|| (stop.kind==='place'?'地方故事':'街區居民'))}</small><span class="street-destination-clue" aria-hidden="true" hidden>目前任務線索</span></span><span aria-hidden="true">↗</span></button>`).join('');
     refreshHighlight();
@@ -258,8 +271,8 @@ export function mountStreetWorld(container,{district,position,stops=[],onMove=()
   }
   function build(){
     const directionButtons=[['up','↑','向上走'],['left','←','向左走'],['down','↓','向下走'],['right','→','向右走']].map(([direction,arrow,label])=>`<button type="button" data-direction="${direction}" aria-label="${label}">${arrow}</button>`).join('');
-    container.innerHTML=`<div class="street-world" data-district="${esc(currentDistrict.id)}"><div class="street-map-top"><span><i aria-hidden="true"></i>${esc(currentDistrict.title)}<small>・想像街區</small></span><span class="street-walk-status">沿著街道慢慢走</span></div><div class="street-stage" tabindex="0" role="group" aria-label="${esc(currentDistrict.title)}，可步行街區" aria-describedby="${prefix}-instructions"><div class="street-land"><svg class="street-map-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 620" aria-hidden="true" focusable="false"><g class="street-scenery">${streetSceneArt(currentDistrict.id)}</g><polyline class="street-route" fill="none" stroke="#668f75" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="3 12"/><circle class="street-route-dot" r="12" fill="#f6e4ad" stroke="#54836e" stroke-width="3"/><g class="street-actors"></g></svg><div class="street-stop-layer"></div></div><span class="street-map-badge">小安的散步地圖 <span aria-hidden="true">↗</span></span></div><div class="street-world-controls"><div class="street-control-copy"><p id="${prefix}-instructions"><b>點人物或地標，小安就會走過去。</b><span>也能點地面散步；方向鍵 / WASD 移動，到路口轉彎，E / Enter / 空白鍵互動。</span></p><button type="button" class="street-near-button" disabled>走近人物或地標</button></div><div class="street-dpad" role="group" aria-label="步行方向控制">${directionButtons}<span aria-hidden="true">步行</span></div></div><details class="street-destination-menu"><summary>街區目的地 <span>點一個地方，開始走</span></summary><div class="street-destinations"></div></details><p class="street-world-live street-visually-hidden" role="status" aria-live="polite" aria-atomic="true"></p></div>`;
-    stage=container.querySelector('.street-stage');svg=container.querySelector('.street-map-svg');actors=container.querySelector('.street-actors');routeLine=container.querySelector('.street-route');routeDot=container.querySelector('.street-route-dot');stopLayer=container.querySelector('.street-stop-layer');nearButton=container.querySelector('.street-near-button');status=container.querySelector('.street-walk-status');live=container.querySelector('.street-world-live');destinationList=container.querySelector('.street-destinations');
+    container.innerHTML=`<div class="street-world" data-district="${esc(currentDistrict.id)}"><div class="street-map-top"><span><i aria-hidden="true"></i>${esc(currentDistrict.title)}<small>・想像街區</small></span><span class="street-walk-status">沿著街道慢慢走</span></div><div class="street-stage" tabindex="0" role="group" aria-label="${esc(currentDistrict.title)}，可步行街區" aria-describedby="${prefix}-instructions"><div class="street-land"><svg class="street-map-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 620" aria-hidden="true" focusable="false"><g class="street-scenery">${streetSceneArt(currentDistrict.id)}</g><polyline class="street-route" fill="none" stroke="#668f75" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="3 12"/><circle class="street-route-dot" r="12" fill="#f6e4ad" stroke="#54836e" stroke-width="3"/><g class="street-actors"></g></svg><div class="ls-html-actors" aria-hidden="true"></div><div class="street-stop-layer"></div></div><span class="street-map-badge">小安的散步地圖 <span aria-hidden="true">↗</span></span></div><div class="street-world-controls"><div class="street-control-copy"><p id="${prefix}-instructions"><b>點人物或地標，小安就會走過去。</b><span>也能點地面散步；方向鍵 / WASD 移動，到路口轉彎，E / Enter / 空白鍵互動。</span></p><button type="button" class="street-near-button" disabled>走近人物或地標</button></div><div class="street-dpad" role="group" aria-label="步行方向控制">${directionButtons}<span aria-hidden="true">步行</span></div></div><details class="street-destination-menu"><summary>街區目的地 <span>點一個地方，開始走</span></summary><div class="street-destinations"></div></details><p class="street-world-live street-visually-hidden" role="status" aria-live="polite" aria-atomic="true"></p></div>`;
+    stage=container.querySelector('.street-stage');svg=container.querySelector('.street-map-svg');actors=container.querySelector('.street-actors');htmlActors=container.querySelector('.ls-html-actors');routeLine=container.querySelector('.street-route');routeDot=container.querySelector('.street-route-dot');stopLayer=container.querySelector('.street-stop-layer');nearButton=container.querySelector('.street-near-button');status=container.querySelector('.street-walk-status');live=container.querySelector('.street-world-live');destinationList=container.querySelector('.street-destinations');
     populateStops();drawRoute();
     listen(stage,'click',event=>{
       if(event.target.closest('button,a'))return;

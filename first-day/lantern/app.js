@@ -2,7 +2,8 @@ import {fresh,view,advance,replay,restore,postcard,SOURCES,STORAGE_KEY} from './
 import {mountStreetWorld,projectToStreet} from './walk-world.js';
 import {CAST,STOPS,dialoguePages,sceneCast,nextDestination} from './presentation.js';
 const root=document.getElementById('lantern-story');
-const CHARACTER_ATLAS='./assets/characters-v3.webp';
+import {CHARACTER_ASSETS} from './character-assets.js';
+import {mountMissions} from './mission-ui.js';
 const q=id=>root.querySelector('#'+id);
 const element=(tag,text,cls)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(cls)el.className=cls;return el;};
 const WALK_KEY='anxin-lantern-walk-v1';
@@ -25,11 +26,7 @@ function culture(id,back=()=>goWalk()){
  showCustom({chapter:'在街上遇見台南',scene:id==='temple'?'street':'windows',speaker:id==='temple'?'沫沫':'博伯',active:id==='temple'?'momo':'bo',title:id==='temple'?'原來，廟也住在街屋裡':'沒有船的街道，留下港口的故事',lines:id==='temple'?['金華府位在神農街，夾在兩棟街屋之間，是街屋型態的廟宇。','「它旁邊就是大家過日子的地方。」沫沫指著畫板，替廟門旁添了一個回家的人。']:['神農街舊稱北勢街，與昔日五條港的河港商業往來有關。','部分街段保留二層鋪瓦街屋，不同年代的立面，讓你抬頭就能多看見一層故事。'],choices:[{label:'回到剛才，繼續走',run:back},external('看官方介紹 ↗',source.url)]});
 }
 function office(){
- showCustom({chapter:'宏國地政｜易丞地政',scene:'shop',speaker:'楊代書｜街坊的專業夥伴',active:'yang',title:'家的事，一起問清楚。',lines:['「歡迎，先坐。」楊代書把資料袋往旁邊放，替你留下一個位置。','「認識一個地方，也可以慢慢認識自己想過的生活。你今天比較想聊哪件事？」'],choices:[{label:'我想買房，先怎麼準備？',run:()=>officeTopic('buy')},{label:'賣屋、傳承，我想先整理',run:()=>officeTopic('family')}]});
-}
-function officeTopic(topic){
- const buy=topic==='buy';
- showCustom({chapter:'宏國地政｜易丞地政',scene:'shop',speaker:'楊代書',active:'yang',title:buy?'把喜歡的家，放進自己的生活':'先把問題整理成一張清單',lines:buy?['「房子喜歡很重要。每個月付完房貸，還想留下多少錢給生活，也值得先想一想。」','「我們準備了房貸工具。等你想算自己的條件，再開啟它；現在也可以繼續散步。」']:['「賣屋想知道能留下多少；傳承想知道家人與資產怎麼盤點。先選你眼前最需要整理的一件事就好。」','「可以先用試算工具整理自己的問題，等你準備好實際資料，再和專業人員確認細節。」'],choices:buy?[external('房貸與生活規劃','https://yangceo-taiwan.github.io/loan-forecast/'),{label:'先回街上，繼續故事',run:()=>goWalk()}]:[external('賣屋實拿試算','https://homegoestate.github.io/test-Property-tax/'),external('資產傳承工具','https://yangceo-taiwan.github.io/inheritance-tax-issues/')]});
+ showCustom({chapter:'宏國地政｜易丞地政',scene:'shop',speaker:'楊代書｜街坊的專業夥伴',active:'yang',title:'家的事，一起問清楚。',lines:['「歡迎，先坐。」楊代書把資料袋往旁邊放，替你留下一個位置。','「選一位和你有共鳴的主角，陪他試一次。最後把你想問的，一起帶回來聊。」'],choices:[{label:'首購小安 · 第一間家',run:()=>missions.open('first-home')},{label:'換屋阿成 · 資金接力',run:()=>missions.open('move-home')},{label:'賣屋美玲 · 實拿帳',run:()=>missions.open('seller')},{label:'傳承一家 · 未來安排',run:()=>missions.open('legacy-family')}]});
 }
 function meet(id){
  if(id==='yang'){office();return;}
@@ -40,14 +37,10 @@ function meet(id){
  const names={aho:'文具店裡，還亮著燈',bo:'博伯替你留了半張長椅',momo:'畫板上，還有一個空位'};
  showCustom({chapter:'街坊打個招呼',scene:id==='bo'?'bench':id==='momo'?'street':'shop',speaker:CAST[id].name,active:id,title:names[id],lines:[CAST[id].greeting,id==='bo'?'「我們這一帶，以前叫北勢街。等你有空，我再慢慢講。」':id==='momo'?'「阿荷今晚要邀大家坐坐，我還在畫那張邀請卡。」':'「先去看看大家想替卡片留什麼，再一起掛起來。」'],choices:[{label:'接著今晚的邀請卡',run:()=>goWalk(nextDestination(s))},{label:'再散步一下',run:()=>goWalk()}]});
 }
-function actorArt(stop,player){
- const id=player?'xiaoan':stop?.id;if(!CAST[id])return null;
- const x=CAST[id].column*307.2;
- return `<g class="${player?'street-player-body':'street-resident-body'}"><g class="ls-map-sprite"><svg x="-44" y="-143" width="88" height="147" viewBox="${x} 0 307.2 512" overflow="hidden"><image href="${CHARACTER_ATLAS}" width="1536" height="1024"/></svg></g></g>`;
-}
+function actorAsset(stop,player){return CHARACTER_ASSETS[player?'xiaoan':stop?.id]?.calm;}
 function mountWorld(){
  world?.destroy();
- world=mountStreetWorld(q('ls-world'),{district:{id:'lane',title:'府城巷弄',spawn:{x:500,y:540}},position,stops:STOPS,actorArt,highlightStopId:nextDestination(s),onMove:p=>{position=p;persist();},onInteract:meet});
+ world=mountStreetWorld(q('ls-world'),{district:{id:'lane',title:'府城巷弄',spawn:{x:500,y:540}},position,stops:STOPS,actorAsset,highlightStopId:nextDestination(s),onMove:p=>{position=p;persist();},onInteract:meet});
 }
 function showCast(node){
  const group=screen==='story'?sceneCast(s,node.speaker):{active:node.active||'yang',ids:['xiaoan',node.active||'yang']};
@@ -56,8 +49,8 @@ function showCast(node){
  for(const id of group.ids){
   const wrap=element('div',undefined,'ls-person'+(id===group.active?' is-speaking':''));wrap.dataset.character=id;
   const b=element('button',undefined,'cursor-interaction');b.type='button';b.setAttribute('aria-label','向'+CAST[id].name+'打招呼');
-  const sprite=element('span',undefined,'ls-sprite');sprite.dataset.person=id;sprite.dataset.pose=(id===group.active&&currentPage%2===0)||node.ending?'happy':'calm';sprite.setAttribute('aria-hidden','true');
-  b.append(sprite);b.addEventListener('click',()=>{sprite.dataset.pose='happy';q('ls-greeting').hidden=false;q('ls-greeting').textContent=CAST[id].greeting;clearTimeout(greetingTimer);greetingTimer=setTimeout(()=>{q('ls-greeting').hidden=true;},2800);});
+  const sprite=element('img',undefined,'ls-sprite');sprite.alt='';sprite.width=246;sprite.height=410;sprite.src=CHARACTER_ASSETS[id][(id===group.active&&currentPage%2===0)||node.ending?'happy':'calm'];sprite.setAttribute('aria-hidden','true');
+  b.append(sprite);b.addEventListener('click',()=>{sprite.src=CHARACTER_ASSETS[id].happy;q('ls-greeting').hidden=false;q('ls-greeting').textContent=CAST[id].greeting;clearTimeout(greetingTimer);greetingTimer=setTimeout(()=>{q('ls-greeting').hidden=true;},2800);});
   wrap.append(b,element('span',CAST[id].name,'ls-person-label'));q('ls-cast').append(wrap);
  }
 }
@@ -94,14 +87,14 @@ function renderBook(){
  q('ls-replay').textContent=restartPending?'確定重新散步':'重新散步';
 }
 function render(){
- q('ls-walk-view').hidden=screen!=='walk';q('ls-conversation').hidden=!['story','custom'].includes(screen);q('ls-notebook').hidden=screen!=='book';
+ q('ls-walk-view').hidden=screen!=='walk';q('ls-life-view').hidden=screen!=='mission';q('ls-conversation').hidden=!['story','custom'].includes(screen);q('ls-notebook').hidden=screen!=='book';
  if(screen==='walk'){
   const target=nextDestination(s);q('ls-mission-tag').textContent=s.node==='hub'?'邀請卡的下一筆':s.node==='ending'?'今晚，你也是街坊了':'巷口有人在等你';
   q('ls-mission-text').textContent=s.node==='hub'?'走近博伯或沫沫，把他們的故事帶回來。':s.node==='ending'?'還可以回去找楊代書，或慢慢散步。':s.trail.length?'剛才的故事還在，走回'+CAST[target].name+'身邊接著聊。':'阿荷的邀請卡，好像還少了一點什麼。';
-  root.querySelector('.ls-mini-portrait').dataset.person=target;
+  root.querySelector('.ls-mini-portrait').src=CHARACTER_ASSETS[target].happy;
   q('ls-guide').textContent=s.node==='ending'?'找楊代書 →':'走去看看 →';
   world?.update({highlightStopId:s.node==='ending'?'yang':target});
- }else if(screen==='book')renderBook();else renderConversation();
+ }else if(screen==='book')renderBook();else if(['story','custom'].includes(screen))renderConversation();
 }
 q('ls-guide').addEventListener('click',()=>world?.walkTo(s.node==='ending'?'yang':nextDestination(s)));
 q('ls-back-map').addEventListener('click',()=>goWalk());
@@ -116,4 +109,5 @@ q('ls-copy').addEventListener('click',async()=>{
  try{await navigator.clipboard.writeText(text);q('ls-copy-status').textContent='已複製。可以留下來，也可以分享給朋友。';}
  catch{q('ls-copy-fallback').hidden=false;q('ls-copy-fallback').value=text;q('ls-copy-fallback').focus();q('ls-copy-fallback').select();q('ls-copy-status').textContent='請選取文字手動複製。';}
 });
+const missions=mountMissions({root,storage,onOpen:()=>{screen='mission';world?.pause();render();},onClose:()=>goWalk()});
 persist();render();mountWorld();
