@@ -1,45 +1,53 @@
 # 街坊故事試作：今晚，巷口留一盞燈
 
-2026-10-31。供審閱與試玩，尚未合併或上線。
+2026-10-31。草稿供試玩，尚未合併或部署正式版。
 
-## 這次解決什麼
+## 體驗與範圍
 
-既有街區的主要互動是開場、選一句話、得到知識或任務線索。台南素材雖已存在，仍容易被感受為獨立的問答與選讀。本章以同一個街坊聚會貫穿角色、地方與玩家動作；地方介紹直接進入途中敘事，不要求先另開台南專區。
+玩家先操控小安在街區散步，走近阿荷才進入邀請卡故事；領到鉛筆後再實際走向博伯或沫沫。回街上保留當前位置、故事選擇及本次開啟頁面的對話段落。點地面、點人物自動尋路、方向鍵／WASD 與畫面方向按鈕皆可移動。窄螢幕放大地圖並跟隨小安，目的地清單讓畫面外的鄰居仍可到達。
 
-玩家幫阿荷完成一張邀請卡，先找博伯或沫沫皆可；另一位會回應遊玩順序。博伯引出北勢街、五條港與街屋，沫沫引出金華府的街屋廟宇及今天的居民。小船／木窗、搬椅／聊天、收畫紙／移長椅、邀請語會影響後續台詞、邀請卡與結尾相聚位置。可以坐著歇一下、回上一刻、重玩。沒有對錯分數、倒數、答題通關或強制公司導流。
+小安、阿荷、博伯、沫沫與楊代書使用同一張五欄兩列的透明角色圖集；每人有平常及招呼姿態。點場景人物會回應招呼，走路時有輕微步行擺動。這是有立體感的插畫，沒有即時 3D／WebGL。原街區地圖美術仍使用既有模組。
 
-入口現在先顯示原街區 SVG 圖與原人物小安、阿荷、博伯、沫沫。點人物先看到角色介紹，再按按鈕進入故事；找鄰居階段可從地圖選擇先拜訪誰。「回街區地圖」為同頁切換，保留所有故事選擇；原版街區另有明確標示的新分頁連結。神農街、金華府的地方介紹也直接放在地圖內。
+宏國地政｜易丞地政出現在品牌列、地圖公司據點及楊代書對話。買房／賣屋／傳承主題連回三個既有工具：
 
-故事場景加入在場人物立繪、姓名與說話者頭像，聚會時四人同框。沿用原街區的角色造型，沒有額外即時 3D／WebGL。這是地圖入口加固定場景的互動故事試作，尚非新的自由走動引擎。已做 17 個主線節點及 1 個可選休息節點；256 個可完成的選擇組合是測試覆蓋，並非 256 段不同故事。
+- 房貸與生活規劃：https://yangceo-taiwan.github.io/loan-forecast/
+- 賣屋實拿試算：https://homegoestate.github.io/test-Property-tax/
+- 資產傳承工具：https://yangceo-taiwan.github.io/inheritance-tax-issues/
 
-## 地方事實與創作分開
+網址沿用既有 `tool-routes.js`，不傳送遊戲選擇、試算參數或個案資料；不改原工具的驗證、法規內容或計算。
 
-- 神農街的舊稱、河港背景與二層鋪瓦街屋：國家文化記憶庫，臺南市政府文化局建檔，https://tcmb.culture.tw/zh-tw/detail?id=273628&indexCode=Culture_Place
-- 金華府的街屋型態及夾於街屋之間：內政部臺灣宗教文化地圖，https://taiwangods.moi.gov.tw/Religious_Culture/html/Cultural/3_0011.aspx?i=240
-- 查核日：2026-10-31。這不是來源發布或法律施行日期。
-- 小安、阿荷、博伯、沫沫、文具店、聚會、對話與天候為創作。場景不是神農街實景復刻、精確地圖或步行路線。
+桌面對話與場景並排；手機場景在上、短對話和雙選項在下。每段上限約 64 字，保留原故事每一字；地方知識也會出現在正常閱讀路徑中，不必先另開台南專區。「欣賞畫面」可收起對話，再原地繼續。手帳集中地方來源、故事紀錄與原版街區入口，避免預設畫面過長。
 
-## 技術與退路
+主線仍是 17 個節點，拜訪順序、卡片畫作、避雨及邀請語影響後續台詞與結尾。256 組路徑是測試涵蓋的選擇組合，不代表 256 個獨立故事。模型保留可選休息節點；此版地圖未提供該節點的入口。
 
-新增 `first-day/lantern/`；既有 `first-day/index.html` 僅增加「街坊故事試玩」連結。原街區、購屋／換屋／賣屋／傳承引擎、稅務與房貸公式、原進度與回饋服務皆不變。本章僅用獨立 key `anxin-lantern-story-v1` 儲存經過驗證的行動序列，資料不可用時回到開場；無後端、追蹤、身分或個案資料。複製卡片僅在玩家點擊時使用剪貼簿，失敗可手動選取。
+## 正確性與隔離
 
-退回方式：移除單一入口連結即可撤下試玩；如需完全移除，再刪除 `first-day/lantern/`。不需變更既有存檔或計算資料。此 PR 不要求合併即取代原首頁。
+- 神農街舊稱、河港背景、二層鋪瓦街屋：國家文化記憶庫，臺南市政府文化局建檔，https://tcmb.culture.tw/zh-tw/detail?id=273628&indexCode=Culture_Place
+- 金華府街屋型態：內政部臺灣宗教文化地圖，https://taiwangods.moi.gov.tw/Religious_Culture/html/Cultural/3_0011.aspx?i=240
+- 上一輪來源查核日：2026-10-31。並非來源發布或法規施行日期。
+- 人物、聚會、天候、對話及街區配置為創作，非實景、導航或個案判斷；楊代書圖像不是本人肖像。
+- 不修改故事模型 `model.js`、原購屋／換屋／賣屋／傳承引擎、原存檔及回饋服務。
 
-## 驗證與待驗收
+## 實作與回復
 
-- `node first-day/lantern/test-story.mjs`：256 組完整路徑、角色先後回應、卡片內容、回上一步／重玩、破損／異版本存檔。
-- 實際嵌入腳本搭配 HTML 解析後的 DOM 事件模擬：選角色、休息、地方說明、天候／夜景、邀請卡、重玩皆通過。
-- 補測：預設地圖、人物圖引用、點人物再進場、故事→地圖→故事進度保留、地圖內選擇拜訪鄰居、文化介紹開關、說話者及聚會人物顯示。
-- JS 語法檢查通過。
-- 尚未完成真實瀏覽器版面與手機手感驗收；瀏覽器安全政策不允許 data: 本機預覽，本輪未繞過限制。
-- 待人測：未讀說明能否開始、玩後能否說出一個台南特色、是否記得一位鄰居及自己做過的事、是否想繼續。以上是驗收問題，未宣稱已收集使用者證據。
+所有新版程式與角色圖集位於 `first-day/lantern/`。`walk-world.js` 取自既有 v16 步行引擎，保留路網與尋路算法，增加可替換人物繪圖、窄版鏡頭、暫停／ResizeObserver 清理與人物前方的到達間距。沒有修改原 `street-world.js` 或 `street-art.js`。
 
-下一個決策：先驗收地圖入場、人物辨識、來回切換與手機版面，再把同一事件鏈帶回原自由走動街區的 NPC 互動，不直接批量擴寫 37 區。原主頁地圖保留，本 PR 不移除或改寫原地圖。
+整個 PR 對既有檔案僅在 `first-day/index.html` 新增一個試玩入口。移除入口就能撤下本章；既有完整街區與工具仍可照常使用。此次修正單獨提交，可回復至上一版草稿；不合併主線、不部署。
+
+故事使用獨立 `anxin-lantern-story-v1`；步行位置另存 `anxin-lantern-walk-v1`。讀取損壞或舊格式資料時安全回復；沒有資料庫遷移。本章無後端、追蹤或個案資料欄位。重新散步需點第二次明確確認，只重設本章。對話內試玩版本不持久保存。
+
+## 驗證
+
+- `node first-day/lantern/test-story.mjs`：256 組完整路徑、17 主線節點與可選休息、順序回應、卡片內容、回退、存檔還原與不合法資料。
+- `node first-day/lantern/test-presentation.mjs`：1,023 個路徑狀態的文字完整性、每段長度、在場人物及可恢復目的地；81 組路線維持在相連道路上，各人物到達點均可互動。
+- JavaScript 語法、靜態元素 ID 與打包後引用檢查通過。對話內版本含全部美術小於 1 MB，不需外部腳本或圖片請求。
+- 使用官方 managed preview 在真實瀏覽器檢查原始模組版及打包版，完成自動走到阿荷／公司、方向鍵移動、故事接回地圖、位置與選擇還原、招呼姿態、手帳往返、欣賞畫面模式、三個原工具網址驗證。
+- 檢查桌面及 390／320 像素 iframe 版面，修正公司標籤蓋頭、窄版角色與地名重疊、品牌列及頁尾斷字。
+- 以上窄版檢查不是實體手機效能測試。仍需用實際 iPhone／Android 檢查觸控長按、低階裝置幀率、慢網路圖片首次載入與 Safari；尚未取得客戶對好玩程度的回饋。
 
 ## 美術來源
 
-`assets/street-map.svg` 及 `xiaoan.svg / aho.svg / bo.svg / momo.svg` 均直接由既有 `first-day/street-art.js` 的 `streetSceneArt('lane')`、`personArt()` 匯出，保留既有角色設計；來源版本 `f5a837367a14af5ddd115febbc20f11e7509be63`，未改原美術模組。
-
-`assets/tainan-lane.webp` 為本次以內建 image_gen 生成的原創背景，僅轉為 WebP 以供網頁使用；未改變內容。不是現地照片。
-
-生成提示：Use case: illustration-story. Original background for a cozy Taiwanese neighborhood story game. A richly atmospheric imaginary narrow lane inspired by the two-story historic shophouses of Shennong Street, Tainan, at late afternoon just after rain. Warm lanterns, muted jade shadows, hand-painted storybook atmosphere, open stationery shop with paper and pencils on the left, aged red-brick and pale plaster shophouses with wooden upper windows and tiled eaves, a wooden bench and empty display easel on the right, inviting wet stone lane. No prominent people, no lettering, no UI, no logos, no watermark, no exact historical reconstruction. Calm lived-in Taiwan, with room for a newcomer to belong.
+- `assets/characters-v3.webp`：內建 image_gen 生成的原創透明圖集，1536 × 1024，262,110 bytes。保留生成的透明度，僅以 Sharp 轉為 WebP（quality 85、alphaQuality 95），無背景移除或重繪。
+- 角色設計規格：溫暖精緻的可愛立體故事人物，五欄依序為玉綠外套與斜背包的小安、橘色圍裙的阿荷、銀髮眼鏡綠色外套的博伯、黃色吊帶裙與畫具的沫沫、米白外套與青綠上衣拿資料夾的虛構楊代書；兩列維持一致的角色與尺寸，分別為平常交談及開心招呼；全身、不裁切、透明背景、沒有文字標誌。
+- `assets/tainan-lane.webp`：上一版生成的想像台南巷弄背景，378,056 bytes，非現地照片。本輪沿用。
+- 舊版 `street-map.svg` 與四個角色 SVG 保留以便比較；新版不載入它們。原地圖圖形仍引用來源版本 `f5a837367a14af5ddd115febbc20f11e7509be63` 的 `street-art.js`。
