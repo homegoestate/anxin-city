@@ -1,8 +1,8 @@
-// 官方活動日期快照，查核日 2026-10-26；不是即時活動介接。
-// 只收錄查核日仍在展期或尚未開始且已有確定日期的活動。
+// 官方活動日期快照；最新補充 2026-11-02，不是即時活動介接。
+// 新增時須有當年度確定日期；已結束紀錄保留，由臺灣日期篩選狀態。
 // 日期範圍不保證每天有節目或開館；請一起呈現 dateLabel 與 caution。
-// 研究證據：work/seasons-v12/research/events.md
-export const tainanEventsReviewedAt = '2026-10-26';
+// 研究證據：work/seasons-v12/research/events.md；work/weekly-20261102。
+export const tainanEventsReviewedAt = '2026-11-02';
 
 export const tainanEvents = [
   {
@@ -184,6 +184,25 @@ export const tainanEvents = [
     },
     "reviewedAt": "2026-10-26",
     "caution": "售票演出，需先確認餘票；全長約80分鐘、無中場休息，開演30分鐘後不再開放入場。實際場地在東區臺南文化中心。"
+  },
+  {
+    "id": "taijiang-spoonbill-stars-2026-11",
+    "title": "11月的黑琵與星空",
+    "startDate": "2026-11-14",
+    "endDate": "2026-11-14",
+    "dateLabel": "2026/11/14 16:30–20:00；須事先報名",
+    "venue": "七股曾文溪口重要濕地（集合位置依主辦通知）",
+    "districtIds": [
+      "qigu"
+    ],
+    "category": "nature",
+    "description": "傍晚觀察度冬候鳥，入夜再認識秋季星空。台江國家公園與南瀛天文館合作，從黑面琵鷺的濕地生活一路看到星空；跟著解說留意自然，也練習保持距離、不干擾鳥群。",
+    "source": {
+      "title": "內政部國家公園署｜11月的黑琵與星空活動公告",
+      "url": "https://www.moi.gov.tw/News_Content.aspx?n=2&s=342766",
+      "publishedAt": "2026-10-22"
+    },
+    "reviewedAt": "2026-11-02",
+    "caution": "公告每人200元、30名；網路報名區間為10/29 10:00至11/5 17:00，額滿提前截止。此卡不表示仍有名額，請由官方公告確認報名、集合位置與天候異動；勿直接前往要求參加。"
   }
 ];
-
