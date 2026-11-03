@@ -86,7 +86,7 @@ function cleanStops(stops,district) {
 }
 
 /** The host owns story/state. This world emits settled movement and explicit interactions only. */
-export function mountStreetWorld(container,{district,position,stops=[],onMove=()=>{},onInteract=()=>{},reducedMotion=false,highlightStopId=null}={}) {
+export function mountStreetWorld(container,{district,position,stops=[],onMove=()=>{},onInteract=()=>{},reducedMotion=false,instantTravel=false,highlightStopId=null}={}) {
   if(!container||typeof container.replaceChildren!=='function')throw new TypeError('A street map host is required.');
   const doc=container.ownerDocument,win=doc.defaultView;
   const prefix=`street-world-${++worldNumber}`;
@@ -97,7 +97,7 @@ export function mountStreetWorld(container,{district,position,stops=[],onMove=()
   let destroyed=false,raf=0,lastTime=0,nearId=null,moving=false,facing='right',lastManualDirection=null;
   let held=new Map(),pointerDirections=new Map(),listeners=[],stage,svg,actors,playerGroup,routeLine,routeDot,nearButton,live,status,destinationList,stopLayer;
   const media=win.matchMedia?.('(prefers-reduced-motion: reduce)');
-  let reduce=Boolean(reducedMotion||media?.matches);
+  let reduce=Boolean(instantTravel||reducedMotion||media?.matches);
   const listen=(element,type,handler,options)=>{element.addEventListener(type,handler,options);listeners.push(()=>element.removeEventListener(type,handler,options));};
   const say=message=>{if(live&&live.textContent!==message)live.textContent=message;};
 
@@ -300,7 +300,7 @@ export function mountStreetWorld(container,{district,position,stops=[],onMove=()
   const blur=()=>stopMovement();
   const reduceChanged=event=>{
     // The option seeds the initial preference; later OS changes work in both directions.
-    reduce=Boolean(event.matches);
+    reduce=Boolean(instantTravel||event.matches);
     playerGroup?.classList.toggle('is-walking',moving&&!reduce);
     if(reduce&&route.length){player={...route.at(-1)};finishRoute();}
   };
