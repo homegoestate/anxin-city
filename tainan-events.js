@@ -1,8 +1,8 @@
-// 官方活動日期快照；最新補充 2026-11-02，不是即時活動介接。
+// 官方活動日期快照；最新補充 2026-11-09，不是即時活動介接。
 // 新增時須有當年度確定日期；已結束紀錄保留，由臺灣日期篩選狀態。
 // 日期範圍不保證每天有節目或開館；請一起呈現 dateLabel 與 caution。
-// 研究證據：work/seasons-v12/research/events.md；work/weekly-20261102。
-export const tainanEventsReviewedAt = '2026-11-02';
+// 研究證據：work/seasons-v12/research/events.md；work/weekly-20261102；work/weekly-20261109。
+export const tainanEventsReviewedAt = '2026-11-09';
 
 export const tainanEvents = [
   {
@@ -10,20 +10,20 @@ export const tainanEvents = [
     "title": "2026關子嶺溫泉美食節",
     "startDate": "2026-10-24",
     "endDate": "2026-11-22",
-    "dateLabel": "2026/10/24–11/22；主題周 11/7–11/8",
+    "dateLabel": "2026/10/24–11/22；11/7–11/8 主題周已結束",
     "venue": "白河關子嶺溫泉區",
     "districtIds": [
       "baihe"
     ],
     "category": "festival",
-    "description": "以關子嶺溫泉小鎮為舞台，串連地方飲食、光影與市集。本屆分開幕周與主題周安排節目，後續可留意十一月七、八日的主題活動，再配合白河周邊旅行規劃，認識山城的秋日風景。",
+    "description": "主題周市集落幕後，白河還有夜間賞燈可走。從寶泉公園、嶺頂公園到大成殿，燈飾展至11月22日，每晚17:00點亮至午夜。想白天走訪水火同源與大仙寺，可查11月17、18日加開的小旅行梯次。",
     "source": {
-      "title": "臺南市政府觀光旅遊局｜2026關子嶺溫泉美食節公告",
-      "url": "https://www.tainan.gov.tw/News_Content.aspx?n=13370&s=8840767&sms=9748",
-      "publishedAt": "2026-10-08"
+      "title": "臺南市政府觀光旅遊局｜關子嶺主題周、夜間燈飾與加開小旅行",
+      "url": "https://info.tainan.gov.tw/News_Content.aspx?n=25742&s=8845359",
+      "publishedAt": "2026-11-05"
     },
-    "reviewedAt": "2026-10-26",
-    "caution": "節慶期間不代表每天有市集或演出；開幕周為10/24–10/25，主題周為11/7–11/8。品嚐及體驗名額依官方報名公告。"
+    "reviewedAt": "2026-11-09",
+    "caution": "節期不代表每天有市集或演出。11/7–11/8 主題周已結束；11/17、11/18 小旅行須另行報名，餘額、費用與集合方式請查主辦公告。"
   },
   {
     "id": "kunshen-salt-festival-2026",
@@ -190,7 +190,7 @@ export const tainanEvents = [
     "title": "11月的黑琵與星空",
     "startDate": "2026-11-14",
     "endDate": "2026-11-14",
-    "dateLabel": "2026/11/14 16:30–20:00；須事先報名",
+    "dateLabel": "2026/11/14 16:30–20:00；原公告網路報名已截止",
     "venue": "七股曾文溪口重要濕地（集合位置依主辦通知）",
     "districtIds": [
       "qigu"
@@ -202,7 +202,47 @@ export const tainanEvents = [
       "url": "https://www.moi.gov.tw/News_Content.aspx?n=2&s=342766",
       "publishedAt": "2026-10-22"
     },
-    "reviewedAt": "2026-11-02",
-    "caution": "公告每人200元、30名；網路報名區間為10/29 10:00至11/5 17:00，額滿提前截止。此卡不表示仍有名額，請由官方公告確認報名、集合位置與天候異動；勿直接前往要求參加。"
+    "reviewedAt": "2026-11-09",
+    "caution": "原公告報名至11/5 17:00，每人200元、限30名。已報名者請查主辦通知的集合位置與天候安排；候補或現場參加方式須向主辦確認。"
+  },
+  {
+    "id": "anding-sesame-festival-2026",
+    "title": "安定胡麻季・安定好胡，傳香幸福",
+    "startDate": "2026-11-14",
+    "endDate": "2026-11-14",
+    "dateLabel": "2026/11/14 08:30–13:00（市府公告）",
+    "venue": "安定區公所西側停車場",
+    "districtIds": [
+      "anding"
+    ],
+    "category": "harvest",
+    "description": "從麻油香認識台南的胡麻產地。安定場安排地方料理、食農體驗及親子彩繪，逛完可以問問孩子：一顆小小的胡麻籽，在餐桌上變成了什麼？",
+    "source": {
+      "title": "臺南市政府勞工局｜轉知安定區公所胡麻季活動",
+      "url": "https://web.tainan.gov.tw/labor/News_Content.aspx?n=471&s=8845514",
+      "publishedAt": "2026-11-06"
+    },
+    "reviewedAt": "2026-11-09",
+    "caution": "市府公告08:30開始，農業易遊網另列08:45；請依安定區公所當日安排。入場免費，限量料理須憑券兌換，DIY費用、報名與名額請另查。"
+  },
+  {
+    "id": "east-winter-starlight-2026-11",
+    "title": "星光輕音樂團《冬日星光音樂季》",
+    "startDate": "2026-11-15",
+    "endDate": "2026-11-15",
+    "dateLabel": "2026/11/15（日）19:00 開始",
+    "venue": "臺南文化中心假日廣場",
+    "districtIds": [
+      "east"
+    ],
+    "category": "art",
+    "description": "週日晚間到東區的假日廣場，聽樂團將國台語老歌、日本演歌與其他曲風放進一場演出。適合親友一起辨認熟悉的旋律，也聽聽彼此記得的版本。",
+    "source": {
+      "title": "臺南文化中心｜冬日星光音樂季場次",
+      "url": "https://www.tmcc.gov.tw/Event/C000014/4ee64335-6379-4fed-8773-156e3db85556",
+      "publishedAt": null
+    },
+    "reviewedAt": "2026-11-09",
+    "caution": "本場免費；演出在戶外假日廣場，請於出發前查看館方場次及天候異動公告。"
   }
 ];

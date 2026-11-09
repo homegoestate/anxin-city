@@ -7,7 +7,7 @@ import {PASSPORT_KEY,restorePassport,stampDistrict,filterDistricts,filterAttract
 
 import {culturePlaces} from './culture-data.js?v=12.0.0';
 
-import {tainanEvents,tainanEventsReviewedAt} from './tainan-events.js?v=17.0.1';
+import {tainanEvents,tainanEventsReviewedAt} from './tainan-events.js?v=17.0.2';
 import {seasonsView,SEASON_PAGE_SIZE} from './seasons-view.js?v=12.0.0';
 import {taiwanDate} from './seasons-state.js?v=12.0.0';
 

@@ -26,7 +26,7 @@ async function exploreAction(action){
   }
  }catch(error){console.error(error);toast('這段散步資料暫時無法載入，請稍後再試。');}
 }
-const tainanExplorer=featureProxy('台南散步',()=>import('./tainan-ui.js?v=17.0.1'),m=>m.createTainanExplorer({onStartMission:id=>enhancements.showPersona(id),onFeedback:context=>enhancements.openFeedback(context),onExploreCulture:target=>cultureWalk.open(target),toast}),['open','openTarget']);
+const tainanExplorer=featureProxy('台南散步',()=>import('./tainan-ui.js?v=17.0.2'),m=>m.createTainanExplorer({onStartMission:id=>enhancements.showPersona(id),onFeedback:context=>enhancements.openFeedback(context),onExploreCulture:target=>cultureWalk.open(target),toast}),['open','openTarget']);
 let cultureInstance;
 const cultureWalk=featureProxy('文化走讀',()=>import('./culture-ui.js?v=17.0.0'),m=>cultureInstance=m.createCultureWalk({onExplore:action=>{cultureInstance.close();exploreAction(action);},onFeedback:context=>{cultureInstance.close();enhancements.openFeedback(context);},onResidents:()=>{cultureInstance.close();residentChat.open();},toast}),['open']);
 const residentChat=featureProxy('街坊聊聊',()=>import('./resident-ui.js?v=13.0.0'),m=>m.createResidentChat({onExplore:exploreAction,onMission:()=>enhancements.openPeople(),onFeedback:context=>enhancements.openFeedback({scene:'general',persona:'none',contextLabel:'街坊聊聊｜'+(context.residentName||'日常對話')}),toast}),['open']);
