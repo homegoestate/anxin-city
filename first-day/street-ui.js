@@ -1,7 +1,7 @@
 import { districts, stops, discoveries } from './street-data.js?v=16.0.0';
 import { loadStreetState, saveStreetState, changeDistrict, movePlayer, availableStops, interact, chooseStory, streetSummary, streetProgress } from './street-state.js?v=16.0.0';
 import { mountStreetWorld } from './street-world.js?v=18.0.0';
-import { createBrandQuests } from './brand-quest-ui.js?v=18.0.0';
+import { createBrandQuests } from './brand-quest-ui.js?v=19.0.0';
 import { companionTools } from '../tool-routes.js?v=6.0.0';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
