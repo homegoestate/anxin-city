@@ -9,8 +9,8 @@
   <title>小安的點交日：怎麼有兩個 12 號車位？｜宏國地政 × 易丞地政</title>
   <meta name="description" content="陪小晴和爸爸到地下室點交車位。在現場照片和配置圖做記號，試試三種處理方法，帶走自己的點交核對清單。">
   <link rel="icon" href="../icon.svg">
-  <link rel="stylesheet" href="./style.css">
-  <script type="module" src="./game.js"></script>
+  <link rel="stylesheet" href="./style.css?v=20">
+  <script type="module" src="./game.js?v=20"></script>
 </head>
 <body>
   <a class="skip-link" href="#stage">跳到本回合</a>
@@ -22,9 +22,15 @@
   </header>
   <main class="case-shell">
     <section class="case-heading" aria-labelledby="case-title">
-      <p class="eyebrow">安心城街坊故事 ／ 小安的點交日</p>
-      <h1 id="case-title">怎麼有兩個 <span class="case-number">12</span> 號車位？</h1>
-      <p class="lede">上次陪小晴看屋，今天陪她和爸爸來點交。地下一樓，對方指向一格車位：「12 號在這裡。」爸爸把紙箱放上推車，小晴遞來一張圖。</p>
+      <div class="opening-copy">
+        <p class="eyebrow">安心城街坊故事 ／ 小安的點交日</p>
+        <h1 id="case-title"><span>怎麼有兩個</span> <span><em class="case-number">12</em> 號車位？</span></h1>
+        <p class="lede">上次陪小晴看屋，今天陪她和爸爸來點交。地下一樓，對方指向一格車位：「12 號在這裡。」爸爸扶好推車，小晴把配置圖遞給你。</p>
+        <a class="evidence-jump" href="#stage">查看照片與配置圖 <span aria-hidden="true">↓</span></a>
+      </div>
+      <img class="opening-art" src="./arrival.webp" srcset="./arrival-small.webp 600w, ./arrival.webp 1200w"
+        sizes="(max-width: 639px) calc(100vw - 2rem), (max-width: 699px) calc(100vw - 4rem), (max-width: 1184px) calc(56vw - 2.24rem), 627px"
+        width="1200" height="800" alt="地下停車場入口，爸爸扶著載有紙箱的推車，和小安一起望向小晴展開的配置圖。" fetchpriority="high">
     </section>
     <nav aria-label="遊戲進度">
       <ol class="stepper">

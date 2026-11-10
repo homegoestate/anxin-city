@@ -18,14 +18,19 @@ const observations = {
 const outcomes = {
   move: {
     title: '紙箱先到了，位置還沒對上。',
-    text: '爸爸把箱子推進 12 號格。隔壁的住戶也指著圖上的 12 號，問：「你們拿的是哪一棟的圖？」爸爸只好先把箱子搬回推車。'
+    text: '爸爸把箱子推進 12 號格。隔壁的住戶也指著圖上的 12 號，問：「你們拿的是哪一棟的圖？」爸爸只好先把箱子搬回推車。',
+    scene: 'move-scene',
+    alt: '爸爸蹲下把紙箱搬回推車，小晴抱著配置圖，小安托著下巴看。'
   },
   ask: {
     title: '有人答了「對」，卻沒留下依據。',
-    text: '帶看的人點點頭：「平常都叫它 12 號。」隔天換人值班，只看得到點交單上的「車位一席」。小晴得再跑一趟，指出當時看的是哪一格。'
+    text: '帶看的人點點頭：「平常都叫它 12 號。」隔天換人值班，只看得到點交單上的「車位一席」。小晴得再跑一趟，指出當時看的是哪一格。',
+    scene: 'ask-scene',
+    alt: '值班人員在窗口攤開手，小晴疑惑地回頭看爸爸，小安抬頭聽著。'
   }
 };
 
+const resolveAlt = '小安舉起柱面照片，小晴對著桌上的車位圖做筆記，爸爸俯身和她一起看。';
 const checklist = [
   ['現場位置', '拍下棟別、樓層、格號與周邊位置，讓下一位查核的人找得到同一格。'],
   ['契約與附件', '找出契約、車位配置圖及車位約定，逐一對照棟別、樓層和編號。'],
@@ -60,6 +65,8 @@ const actionButton = (action, label, kind = 'primary-btn') =>
   `<button type="button" data-action="${action}" class="${kind}">${label}</button>`;
 const panelTitle = (kicker, title, copy) =>
   `<div class="panel-heading"><p class="kicker">${kicker}</p><h2 id="round-title" tabindex="-1">${title}</h2><p>${copy}</p></div>`;
+const storyFrame = (file, alt, width = 960, height = 540) =>
+  `<figure class="scene-frame"><img src="./${file}.webp" width="${width}" height="${height}" alt="${alt}"></figure>`;
 
 function hotspot(source, item) {
   return `<button type="button" class="${source}-hotspot" data-source="${source}" data-spot="${item.id}"
@@ -134,27 +141,32 @@ function markCount() {
 }
 
 function choose() {
-  return `<section class="decision-panel">
+  return `<section class="decision-panel story-spread">
     ${panelTitle('點交現場', '爸爸問：「紙箱可以搬過去了嗎？」', '小晴握著圖，等你先開口。')}
-    <div class="choice-list">
+    ${storyFrame('arrival-small', '爸爸扶著推車，等小晴和小安看完配置圖。', 600, 400)}
+    <div class="spread-controls"><div class="choice-list">
       ${actionButton('move', '把紙箱搬進 12 號車格', 'choice-btn')}
       ${actionButton('ask', '先問現場人員是不是這一格', 'choice-btn')}
       ${actionButton('record', '把差異記下，請交付方確認', 'choice-btn')}
     </div>
-    <div class="stage-actions">${actionButton('edit-from-choose', '← 回去看我的標記', 'text-link')}</div>
+    <div class="stage-actions">${actionButton('edit-from-choose', '← 回去看我的標記', 'text-link')}</div></div>
   </section>`;
 }
 
 function outcome() {
   const result = outcomes[state.outcome];
-  return `<section class="outcome-card">${panelTitle('這個選擇之後', result.title, result.text)}
-    <div class="stage-actions">${actionButton('rewind', '↶ 倒帶，換個做法')}${actionButton('edit-from-choose', '重看現場證物', 'secondary-btn')}</div>
-    <p class="sheet-note">倒帶會保留你做的兩個記號。</p></section>`;
+  return `<section class="outcome-card story-spread">${panelTitle('這個選擇之後', result.title, result.text)}
+    ${storyFrame(result.scene, result.alt)}
+    <div class="spread-controls"><div class="stage-actions">${actionButton('rewind', '↶ 倒帶，換個做法')}${actionButton('edit-from-choose', '重看現場證物', 'secondary-btn')}</div>
+    <p class="sheet-note">倒帶會保留你做的兩個記號。</p></div></section>`;
 }
 
 function proof() {
-  return `<section class="decision-panel">
-    ${panelTitle('點交紀錄 ／ 待確認', '哪兩個記號能說明差異？', '從你留下的標記，各附上一份能讓對方回頭核對的證據。')}
+  return `<section class="decision-panel proof-panel">
+    <div class="proof-heading">
+      ${panelTitle('點交紀錄 ／ 待確認', '哪兩個記號能說明差異？', '小晴攤開點交單。從你留下的標記，各附上一份能讓對方回頭核對的證據。')}
+      ${storyFrame('resolve-scene', resolveAlt)}
+    </div>
     <div class="review-grid">${['photo', 'plan'].map((source, i) =>
       `<article class="review-card"><p class="kicker">證物 0${i + 1} ／ ${i ? '配置圖' : '現場照片'}</p><h3>${markOf(source).label}</h3>
         <p>${markOf(source).note}</p><label class="attachment-label"><input type="checkbox" data-attach="${source}" ${state.attached[source] ? 'checked' : ''}> 附上這個標記</label></article>`).join('')}</div>
@@ -170,10 +182,11 @@ function messageText() {
 }
 
 function finish() {
-  return `<section class="outcome-card final-outcome">
+  return `<section class="outcome-card final-outcome story-spread">
     ${panelTitle('點交紀錄已完成 ／ 車位待確認', '同樣寫著 12 號，指向的棟別卻不同。', '小晴把「現場柱面 B、附件圖首 A 棟」並列在點交單上。爸爸先收好推車，約交付方帶原圖一起核對。')}
-    <p class="sheet-note">「車位一席」只寫了數量。這兩個記號足以提出疑問，權利範圍仍要回到契約、附件及相關資料核對。</p>
-    <div class="stage-actions">${actionButton('rewind', '↶ 保留標記，試另一個選擇', 'secondary-btn')}</div>
+    ${storyFrame('resolve-scene', resolveAlt)}
+    <div class="spread-controls"><p class="sheet-note">「車位一席」只寫了數量。這兩個記號足以提出疑問，權利範圍仍要回到契約、附件及相關資料核對。</p>
+    <div class="stage-actions">${actionButton('rewind', '↶ 保留標記，試另一個選擇', 'secondary-btn')}</div></div>
   </section>
   <section class="decision-panel checklist-panel"><p class="kicker">小晴的點交筆記</p><h2>帶到現場的四項清單</h2>
     <p>勾選想優先詢問的項目，會附在 LINE 清單最後。</p>
@@ -204,11 +217,12 @@ function showPage(page, moveFocus = true) {
     else step.removeAttribute('aria-current');
     step.classList.toggle('is-complete', i < progress[page]);
   });
+  if (moveFocus) document.querySelector('.case-shell').classList.add('in-round');
   stage.innerHTML = views[page]();
   if (moveFocus) {
     const target = page === 'inspect' ? stage : stage.querySelector('#round-title');
     target.focus({ preventScroll: true });
-    stage.scrollIntoView({ block: 'start' });
+    document.querySelector('.stepper').scrollIntoView({ block: 'start' });
   }
 }
 
