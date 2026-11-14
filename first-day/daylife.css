@@ -1,0 +1,129 @@
+/* A quiet, self-contained layer inside the existing street dialog. */
+.daylife-entry{display:flex;align-items:center;gap:18px;width:100%;min-width:0;min-height:44px;padding:12px 18px 12px 12px;border:1px solid #d3cdb6;border-radius:16px;background:#f9f1df;color:#235449;text-align:left;font:inherit;line-height:1.5;cursor:pointer;box-sizing:border-box}
+.daylife-entry>img{display:block;width:108px;height:auto;aspect-ratio:3/2;object-fit:cover;border-radius:10px;flex:0 0 108px}
+.daylife-entry-copy{display:grid;gap:3px;min-width:0;flex:1;overflow-wrap:anywhere}
+.daylife-entry-copy>strong{font-family:var(--serif,serif);font-size:1.14rem;font-weight:700}
+.daylife-entry-name{font-size:.82rem;font-weight:700;color:#8d4e2e;letter-spacing:.04em}
+.daylife-entry-copy>span:last-child{font-size:.91rem;color:#526452}
+.daylife-entry-arrow{font-size:1.5rem;flex-shrink:0}
+.daylife-entry:hover{background:#f4ead3;border-color:#ac926b}
+.daylife-entry:focus-visible,.daylife button:focus-visible,.daylife a:focus-visible,.daylife summary:focus-visible,.daylife textarea:focus-visible{outline:3px solid #a46639;outline-offset:3px}
+.daylife{--daylife-ink:#265b4d;--daylife-muted:#576a58;--daylife-line:#d6d6bd;min-width:0;color:var(--daylife-ink);font-size:1.0625rem;line-height:1.85;overflow-wrap:anywhere}
+.daylife *{box-sizing:border-box}
+.daylife p{margin:0 0 1em}
+.daylife h3{margin:0 0 .6em;font-size:1.25rem;line-height:1.6;color:#254f42;overflow-wrap:anywhere}
+.daylife button,.daylife a,.daylife textarea{font:inherit}
+.daylife button,.daylife a{white-space:normal;overflow-wrap:anywhere}
+.daylife .daylife-lead{font-family:var(--serif,serif);font-size:1.35rem;font-weight:700;line-height:1.65;margin-bottom:.45em}
+.daylife .daylife-note{font-size:.94rem;line-height:1.75;color:var(--daylife-muted)}
+.daylife a{color:#2b5c4b;text-decoration-thickness:1px;text-underline-offset:.2em}
+.daylife-times{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 18px}
+.daylife-times button{min-width:0;flex:1 1 90px;min-height:48px;padding:9px 12px;border:1px solid #a6b99d;border-radius:10px;background:#f8f6e8;color:#315e4b;cursor:pointer;font-weight:700;line-height:1.5}
+.daylife-times button[aria-pressed=true]{background:#295c4d;border-color:#295c4d;color:#fff9e8;box-shadow:inset 0 -3px 0 #163f34}
+.daylife-illustration{margin:0 0 22px;overflow:hidden;border-radius:13px;background:#eee4ce}
+.daylife-illustration img{display:block;width:100%;max-width:100%;height:auto;aspect-ratio:3/2;object-fit:cover}
+.daylife-illustration figcaption{padding:9px 13px;font-size:.9rem;color:#576650;line-height:1.7}
+.daylife-story-art{max-width:340px;margin-inline:auto}
+.street-dialog:has(.daylife-browse){width:min(1020px,calc(100vw - 24px))}
+.daylife-browse-layout{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:24px;align-items:start}
+.daylife-browse-layout>.daylife-illustration{margin:0}
+.daylife-browse-layout>.daylife-illustration figcaption{display:none}
+.daylife-browse-content{min-width:0}
+.daylife-browse .daylife-destinations{grid-template-columns:1fr;gap:10px;margin-bottom:0}
+.daylife-browse .daylife-destination{padding:14px 17px;gap:4px}
+.daylife-browse .daylife-destination-bottom{padding-top:3px}
+.daylife .daylife-browse-caption{margin:12px 0 0;font-size:.9rem}
+.daylife-time-copy{margin-bottom:19px}
+.daylife-time-copy h3{font-family:var(--serif,serif);font-size:1.4rem;margin-bottom:.3em}
+.daylife-time-copy p{font-size:1rem;color:var(--daylife-muted);margin:0}
+.daylife-destinations{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0 0 22px}
+.daylife-destination{display:flex;flex-direction:column;align-items:flex-start;gap:9px;min-width:0;min-height:44px;padding:19px 17px;border:1px solid #c9cfb4;border-radius:12px;background:#fffbed;color:#285442;text-align:left;cursor:pointer;line-height:1.65}
+.daylife-destination:hover{background:#f2efdc;border-color:#839b73}
+.daylife-district{font-size:.95rem;color:#95613a}
+.daylife-destination>strong{font-family:var(--serif,serif);font-size:1.2rem;font-weight:700}
+.daylife-destination-bottom{font-size:.94rem;margin-top:auto;padding-top:7px;color:#536950}
+.daylife-actions{display:flex;flex-wrap:wrap;align-items:center;gap:11px;margin:24px 0}
+.daylife .daylife-button{display:inline-flex;align-items:center;justify-content:center;gap:9px;max-width:100%;min-height:48px;padding:11px 18px;border:1px solid #295c4d;border-radius:10px;background:#295c4d;color:#fff9e8;font-weight:700;line-height:1.6;text-align:center;text-decoration:none;cursor:pointer}
+.daylife .daylife-button:hover{background:#214c3f;border-color:#214c3f}
+.daylife .daylife-secondary{background:#f8f4e6;border-color:#aebc9e;color:#2e5b47}
+.daylife .daylife-secondary:hover{background:#e8ecd9;border-color:#80966c}
+.daylife .daylife-text-button{display:inline-flex;align-items:center;min-height:44px;max-width:100%;padding:8px 1px;border:0;background:transparent;color:#3a654d;text-decoration:underline;text-underline-offset:.25em;cursor:pointer;line-height:1.65;text-align:left}
+.daylife-story-heading{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 16px;margin:0 0 16px;color:#657252;font-size:.95rem}
+.daylife .daylife-speaker{font-weight:700;color:#8e5732;font-size:1rem;margin:0 0 14px}
+.daylife-prose p{margin:0 0 1em}
+.daylife-prose p:last-child{margin-bottom:0}
+.daylife .daylife-choice-title{margin:27px 0 14px;font-size:1.1rem}
+.daylife-choices{display:grid;gap:12px;margin-bottom:13px}
+.daylife-choice{display:flex;align-items:center;justify-content:space-between;gap:18px;width:100%;min-height:52px;padding:15px 18px;border:1px solid #acbea1;border-bottom-width:3px;border-radius:12px;background:#f1f1df;color:#315a43;text-align:left;cursor:pointer;line-height:1.8}
+.daylife-choice>span:first-child{min-width:0}
+.daylife-choice>span:last-child{flex-shrink:0}
+.daylife-choice small{display:block;margin-top:4px;font-size:.9rem;font-weight:400;color:#516749}
+.daylife-choice:hover,.daylife-choice[aria-pressed=true]{background:#e5ebd3;border-color:#65845a}
+.daylife .daylife-location{font-size:.95rem;color:#6d7050;margin-bottom:13px}
+.daylife-response{border-top:1px solid var(--daylife-line);padding-top:24px;margin-bottom:27px}
+.daylife-memory{margin:0 0 22px;padding:19px 20px;border-left:3px solid #bb8954;background:#f5ecd7;border-radius:0 11px 11px 0}
+.daylife-memory>span{display:block;font-size:.94rem;color:#8b5935;margin-bottom:6px}
+.daylife-memory>p{font-family:var(--serif,serif);font-size:1.25rem;line-height:1.8;margin:0}
+.daylife-home-question h3{font-size:1.1rem;margin-bottom:9px}
+.daylife-home-question p{margin:0}
+.daylife-source,.daylife-about,.daylife-tools{margin:20px 0 0;border-top:1px solid var(--daylife-line);padding-top:4px;font-size:.95rem;line-height:1.8;color:#52664e}
+.daylife-source>summary,.daylife-about>summary,.daylife-tools>summary{min-height:44px;padding:10px 0;cursor:pointer;font-size:.95rem;font-weight:600}
+.daylife-source>p,.daylife-about>p,.daylife-tools>p{margin:4px 0 12px}
+.daylife-source>a{display:inline-flex;align-items:center;min-height:44px;padding-block:5px;max-width:100%}
+.daylife-source .daylife-note{margin-top:9px}
+.daylife-storage{margin:18px 0 0!important;font-size:.9rem;line-height:1.8;color:#5a6b54}
+.daylife-notebook{display:grid;gap:26px;margin:28px 0}
+.daylife-notebook-item{padding:0 0 24px;border-bottom:1px solid #d0d2b9}
+.daylife-notebook-item h3{font-family:var(--serif,serif);font-size:1.3rem}
+.daylife-notebook-item>.daylife-location{margin:0 0 7px}
+.daylife-notebook-question{padding:16px 17px;margin:16px 0 5px;background:#edf0df;border-radius:9px}
+.daylife-notebook-question>span{display:block;font-size:.92rem;color:#5a7051;margin-bottom:6px}
+.daylife-notebook-question>p{margin:0}
+.daylife-notebook-item>.daylife-source{margin-top:8px}
+.daylife-handoff{margin-top:31px;padding:25px 0 0;border-top:2px solid #b6c3a6}
+.daylife .daylife-brand{font-size:.9rem;font-weight:700;color:#8a5b34;margin-bottom:8px;letter-spacing:.04em}
+.daylife-handoff>h3{font-family:var(--serif,serif);font-size:1.4rem}
+.daylife-handoff>label{display:block;margin:24px 0 10px;font-weight:700;font-size:1rem;line-height:1.75}
+.daylife-handoff textarea{display:block;width:100%;max-width:100%;min-width:0;min-height:220px;margin:0 0 12px;padding:15px;border:1px solid #aab99a;border-radius:10px;background:#fffdf4;color:#2f523e;font-size:1rem;line-height:1.8;resize:vertical;overflow-wrap:anywhere;white-space:pre-wrap}
+.daylife-handoff .daylife-actions{margin-bottom:14px}
+.daylife-tools>div{display:flex;flex-wrap:wrap;gap:9px 20px;margin:5px 0 15px}
+.daylife-tools a{display:inline-flex;align-items:center;min-height:44px;max-width:100%;font-size:.95rem}
+.daylife-explore-links{display:flex;flex-wrap:wrap;gap:7px 20px;margin-top:23px}
+.daylife-explore-links>a{display:inline-flex;align-items:center;min-height:44px;max-width:100%;font-size:.95rem}
+.daylife .daylife-copy-help{padding:13px 15px;background:#f4e6c7;color:#6c492c;border-radius:8px;font-size:1rem;line-height:1.75}
+.daylife [hidden]{display:none!important}
+@media(max-width:760px){
+  .daylife-browse-layout{grid-template-columns:1fr;gap:16px}
+  .daylife-browse-layout>.daylife-illustration{background:transparent}
+  .daylife-browse-layout>.daylife-illustration img{width:100%;height:180px;max-height:180px;object-fit:contain}
+  .daylife-browse .daylife-times{margin:12px 0 15px}
+  .daylife-browse .daylife-time-copy{margin-bottom:12px}
+  .daylife-browse .daylife-time-copy h3{font-size:1.2rem;margin-bottom:0}
+  .daylife-browse .daylife-time-copy p{display:none}
+}
+@media(max-width:600px){
+  .daylife-entry{gap:13px;padding:11px 13px 11px 11px}
+  .daylife-entry>img{width:88px;flex-basis:88px}
+  .daylife-entry-copy>strong{font-size:1.06rem}
+  .daylife-entry-copy>span:last-child{font-size:.9rem}
+  .daylife-entry-arrow{display:none}
+  .daylife-destinations{grid-template-columns:1fr;gap:11px}
+  .daylife-destination{padding:17px 18px;gap:5px}
+  .daylife-destination-bottom{padding-top:3px;margin-top:0}
+  .daylife .daylife-lead,.daylife-time-copy h3,.daylife-handoff>h3{font-size:1.25rem}
+  .daylife-actions>.daylife-button{width:100%}
+  .daylife-illustration{margin-bottom:18px;border-radius:10px}
+  .daylife-choice{padding:14px;gap:12px}
+}
+@media(max-width:380px){
+  .daylife-entry{gap:10px}
+  .daylife-entry>img{width:72px;flex-basis:72px}
+  .daylife-entry-name{font-size:.86rem}
+  .daylife-entry-copy>strong{font-size:1rem}
+  .daylife-entry-copy>span:last-child{display:none}
+  .daylife .daylife-button{padding:11px 13px}
+  .daylife-times{gap:6px}
+  .daylife-times button{flex-basis:68px;padding:10px 7px}
+  .daylife-memory{padding:16px}
+}
+@media(prefers-reduced-motion:reduce){.daylife-entry,.daylife *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}

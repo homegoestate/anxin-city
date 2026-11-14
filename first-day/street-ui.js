@@ -3,6 +3,7 @@ import { loadStreetState, saveStreetState, changeDistrict, movePlayer, available
 import { mountStreetWorld } from './street-world.js?v=18.0.0';
 import { createBrandQuests } from './brand-quest-ui.js?v=19.0.0';
 import { companionTools } from '../tool-routes.js?v=6.0.0';
+import { createDaylife } from './daylife.js?v=21.0.0';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const lineUrl = text => 'https://line.me/R/oaMessage/%40604gpqef/?' + encodeURIComponent(text);
@@ -13,6 +14,10 @@ export function createStreetExperience({storage,onLesson,onFeedback,toast=()=>{}
   let memoryOnly=false,fastTravel=false;
   try{fastTravel=storage?.getItem('anxin-first-day-fast-travel')==='true';}catch{}
   const reduce=matchMedia('(prefers-reduced-motion: reduce)');
+  const daylife=createDaylife({storage,showPanel:showDialog,notify:announce,onChanged:()=>{
+    const entry=host?.querySelector('[data-daylife-entry]');
+    if(entry)entry.innerHTML=daylife.entry();
+  }});
   const questsUI=createBrandQuests({storage,getStreetState:()=>state,showPanel:showDialog,walkTo:goToStop,
     onFeedback:()=>{dialog?.close();onFeedback();},
     changed:()=>{refreshProgress();world?.update({highlightStopId:questsUI.nextStop()});},notify:announce});
@@ -27,7 +32,7 @@ export function createStreetExperience({storage,onLesson,onFeedback,toast=()=>{}
     if(memoryOnly) announce('這次仍可探索，但此瀏覽器暫時無法保存進度。');
   }
   function summary() {
-    return ['【宏國地政 × 易丞地政・小安的台南街區探索】',streetSummary(state),questsUI.summary(),'',
+    return ['【宏國地政 × 易丞地政・小安的台南街區探索】',streetSummary(state),questsUI.summary(),daylife.summary(),'',
       '我想帶回現實繼續確認：產權文件、使用與屋況、銀行條件，以及家人的安排。',
       '這是虛構街區的學習紀錄，不代表實際到訪、核貸或個案法律判斷。','尚未送出訊息；由我確認後自行傳送。'].join('\n');
   }
@@ -42,6 +47,7 @@ export function createStreetExperience({storage,onLesson,onFeedback,toast=()=>{}
     dialog.addEventListener('close',()=>host?.querySelector('[data-street-notebook]')?.focus({preventScroll:true}));
     dialog.addEventListener('click',event=>{
       const b=event.target.closest('button');if(!b)return;
+      if(daylife.handleClick(b))return;
       if(questsUI.handleClick(b))return;
       if(b.hasAttribute('data-dialog-close')) dialog.close();
       if(b.dataset.answer) answer(b.dataset.answer);
@@ -53,6 +59,7 @@ export function createStreetExperience({storage,onLesson,onFeedback,toast=()=>{}
       if(b.hasAttribute('data-copy-exploration')) copySummary();
     });
     dialog.addEventListener('input',event=>{
+      if(daylife.handleInput(event))return;
       if(questsUI.handleInput(event))return;
       if(event.target.id==='street-line-text')dialog.querySelector('#street-line-link').href=lineUrl(event.target.value);
     });
@@ -72,7 +79,8 @@ export function createStreetExperience({storage,onLesson,onFeedback,toast=()=>{}
     lastStop=id;lastChoice=null;
     if(id==='lane-office'){questsUI.visitOffice();return;}
     showDialog(stop.name+' · '+stop.role,'<p class="street-speaker">'+esc(stop.kind==='place'?'觀察一下這個地方':'你想怎麼接話？')+'</p>'+story.intro.map(t=>'<p>'+esc(t)+'</p>').join('')+
-      '<div class="street-choices">'+story.choices.map(c=>'<button type="button" class="street-choice'+(questsUI.choiceHint(id,c.id)?' quest-current-choice':'')+'" data-answer="'+esc(c.id)+'"><span>'+(questsUI.choiceHint(id,c.id)?'<small class="quest-choice-tag">這段話裡有任務線索</small>':'')+'<small class="branch-read">'+(state.history.some(h=>h.stopId===id&&h.choiceId===c.id)?'已讀 · 可重溫':'未讀 · 新的對話')+'</small>'+esc(c.label)+'</span><span aria-hidden="true">→</span></button>').join('')+'</div><p class="note">換個選擇，可以聽見另一段故事。</p>');
+      '<div class="street-choices">'+story.choices.map(c=>'<button type="button" class="street-choice'+(questsUI.choiceHint(id,c.id)?' quest-current-choice':'')+'" data-answer="'+esc(c.id)+'"><span>'+(questsUI.choiceHint(id,c.id)?'<small class="quest-choice-tag">這段話裡有任務線索</small>':'')+'<small class="branch-read">'+(state.history.some(h=>h.stopId===id&&h.choiceId===c.id)?'已讀 · 可重溫':'未讀 · 新的對話')+'</small>'+esc(c.label)+'</span><span aria-hidden="true">→</span></button>').join('')+'</div><p class="note">換個選擇，可以聽見另一段故事。</p>'+
+      '<button class="text-link" type="button" data-daylife-period="'+(stop.district==='coast'?'evening':stop.district==='hills'?'afternoon':'morning')+'">也想聽聽台南的日常？一起慢慢逛 →</button>');
   }
   function answer(choiceId) {
     const replay=state.history.some(h=>h.stopId===lastStop&&h.choiceId===choiceId);
@@ -113,6 +121,7 @@ export function createStreetExperience({storage,onLesson,onFeedback,toast=()=>{}
     if(world)world.destroy();world=null;host=container;
     const d=byId(districts,state.district);
     host.innerHTML='<section class="street-screen"><header class="street-heading"><div><p class="eyebrow">宏國地政 × 易丞地政 · 家的事，一起問清楚</p><h1 id="chapter-title" tabindex="-1">小安在台南的第一天<span>陪街坊解開家的小問題。</span></h1></div><button class="secondary" type="button" data-street-notebook>我的探索手帳</button></header>'+
+      '<div data-daylife-entry>'+daylife.entry()+'</div>'+
       '<div class="street-travel-option"><button class="secondary" type="button" data-fast-travel aria-pressed="'+fastTravel+'">快速移動：'+(fastTravel?'開啟':'關閉')+'</button><span>想慢慢逛就沿街走；趕時間可切換，點居民直接抵達。</span></div>'+
       '<nav class="street-toolbar" aria-label="選擇探索街區">'+districts.map(item=>'<button type="button" data-district="'+esc(item.id)+'" aria-pressed="'+(item.id===state.district)+'">'+esc(item.title)+'</button>').join('')+'</nav>'+
       '<div class="quest-hud" aria-label="目前街坊任務"></div><div class="street-map-heading"><strong>'+esc(d.title)+'</strong><span>'+esc(d.subtitle)+'</span></div>'+
@@ -123,6 +132,10 @@ export function createStreetExperience({storage,onLesson,onFeedback,toast=()=>{}
     host.querySelector('[data-street-notebook]').onclick=notebook;
     host.querySelector('[data-street-lesson]').onclick=onLesson;
     host.querySelector('[data-street-feedback]').onclick=onFeedback;
+    host.querySelector('[data-daylife-entry]').onclick=event=>{
+      const button=event.target.closest('button');
+      if(button)daylife.handleClick(button);
+    };
     host.querySelector('.quest-hud').onclick=event=>{const button=event.target.closest('button');if(button)questsUI.handleClick(button);};
     refreshProgress();
     world=mountStreetWorld(host.querySelector('.street-map-host'),{district:d,position:state.position,stops:availableStops(state),reducedMotion:reduce.matches,instantTravel:fastTravel,highlightStopId:questsUI.nextStop(),
@@ -164,5 +177,5 @@ export function createStreetExperience({storage,onLesson,onFeedback,toast=()=>{}
     canvas.toBlob(blob=>{if(!blob){announce('圖片暫未完成，請改用摘要。');return;}const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='小安在台南_今日探索卡.png';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);announce('探索卡已開始保存。');},'image/png');
   }
   function destroy() {world?.destroy();world=null;host=null;if(dialog?.open)dialog.close();}
-  return {mount,destroy,summary,progress:()=>streetProgress(state),context:()=>byId(districts,state.district)?.title||'街區探索',notebook};
+  return {mount,destroy,summary,progress:()=>streetProgress(state),context:()=>byId(districts,state.district)?.title||'街區探索',notebook,openDaylife:()=>daylife.launch(),daylifeCount:()=>daylife.count()};
 }
