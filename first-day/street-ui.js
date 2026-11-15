@@ -1,9 +1,10 @@
 import { districts, stops, discoveries } from './street-data.js?v=16.0.0';
 import { loadStreetState, saveStreetState, changeDistrict, movePlayer, availableStops, interact, chooseStory, streetSummary, streetProgress } from './street-state.js?v=16.0.0';
-import { mountStreetWorld } from './street-world.js?v=18.0.0';
+import { mountStreetWorld } from './street-world.js?v=22.0.2';
 import { createBrandQuests } from './brand-quest-ui.js?v=19.0.0';
 import { companionTools } from '../tool-routes.js?v=6.0.0';
-import { createDaylife } from './daylife.js?v=21.0.0';
+import { createDaylife } from './daylife.js?v=22.0.2';
+import { createDaylifeWalk } from './daylife-walk.js?v=22.0.2';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const lineUrl = text => 'https://line.me/R/oaMessage/%40604gpqef/?' + encodeURIComponent(text);
@@ -12,12 +13,19 @@ const byId = (items,id) => items.find(item=>item.id===id);
 export function createStreetExperience({storage,onLesson,onFeedback,toast=()=>{}}) {
   let state=loadStreetState(storage),host=null,world=null,lastStop=null,dialog=null,lastChoice=null;
   let memoryOnly=false,fastTravel=false;
+  let walkMode=false;
   try{fastTravel=storage?.getItem('anxin-first-day-fast-travel')==='true';}catch{}
   const reduce=matchMedia('(prefers-reduced-motion: reduce)');
-  const daylife=createDaylife({storage,showPanel:showDialog,notify:announce,onChanged:()=>{
+  const daylife=createDaylife({storage,showPanel:showDialog,notify:announce,onWalk:openWalk,onReturnWalk:closeWalkPanel,extraSummary:()=>walkUI.summary(),onChanged:()=>{
     const entry=host?.querySelector('[data-daylife-entry]');
     if(entry)entry.innerHTML=daylife.entry();
+    walkUI.refresh();
   }});
+  const walkUI=createDaylifeWalk({storage,showPanel:showDialog,closePanel:closeWalkPanel,notify:announce,
+    onStory:id=>daylife.openStory(id,{walking:true}),onBook:()=>daylife.openBook({walking:true}),
+    getMoments:()=>daylife.count(),getSelections:()=>daylife.selectionIds(),
+    onExit:()=>{walkMode=false;walkUI.destroy();if(host){mount(host);host.querySelector('h1')?.focus({preventScroll:true});}},
+    onLesson:()=>{dialog?.close();onLesson();},onFeedback:()=>{dialog?.close();onFeedback();}});
   const questsUI=createBrandQuests({storage,getStreetState:()=>state,showPanel:showDialog,walkTo:goToStop,
     onFeedback:()=>{dialog?.close();onFeedback();},
     changed:()=>{refreshProgress();world?.update({highlightStopId:questsUI.nextStop()});},notify:announce});
@@ -32,7 +40,7 @@ export function createStreetExperience({storage,onLesson,onFeedback,toast=()=>{}
     if(memoryOnly) announce('這次仍可探索，但此瀏覽器暫時無法保存進度。');
   }
   function summary() {
-    return ['【宏國地政 × 易丞地政・小安的台南街區探索】',streetSummary(state),questsUI.summary(),daylife.summary(),'',
+    return ['【宏國地政 × 易丞地政・小安的台南街區探索】',streetSummary(state),questsUI.summary(),daylife.summary(),walkUI.summary(),'',
       '我想帶回現實繼續確認：產權文件、使用與屋況、銀行條件，以及家人的安排。',
       '這是虛構街區的學習紀錄，不代表實際到訪、核貸或個案法律判斷。','尚未送出訊息；由我確認後自行傳送。'].join('\n');
   }
@@ -44,9 +52,10 @@ export function createStreetExperience({storage,onLesson,onFeedback,toast=()=>{}
     if(dialog) return;
     dialog=document.createElement('dialog');dialog.className='street-dialog';dialog.setAttribute('aria-label','小安的街區故事');
     document.body.append(dialog);
-    dialog.addEventListener('close',()=>host?.querySelector('[data-street-notebook]')?.focus({preventScroll:true}));
+    dialog.addEventListener('close',()=>host?.querySelector(walkMode?'.street-stage':'[data-street-notebook]')?.focus({preventScroll:true}));
     dialog.addEventListener('click',event=>{
       const b=event.target.closest('button');if(!b)return;
+      if(walkUI.handleClick(b))return;
       if(daylife.handleClick(b))return;
       if(questsUI.handleClick(b))return;
       if(b.hasAttribute('data-dialog-close')) dialog.close();
@@ -110,6 +119,7 @@ export function createStreetExperience({storage,onLesson,onFeedback,toast=()=>{}
     if(button)button.textContent=(p.ready?'收下今日探索卡':'我的探索手帳')+' · '+p.discoveries;
   }
   function goToStop(id){
+    if(walkMode){walkMode=false;walkUI.destroy();if(host)mount(host);}
     const target=byId(stops,id);if(!target||!host)return;
     if(dialog?.open)dialog.close();
     if(state.district!==target.district){state=changeDistrict(state,target.district);persist();mount(host);}
@@ -119,6 +129,8 @@ export function createStreetExperience({storage,onLesson,onFeedback,toast=()=>{}
   }
   function mount(container) {
     if(world)world.destroy();world=null;host=container;
+    if(walkMode){walkUI.mount(host);return;}
+    walkUI.destroy();
     const d=byId(districts,state.district);
     host.innerHTML='<section class="street-screen"><header class="street-heading"><div><p class="eyebrow">宏國地政 × 易丞地政 · 家的事，一起問清楚</p><h1 id="chapter-title" tabindex="-1">小安在台南的第一天<span>陪街坊解開家的小問題。</span></h1></div><button class="secondary" type="button" data-street-notebook>我的探索手帳</button></header>'+
       '<div data-daylife-entry>'+daylife.entry()+'</div>'+
@@ -176,6 +188,14 @@ export function createStreetExperience({storage,onLesson,onFeedback,toast=()=>{}
     ctx.fillStyle='#194f49';ctx.fillRect(0,1280,1080,140);ctx.fillStyle='#fff9e8';ctx.font='28px "Microsoft JhengHei",sans-serif';ctx.fillText('帶著問題，楊代書陪你往下一步。',64,1302);ctx.font='23px sans-serif';ctx.fillText('LINE @604gpqef · homegoestate.github.io/anxin-city/first-day/',64,1358);
     canvas.toBlob(blob=>{if(!blob){announce('圖片暫未完成，請改用摘要。');return;}const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='小安在台南_今日探索卡.png';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);announce('探索卡已開始保存。');},'image/png');
   }
-  function destroy() {world?.destroy();world=null;host=null;if(dialog?.open)dialog.close();}
-  return {mount,destroy,summary,progress:()=>streetProgress(state),context:()=>byId(districts,state.district)?.title||'街區探索',notebook,openDaylife:()=>daylife.launch(),daylifeCount:()=>daylife.count()};
+  function closeWalkPanel(){if(dialog?.open)dialog.close();}
+  function openWalk(id){
+    if(!host)return;
+    closeWalkPanel();world?.destroy();world=null;walkMode=true;
+    walkUI.mount(host,id);
+    host.querySelector('h1')?.focus({preventScroll:true});
+    host.scrollIntoView({block:'start',behavior:'instant'});
+  }
+  function destroy() {world?.destroy();world=null;walkUI.destroy();host=null;if(dialog?.open)dialog.close();}
+  return {mount,destroy,summary,progress:()=>streetProgress(state),context:()=>walkMode?walkUI.context():(byId(districts,state.district)?.title||'街區探索'),notebook,openDaylife:()=>daylife.launch(),openWalk,daylifeCount:()=>daylife.count(),walkSummary:()=>walkUI.summary()};
 }

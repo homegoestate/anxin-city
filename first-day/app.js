@@ -3,7 +3,7 @@ import { priorities, homes, timings, shocks, clues, verification, places, lesson
 import { streetScene, houseArt, placeArt } from './art.js?v=14.0.0';
 import { companionTools } from '../tool-routes.js?v=6.0.0';
 import { createFeedbackDialog } from '../feedback-client.js?v=11.0.0';
-import { createStreetExperience } from './street-ui.js?v=21.0.0';
+import { createStreetExperience } from './street-ui.js?v=22.0.2';
 
 const $ = selector => document.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -26,7 +26,7 @@ let state = loadState(storage), introVisible = true, expandedClue = null, status
 let summaryDraft = null, summaryDirty = false, memoryOnly = false;
 let view = 'street';
 const feedback = createFeedbackDialog({
-  endpoint:'https://hongguo-anxin-feedback-20261024.yang-ceo.chatgpt.site/api/feedback',siteVersion:'21.0.0',
+  endpoint:'https://hongguo-anxin-feedback-20261024.yang-ceo.chatgpt.site/api/feedback',siteVersion:'22.0.0',
   getCurrentScene:()=> 'buy',getCurrentPersona:()=> 'first-home',toast:notify,
 });
 const street = createStreetExperience({storage,onLesson:openLesson,onFeedback:()=>$('#open-feedback').click(),toast:notify});
@@ -54,7 +54,7 @@ function openLesson() {
 }
 function buildCombinedSummary() {
   const base=buildSummary(state);
-  return (street.progress().discoveries || street.daylifeCount()) ? (base+'\n\n街區探索補充：\n'+street.summary()).slice(0,1600) : base;
+  return (street.progress().discoveries || street.daylifeCount() || street.walkSummary()) ? (base+'\n\n街區探索補充：\n'+street.summary()).slice(0,1600) : base;
 }
 function persist() {
   memoryOnly = !saveState(storage,state);
@@ -200,4 +200,5 @@ function downloadCard() {
 window.addEventListener('popstate',event=>{if(event.state?.streetMode){view='street';render({focus:true});return;}const step=event.state?.storyStep;if(STEPS.includes(step))go(step,{history:false});});
 window.history.replaceState({streetMode:true},'','#street');
 render();
-if(new URLSearchParams(window.location.search).get('daylife')==='1')street.openDaylife();
+if(new URLSearchParams(window.location.search).get('walk')==='1')street.openWalk();
+else if(new URLSearchParams(window.location.search).get('daylife')==='1')street.openDaylife();

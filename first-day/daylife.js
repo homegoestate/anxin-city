@@ -19,7 +19,8 @@ const safeUrl = value => {
   try { const url = new URL(value); return url.protocol === 'https:' ? url.href : ''; } catch { return ''; }
 };
 
-export function createDaylife({ storage, showPanel, notify = () => {}, onChanged = () => {} }) {
+export function createDaylife({ storage, showPanel, notify = () => {}, onChanged = () => {}, onWalk = null, onReturnWalk = () => {}, extraSummary = () => '' }) {
+  let walking = false;
   let state = { version: 1, period: 'morning', selections: {}, draft: null };
   let memoryOnly = !storage || typeof storage.getItem !== 'function' || typeof storage.setItem !== 'function';
   let warned = false;
@@ -80,7 +81,7 @@ export function createDaylife({ storage, showPanel, notify = () => {}, onChanged
   }
 
   function defaultDraft() {
-    return ('你好，我在「台南慢日子」留下了這些片刻。\n\n' + summary() + '\n\n想請宏國地政 × 易丞地政陪我了解：\n（可在這裡寫下目前最想問的一個問題。）').slice(0, DRAFT_LIMIT);
+    return ('你好，我在「台南慢日子」留下了這些片刻。\n\n' + summary() + (extraSummary() ? '\n\n' + extraSummary() : '') + '\n\n想請宏國地政 × 易丞地政陪我了解：\n（可在這裡寫下目前最想問的一個問題。）').slice(0, DRAFT_LIMIT);
   }
 
   function storageNote() {
@@ -111,16 +112,17 @@ export function createDaylife({ storage, showPanel, notify = () => {}, onChanged
   }
 
   function panel(title, body, browse = false) {
-    showPanel(title, '<section class="daylife' + (browse ? ' daylife-browse' : '') + '">' + body + storageNote() + '</section>');
+    showPanel(title, '<section class="daylife' + (browse ? ' daylife-browse' : '') + '">' + (walking ? '<button type="button" class="daylife-button daylife-secondary" data-daylife-return>← 回到散步地圖，繼續走走</button>' : '') + body + storageNote() + '</section>');
     announceStorage();
   }
 
   function launch(periodId) {
+    walking = false;
     if (periodById(periodId)) { state.period = periodId; persist(); }
     const period = periodById(state.period);
     const stories = dayStories.filter(story => story.period === period.id);
     panel('台南慢日子',
-      '<p class="daylife-lead">今天，想在台南多待一會？</p>' +
+      '<p class="daylife-lead">今天，想在台南多待一會？</p>' + (onWalk ? '<button type="button" class="daylife-button" data-daylife-walk>讓小安走進這些地方 →</button>' : '') +
       '<nav class="daylife-times" aria-label="選擇台南的一段時光">' + PERIODS.map(item =>
         '<button type="button" data-daylife-period="' + item.id + '" aria-pressed="' + (item.id === period.id) + '">' + item.name + '</button>'
       ).join('') + '</nav>' +
@@ -144,6 +146,7 @@ export function createDaylife({ storage, showPanel, notify = () => {}, onChanged
       '<div class="daylife-story-heading"><span>' + esc(periodById(story.period).name) + ' · ' + esc(story.district) + '</span><button class="daylife-text-button" type="button" data-daylife-launch>回到時光選單</button></div>' +
       illustration(story.period, true) +
       '<p class="daylife-speaker">' + esc(story.speaker) + '</p><div class="daylife-prose">' + paragraphs(story.intro) + '</div>' +
+      (!walking && onWalk ? '<button type="button" class="daylife-button" data-daylife-walk="' + esc(story.id) + '">走進街區，親自找他聊聊 →</button>' : '') +
       '<h3 class="daylife-choice-title">這一刻，你想怎麼接住？</h3><div class="daylife-choices">' + story.choices.map(choice =>
         '<button type="button" class="daylife-choice" data-daylife-choice="' + esc(choice.id) + '" data-daylife-story-id="' + esc(story.id) + '" aria-pressed="' + (current === choice.id) + '"><span>' + esc(choice.label) +
         (current === choice.id ? '<small>目前留在手帳裡的選擇</small>' : '') + '</span><span aria-hidden="true">→</span></button>'
@@ -167,6 +170,7 @@ export function createDaylife({ storage, showPanel, notify = () => {}, onChanged
 
   function notebook() {
     const moments = selected();
+    const walkingNotes = extraSummary();
     const draft = state.draft ?? defaultDraft();
     panel('我的台南片刻',
       '<p class="daylife-lead">' + (moments.length ? '有些地方，是從一句話開始喜歡的。' : '留一點時間，給還沒遇見的日常。') + '</p>' +
@@ -174,8 +178,9 @@ export function createDaylife({ storage, showPanel, notify = () => {}, onChanged
         '<article class="daylife-notebook-item"><p class="daylife-location">' + esc(periodById(story.period).name) + ' · ' + esc(story.district) + '</p><h3>' + esc(story.title) + '</h3><p>' + esc(choice.memory) +
         '</p><div class="daylife-notebook-question"><span>關於住在這裡，我想多問一句</span><p>' + esc(choice.homePrompt) + '</p></div><button type="button" class="daylife-text-button" data-daylife-story="' + esc(story.id) + '">回到這個片刻，重新選擇 →</button>' + source(story) + '</article>'
       ).join('') + '</div>' : '<p>清晨、午後或傍晚，挑一段時光、聽一位居民說話。喜歡的片刻會留在這裡。</p>') +
-      '<div class="daylife-actions"><button type="button" class="daylife-button daylife-secondary" data-daylife-launch>回到台南，繼續慢慢逛 →</button></div>' +
-      (moments.length ? '<section class="daylife-handoff"><p class="daylife-brand">宏國地政 × 易丞地政</p><h3>把喜歡的生活，變成能問清楚的問題。</h3><p>住在哪裡、怎麼買、家人怎麼安排，都可以先從一個疑問開始。</p>' +
+      (walkingNotes ? '<section class="daylife-notebook-item"><h3>路上撿到的小發現</h3>' + paragraphs(walkingNotes.split('\n')) + '</section>' : '') +
+      '<div class="daylife-actions"><button type="button" class="daylife-button daylife-secondary" ' + (walking ? 'data-daylife-return' : 'data-daylife-launch') + '>回到台南，繼續慢慢逛 →</button></div>' +
+      (moments.length || walkingNotes || walking ? '<section class="daylife-handoff"><p class="daylife-brand">宏國地政 × 易丞地政</p><h3>把喜歡的生活，變成能問清楚的問題。</h3><p>住在哪裡、怎麼買、家人怎麼安排，都可以先從一個疑問開始。</p>' +
         '<label for="daylife-line-draft">想帶到 LINE 的文字，可以先改成自己的話</label><textarea id="daylife-line-draft" data-daylife-draft rows="8" maxlength="' + DRAFT_LIMIT + '" spellcheck="false">' + esc(draft) + '</textarea>' +
         '<p class="daylife-note">草稿留在這個瀏覽器，請勿放入身分證、地址或真實案件的個資。</p>' +
         '<div class="daylife-actions"><a class="daylife-button" data-daylife-line href="' + esc(lineUrl(draft)) + '" target="_blank" rel="noopener noreferrer">帶著問題，開啟官方 LINE ↗</a><button type="button" class="daylife-button daylife-secondary" data-daylife-copy>複製這份文字</button>' +
@@ -207,6 +212,8 @@ export function createDaylife({ storage, showPanel, notify = () => {}, onChanged
 
   function handleClick(button) {
     if (!button?.dataset) return false;
+    if (button.hasAttribute('data-daylife-walk')) { if (onWalk) onWalk(button.dataset.daylifeWalk || undefined); return true; }
+    if (button.hasAttribute('data-daylife-return')) { onReturnWalk(); return true; }
     if (button.hasAttribute('data-daylife-launch')) { launch(); return true; }
     if (button.hasAttribute('data-daylife-book')) { notebook(); return true; }
     if (button.hasAttribute('data-daylife-copy')) { void copyDraft(); return true; }
@@ -233,8 +240,12 @@ export function createDaylife({ storage, showPanel, notify = () => {}, onChanged
   }
 
   function entry() {
-    return '<button class="daylife-entry" type="button" data-daylife-launch><img src="' + esc(asset('morning')) + '" alt="" width="180" height="120" decoding="async"><span class="daylife-entry-copy"><span class="daylife-entry-name">台南慢日子</span><strong>今天，想在台南多待一會？</strong><span>從清晨到暮色，聽六個地方的日常。</span></span><span class="daylife-entry-arrow" aria-hidden="true">→</span></button>';
+    return '<button class="daylife-entry" type="button" ' + (onWalk ? 'data-daylife-walk' : 'data-daylife-launch') + '><img src="' + esc(asset('morning')) + '" alt="" width="180" height="120" decoding="async"><span class="daylife-entry-copy"><span class="daylife-entry-name">台南慢日子</span><strong>今天，想在台南多待一會？</strong><span>走進六個小街區，跟居民聊天、發現日常。</span></span><span class="daylife-entry-arrow" aria-hidden="true">→</span></button>';
   }
 
-  return { launch, handleClick, handleInput, summary, count, entry };
+  return { launch, handleClick, handleInput, summary, count, entry,
+    openStory: (id, options = {}) => { walking = !!options.walking; storyScreen(id); },
+    openBook: (options = {}) => { walking = !!options.walking; notebook(); },
+    selectionIds: () => selected().map(item => item.story.id)
+  };
 }
