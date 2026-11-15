@@ -3,7 +3,7 @@ import { priorities, homes, timings, shocks, clues, verification, places, lesson
 import { streetScene, houseArt, placeArt } from './art.js?v=14.0.0';
 import { companionTools } from '../tool-routes.js?v=6.0.0';
 import { createFeedbackDialog } from '../feedback-client.js?v=11.0.0';
-import { createStreetExperience } from './street-ui.js?v=23.0.3';
+import { createStreetExperience } from './street-ui.js?v=23.0.7';
 
 const $ = selector => document.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

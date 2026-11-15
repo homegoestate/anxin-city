@@ -1,10 +1,10 @@
 import { districts, stops, discoveries } from './street-data.js?v=16.0.0';
 import { loadStreetState, saveStreetState, changeDistrict, movePlayer, availableStops, interact, chooseStory, streetSummary, streetProgress } from './street-state.js?v=16.0.0';
-import { mountStreetWorld } from './street-world.js?v=23.0.3';
+import { mountStreetWorld } from './street-world.js?v=23.0.7';
 import { createBrandQuests } from './brand-quest-ui.js?v=19.0.0';
 import { companionTools } from '../tool-routes.js?v=6.0.0';
-import { createDaylife } from './daylife.js?v=23.0.3';
-import { createDaylifeWalk } from './daylife-walk.js?v=23.0.3';
+import { createDaylife } from './daylife.js?v=23.0.7';
+import { createDaylifeWalk } from './daylife-walk.js?v=23.0.7';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const lineUrl = text => 'https://line.me/R/oaMessage/%40604gpqef/?' + encodeURIComponent(text);

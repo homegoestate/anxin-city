@@ -1,9 +1,9 @@
-import { mountStreetWorld } from './street-world.js?v=23.0.3';
-import { daylifeWalkScene } from './daylife-walk-art.js?v=23.0.3';
-import { walkScenes, walkDiscoveries, walkSceneById, walkDiscoveryById, walkStops, loadWalkState, saveWalkState } from './daylife-walk-data.js?v=23.0.3';
+import { mountStreetWorld } from './street-world.js?v=23.0.7';
+import { daylifeWalkScene } from './daylife-walk-art.js?v=23.0.7';
+import { walkScenes, walkDiscoveries, walkSceneById, walkDiscoveryById, walkStops, loadWalkState, saveWalkState } from './daylife-walk-data.js?v=23.0.7';
 import { companionTools } from '../tool-routes.js?v=6.0.0';
-import { lifeFor, livingStops, residentPlans } from './daylife-life-data.js?v=23.0.3';
-import { daylifePlayerArt, daylifeActorArt } from './daylife-character-art.js?v=23.0.3';
+import { lifeFor, livingStops, residentPlans } from './daylife-life-data.js?v=23.0.7';
+import { daylifePlayerArt, daylifeActorArt } from './daylife-character-art.js?v=23.0.7';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const times = { morning: '清晨', afternoon: '午後', evening: '傍晚' };
@@ -126,6 +126,7 @@ export function createDaylifeWalk({ storage, onStory = () => {}, onBook = () => 
       lifePaused = !lifePaused;
       try { storage?.setItem('anxin-daylife-ambient-paused-v1', String(lifePaused)); } catch {}
       world?.update({ambientEnabled: !lifePaused});
+      refresh();
       button.setAttribute('aria-pressed', String(lifePaused));
       button.textContent = lifePaused ? '繼續街坊散步' : '暫停街坊散步';
       host?.querySelector('[data-walk-root]')?.setAttribute('data-life-paused', String(lifePaused));
