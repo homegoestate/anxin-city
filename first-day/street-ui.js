@@ -1,10 +1,10 @@
 import { districts, stops, discoveries } from './street-data.js?v=16.0.0';
 import { loadStreetState, saveStreetState, changeDistrict, movePlayer, availableStops, interact, chooseStory, streetSummary, streetProgress } from './street-state.js?v=16.0.0';
-import { mountStreetWorld } from './street-world.js?v=22.0.2';
+import { mountStreetWorld } from './street-world.js?v=23.0.3';
 import { createBrandQuests } from './brand-quest-ui.js?v=19.0.0';
 import { companionTools } from '../tool-routes.js?v=6.0.0';
-import { createDaylife } from './daylife.js?v=22.0.2';
-import { createDaylifeWalk } from './daylife-walk.js?v=22.0.2';
+import { createDaylife } from './daylife.js?v=23.0.3';
+import { createDaylifeWalk } from './daylife-walk.js?v=23.0.3';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const lineUrl = text => 'https://line.me/R/oaMessage/%40604gpqef/?' + encodeURIComponent(text);
@@ -52,7 +52,7 @@ export function createStreetExperience({storage,onLesson,onFeedback,toast=()=>{}
     if(dialog) return;
     dialog=document.createElement('dialog');dialog.className='street-dialog';dialog.setAttribute('aria-label','小安的街區故事');
     document.body.append(dialog);
-    dialog.addEventListener('close',()=>host?.querySelector(walkMode?'.street-stage':'[data-street-notebook]')?.focus({preventScroll:true}));
+    dialog.addEventListener('close',()=>{if(walkMode)walkUI.resumeAmbient();host?.querySelector(walkMode?'.street-stage':'[data-street-notebook]')?.focus({preventScroll:true});});
     dialog.addEventListener('click',event=>{
       const b=event.target.closest('button');if(!b)return;
       if(walkUI.handleClick(b))return;

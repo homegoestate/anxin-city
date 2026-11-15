@@ -1,7 +1,9 @@
-import { mountStreetWorld } from './street-world.js?v=22.0.2';
-import { daylifeWalkScene } from './daylife-walk-art.js?v=22.0.2';
-import { walkScenes, walkDiscoveries, walkSceneById, walkDiscoveryById, walkStops, loadWalkState, saveWalkState } from './daylife-walk-data.js?v=22.0.2';
+import { mountStreetWorld } from './street-world.js?v=23.0.3';
+import { daylifeWalkScene } from './daylife-walk-art.js?v=23.0.3';
+import { walkScenes, walkDiscoveries, walkSceneById, walkDiscoveryById, walkStops, loadWalkState, saveWalkState } from './daylife-walk-data.js?v=23.0.3';
 import { companionTools } from '../tool-routes.js?v=6.0.0';
+import { lifeFor, livingStops, residentPlans } from './daylife-life-data.js?v=23.0.3';
+import { daylifePlayerArt, daylifeActorArt } from './daylife-character-art.js?v=23.0.3';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const times = { morning: '清晨', afternoon: '午後', evening: '傍晚' };
@@ -11,6 +13,8 @@ const source = item => '<details class="daylife-source"><summary>這個地方的
 export function createDaylifeWalk({ storage, onStory = () => {}, onBook = () => {}, onExit = () => {}, onLesson = () => {}, onFeedback = () => {}, showPanel = () => {}, closePanel = () => {}, notify = () => {}, getMoments = () => 0, getSelections = () => [] } = {}) {
   const loaded = loadWalkState(storage);
   let state = loaded.state, memoryOnly = !loaded.saved, warned = false, host = null, world = null, fast = false, removeClick = null;
+  let lifePaused = false, lineIndex = 0;
+  try { lifePaused = storage?.getItem('anxin-daylife-ambient-paused-v1') === 'true'; } catch {}
   const sceneNow = () => walkSceneById(state.selectedId);
   const foundIn = scene => scene.discoveries.filter(item => state.discoveryIds.includes(item.id)).length;
   const selectedStories = () => { const value = getSelections(); return Array.isArray(value) ? value : value && typeof value === 'object' ? Object.keys(value) : []; };
@@ -53,7 +57,20 @@ export function createDaylifeWalk({ storage, onStory = () => {}, onBook = () => 
     }
   }
   function panel(title, html) {
+    world?.setAmbientPaused(true);
     showPanel(title, '<section class="daylife daylife-walk-panel">' + html + '<p class="daylife-note">原創想像場景，並非實景導覽；所有地點都可以重訪。</p></section>');
+  }
+  function showDailyLine(line) {
+    if (!host) return;
+    const [speaker, ...words] = line.split('｜');
+    const name = host.querySelector('[data-life-speaker]'), text = host.querySelector('[data-life-line]');
+    if (name) name.textContent = speaker;
+    if (text) text.textContent = words.join('｜') || line;
+  }
+  function neighborTalk(replyIndex) {
+    const scene = sceneNow(), life = lifeFor(scene.id), reply = life.replies[replyIndex];
+    panel(life.neighbor + '的日常', '<p class="daylife-speaker">' + esc(life.role) + '</p><div class="life-portrait" aria-hidden="true"><svg viewBox="-48 -120 96 128">' + daylifeActorArt({id:scene.id+'-neighbor',kind:'resident',portrait:'neighbor'},0) + '</svg></div><div class="daylife-prose"><p>' + esc(reply ? reply.text : life.hello) + '</p></div>' +
+      '<div class="daylife-choices">' + life.replies.map((item, index) => '<button type="button" class="daylife-choice" data-life-reply="'+index+'">' + esc(item.label) + '<span aria-hidden="true">→</span></button>').join('') + '</div><button type="button" class="daylife-button daylife-secondary" data-walk-back>跟他說聲謝謝，回街上走走 →</button>');
   }
   function discovery(id) {
     const item = walkDiscoveryById(id);
@@ -70,7 +87,8 @@ export function createDaylifeWalk({ storage, onStory = () => {}, onBook = () => 
   }
   function interact(id) {
     const scene = sceneNow();
-    if (id === `${scene.id}-resident`) onStory(scene.id);
+    if (id === `${scene.id}-resident`) { world?.setAmbientPaused(true); onStory(scene.id); }
+    else if (id === `${scene.id}-neighbor`) neighborTalk();
     else if (id === `${scene.id}-office`) office();
     else if (scene.discoveries.some(item => item.id === id)) discovery(id);
   }
@@ -79,15 +97,21 @@ export function createDaylifeWalk({ storage, onStory = () => {}, onBook = () => 
     destroy(); host = container;
     if (walkSceneById(storyId)) state.selectedId = storyId;
     const scene = sceneNow();
-    host.innerHTML = '<section class="daylife-walk" data-walk-root data-walk-period="' + esc(scene.period) + '"><header class="daylife-walk-header"><div><p class="daylife-walk-kicker">小安的台南慢日子 · ' + times[scene.period] + '</p><h1 id="chapter-title" tabindex="-1">今天，想在哪裡慢慢走？</h1><p>' + esc(scene.invitation) + '</p></div><img src="' + esc(art(scene.period)) + '" width="1200" height="800" alt="' + times[scene.period] + '的原創台南生活意象插畫，並非實景" decoding="async"></header><nav class="daylife-walk-scenes" aria-label="選擇獨立的台南想像小街區">' + walkScenes.map(item => '<button type="button" data-walk-scene="' + esc(item.id) + '" aria-pressed="' + (scene.id === item.id) + '"><span>' + times[item.period] + '</span><strong>' + esc(item.name) + '</strong><small data-walk-scene-status></small></button>').join('') + '</nav><div class="daylife-walk-map-intro"><p><strong>' + esc(scene.name) + '</strong> · 走到' + esc(scene.story.speaker.split('｜')[0]) + '身旁，聽一段日常；路上還有兩個小發現。</p><button type="button" data-walk-fast aria-pressed="' + fast + '">快速移動：' + (fast ? '開啟' : '關閉') + '</button></div><div class="daylife-walk-map" data-walk-map></div><section class="daylife-walk-progress" aria-label="散步小發現進度"><div><span>我的散步小發現</span><strong data-walk-count></strong><progress max="12" value="0" data-walk-progress aria-label="已收集的小發現"></progress></div><p data-walk-local-count></p><button type="button" data-walk-journal>打開發現手帳 →</button></section><nav class="daylife-walk-actions" aria-label="散步與原街區功能"><button type="button" data-walk-book data-walk-moment-count>我的台南片刻</button><button type="button" data-walk-exit>回原街區，接著玩互助任務</button><button type="button" data-walk-feedback>告訴我們哪裡好玩、哪裡卡住</button></nav><details class="daylife-walk-about"><summary>關於這六個地方與我的進度</summary><p>這是以真實地方文化為線索的六個獨立想像小街區，不是能跨越全市照走的步行路線。選地方只會切換場景，點人物或地標後才開始走近。</p><p>居民、對話、場景與插畫為原創虛構；地方文化附官方來源與查核日期。場景時段不是營業、天候或活動保證，印記也不代表實際到訪。</p><p>預設沿街步行；可自行開啟快速移動。裝置的減少動態效果設定也會受到尊重。</p><p data-walk-storage>' + storageText() + '</p></details></section>';
+    host.innerHTML = '<section class="daylife-walk" data-walk-root data-walk-period="' + esc(scene.period) + '"><header class="daylife-walk-header"><div><p class="daylife-walk-kicker">小安的台南慢日子 · ' + times[scene.period] + '</p><h1 id="chapter-title" tabindex="-1">今天，想在哪裡慢慢走？</h1><p>' + esc(scene.invitation) + '</p></div><img src="' + esc(art(scene.period)) + '" width="1200" height="800" alt="' + times[scene.period] + '的原創台南生活意象插畫，並非實景" decoding="async"></header><nav class="daylife-walk-scenes" aria-label="選擇獨立的台南想像小街區">' + walkScenes.map(item => '<button type="button" data-walk-scene="' + esc(item.id) + '" aria-pressed="' + (scene.id === item.id) + '"><span>' + times[item.period] + '</span><strong>' + esc(item.name) + '</strong><small data-walk-scene-status></small></button>').join('') + '</nav><label class="life-mobile-select">換個地方散步<select data-life-scene aria-label="選擇散步地方">' + walkScenes.map(item => '<option value="' + esc(item.id) + '"' + (item.id === scene.id ? ' selected' : '') + '>' + esc(item.name) + ' · ' + times[item.period] + '</option>').join('') + '</select></label><div class="daylife-walk-map-intro"><p><strong>' + esc(scene.name) + '</strong> · 走到' + esc(scene.story.speaker.split('｜')[0]) + '身旁，聽一段日常；路上還有兩個小發現。</p><button type="button" data-walk-fast aria-pressed="' + fast + '">快速移動：' + (fast ? '開啟' : '關閉') + '</button></div><div class="daylife-walk-map" data-walk-map></div><aside class="life-chat" aria-label="街坊日常，原創情境"><div class="life-chat-mark" aria-hidden="true">❝</div><div class="life-chat-copy"><p><span>街坊日常</span><b data-life-speaker></b></p><p data-life-line></p></div><div class="life-chat-actions"><button type="button" data-life-next>再聽一句</button><button type="button" data-life-pause aria-pressed="' + lifePaused + '">' + (lifePaused ? '繼續街坊散步' : '暫停街坊散步') + '</button></div></aside><section class="daylife-walk-progress" aria-label="散步小發現進度"><div><span>我的散步小發現</span><strong data-walk-count></strong><progress max="12" value="0" data-walk-progress aria-label="已收集的小發現"></progress></div><p data-walk-local-count></p><button type="button" data-walk-journal>打開發現手帳 →</button></section><nav class="daylife-walk-actions" aria-label="散步與原街區功能"><button type="button" data-walk-book data-walk-moment-count>我的台南片刻</button><button type="button" data-walk-exit>回原街區，接著玩互助任務</button><button type="button" data-walk-feedback>告訴我們哪裡好玩、哪裡卡住</button></nav><details class="daylife-walk-about"><summary>關於這六個地方與我的進度</summary><p>這是以真實地方文化為線索的六個獨立想像小街區，不是能跨越全市照走的步行路線。選地方只會切換場景，點人物或地標後才開始走近。</p><p>居民、對話、場景與插畫為原創虛構；地方文化附官方來源與查核日期。場景時段不是營業、天候或活動保證，印記也不代表實際到訪。</p><p>預設沿街步行；可自行開啟快速移動。裝置的減少動態效果設定也會受到尊重。</p><p data-walk-storage>' + storageText() + '</p></details></section>';
     const click = event => { const button = event.target.closest?.('button'); if (button && handleClick(button)) event.stopPropagation(); };
-    host.addEventListener('click', click); removeClick = () => container.removeEventListener('click', click);
-    world = mountStreetWorld(host.querySelector('[data-walk-map]'), { district: scene, position: state.positions[scene.id] || scene.spawn, stops: walkStops(scene.id), sceneArt: daylifeWalkScene, instantTravel: fast, onMove: position => { state.positions[scene.id] = position; persist(); }, onInteract: interact });
+    host.addEventListener('click', click);
+    const change = event => { if (event.target.matches('[data-life-scene]') && walkSceneById(event.target.value)) { open(event.target.value); host?.querySelector('[data-life-scene]')?.focus({preventScroll:true}); } };
+    host.addEventListener('change', change);
+    removeClick = () => {container.removeEventListener('click', click);container.removeEventListener('change', change);};
+    world = mountStreetWorld(host.querySelector('[data-walk-map]'), { district: scene, position: state.positions[scene.id] || scene.spawn, stops: livingStops(scene, walkStops(scene.id)), sceneArt: daylifeWalkScene, playerArt: daylifePlayerArt, actorArt: daylifeActorArt, residentLife: residentPlans(scene), ambientEnabled: !lifePaused, onAmbientLine: ({text}) => showDailyLine(text), instantTravel: fast, onMove: position => { state.positions[scene.id] = position; persist(); }, onInteract: interact });
     for (const button of host.querySelectorAll('[data-stop]')) {
       button.dataset.walkStop = button.dataset.stop;
       if (button.dataset.stop === scene.discoveries[0].id) button.dataset.walkEdge = 'left';
       if (button.dataset.stop === `${scene.id}-office`) button.dataset.walkOffice = 'true';
+      if (button.dataset.stop === `${scene.id}-neighbor`) button.dataset.lifeNeighbor = 'true';
     }
+    lineIndex = 0; showDailyLine(lifeFor(scene.id).lines[0]);
+    host.querySelector('[data-walk-root]').dataset.lifePaused = String(lifePaused);
     persist();
   }
   function open(storyId) {
@@ -98,17 +122,28 @@ export function createDaylifeWalk({ storage, onStory = () => {}, onBook = () => 
   function handleClick(button) {
     if (!button?.dataset) return false;
     const data = button.dataset;
+    if ('lifePause' in data) {
+      lifePaused = !lifePaused;
+      try { storage?.setItem('anxin-daylife-ambient-paused-v1', String(lifePaused)); } catch {}
+      world?.update({ambientEnabled: !lifePaused});
+      button.setAttribute('aria-pressed', String(lifePaused));
+      button.textContent = lifePaused ? '繼續街坊散步' : '暫停街坊散步';
+      host?.querySelector('[data-walk-root]')?.setAttribute('data-life-paused', String(lifePaused));
+      return true;
+    }
+    if ('lifeNext' in data) { const lines = lifeFor(sceneNow().id).lines; lineIndex = (lineIndex + 1) % lines.length; showDailyLine(lines[lineIndex]); return true; }
+    if ('lifeReply' in data) { const i = Number(data.lifeReply); if (Number.isInteger(i) && i >= 0 && i < 2) neighborTalk(i); return true; }
     if (data.walkScene) { if (walkSceneById(data.walkScene)) { open(data.walkScene); host?.querySelector(`[data-walk-scene="${data.walkScene}"]`)?.focus({ preventScroll: true }); } return true; }
     if ('walkFast' in data) { fast = !fast; if (host) { const container = host; mount(container); host.querySelector('[data-walk-fast]').focus({ preventScroll: true }); } return true; }
     if ('walkCollect' in data) { const item = walkDiscoveryById(data.walkCollect); if (item && item.sceneId === state.selectedId) { const fresh = !state.discoveryIds.includes(item.id); if (fresh) { state.discoveryIds.push(item.id); persist(); } closePanel(); notify(fresh ? `收下「${item.name}」，現在有 ${state.discoveryIds.length} 個小發現。` : '小發現已在手帳裡，繼續慢慢走。'); } return true; }
     if ('walkReplay' in data) { const item = walkDiscoveryById(data.walkReplay); if (item && host) { open(item.sceneId); world?.walkTo(item.id); } return true; }
     if ('walkBack' in data) { closePanel(); host?.querySelector('.street-stage')?.focus({ preventScroll: true }); return true; }
     if ('walkJournal' in data) { journal(); return true; }
-    if ('walkBook' in data) { onBook(); return true; }
+    if ('walkBook' in data) { world?.setAmbientPaused(true); onBook(); return true; }
     if ('walkExit' in data) { closePanel(); destroy(); onExit(); return true; }
     if ('walkLesson' in data) { closePanel(); destroy(); onLesson(); return true; }
     if ('walkFeedback' in data) { onFeedback(); return true; }
     return false;
   }
-  return { mount, destroy, handleClick, summary, context: () => `${sceneNow().name} · 台南慢日子散步`, refresh, open };
+  return { mount, destroy, handleClick, summary, context: () => `${sceneNow().name} · 台南慢日子散步`, refresh, open, resumeAmbient: () => world?.setAmbientPaused(false) };
 }

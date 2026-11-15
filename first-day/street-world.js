@@ -1,4 +1,5 @@
 import { streetSceneArt, personArt, stopArt } from './street-art.js?v=16.0.0';
+import { createResidentLife, advanceResidentLife, residentPauseReason, createResidentDialogue, advanceResidentDialogue } from './resident-life.js?v=23.0.3';
 
 const X_ROADS = [130,360,500,620,870];
 const Y_ROADS = [220,440,540];
@@ -85,8 +86,16 @@ function cleanStops(stops,district) {
   return (Array.isArray(stops)?stops:[]).filter(stop=>stop&&typeof stop.id==='string'&&(!stop.district||stop.district===district)&&Number.isFinite(Number(stop.x))&&Number.isFinite(Number(stop.y))).map(stop=>({...stop,x:Number(stop.x),y:Number(stop.y)}));
 }
 
+function residentConfigKey(configs){
+  return JSON.stringify((Array.isArray(configs)?configs:[]).slice(0,12).map(config=>[
+    typeof config?.id==='string'?config.id:null,
+    (Array.isArray(config?.route)?config.route:[]).slice(0,24).map(point=>[Number.isFinite(point?.x)?point.x:null,Number.isFinite(point?.y)?point.y:null]),
+    (Array.isArray(config?.lines)?config.lines:[]).filter(line=>typeof line==='string').slice(0,12),
+  ]));
+}
+
 /** The host owns story/state. This world emits settled movement and explicit interactions only. */
-export function mountStreetWorld(container,{district,position,stops=[],onMove=()=>{},onInteract=()=>{},reducedMotion=false,instantTravel=false,highlightStopId=null,sceneArt=streetSceneArt}={}) {
+export function mountStreetWorld(container,{district,position,stops=[],onMove=()=>{},onInteract=()=>{},reducedMotion=false,instantTravel=false,highlightStopId=null,sceneArt=streetSceneArt,playerArt=()=>personArt('guide',true),actorArt=stopArt,residentLife=[],ambientEnabled=true,onAmbientLine=()=>{}}={}) {
   if(!container||typeof container.replaceChildren!=='function')throw new TypeError('A street map host is required.');
   const doc=container.ownerDocument,win=doc.defaultView;
   const prefix=`street-world-${++worldNumber}`;
@@ -98,6 +107,9 @@ export function mountStreetWorld(container,{district,position,stops=[],onMove=()
   let held=new Map(),pointerDirections=new Map(),listeners=[],stage,svg,actors,playerGroup,routeLine,routeDot,nearButton,live,status,destinationList,stopLayer;
   const media=win.matchMedia?.('(prefers-reduced-motion: reduce)');
   let reduce=Boolean(instantTravel||reducedMotion||media?.matches);
+  let residentConfigs=residentLife,residents=[],ambientRaf=0,ambientTime=0,ambientPaused=false,ambientOffscreen=false,ambientApproaching=false,ambientEngagedId=null,ambientPointerHeld=false,ambientObserver=null;
+  let ambientOn=Boolean(ambientEnabled),residentElements=new Map(),ambientDialogue=createResidentDialogue(),lastAmbientLine=null;
+  let ambientModalOpen=false,ambientModalObserver=null;
   const listen=(element,type,handler,options)=>{element.addEventListener(type,handler,options);listeners.push(()=>element.removeEventListener(type,handler,options));};
   const say=message=>{if(live&&live.textContent!==message)live.textContent=message;};
 
@@ -117,7 +129,7 @@ export function mountStreetWorld(container,{district,position,stops=[],onMove=()
     for(const stop of visibleStops)if(distance(player,stop)<=TALK_DISTANCE&&(!best||distance(player,stop)<distance(player,best)))best=stop;
     return best;
   }
-  function refreshNear(){
+  function refreshNear(announce=true){
     const stop=nearest(),next=stop?.id||null;
     if(next===nearId&&nearButton.dataset.ready!==undefined)return;
     nearId=next;nearButton.dataset.ready='true';
@@ -125,7 +137,7 @@ export function mountStreetWorld(container,{district,position,stops=[],onMove=()
     nearButton.innerHTML=stop?`<span aria-hidden="true">${stop.kind==='place'?'◇':'✦'}</span> ${esc(stop.kind==='place'?'看看':'聊聊')}・${esc(stop.name)}`:'<span aria-hidden="true">◇</span> 走近人物或地標';
     nearButton.setAttribute('aria-label',stop?`${stop.kind==='place'?'觀察':'和'}${stop.name}${stop.kind==='place'?'':'交談'}`:'走近人物或地標後互動');
     stopLayer.querySelectorAll('[data-stop]').forEach(button=>button.classList.toggle('is-near',button.dataset.stop===next));
-    if(stop&&!route.length)say(`附近有${stop.name}。按 E、Enter 或空白鍵${stop.kind==='place'?'觀察':'交談'}。`);
+    if(announce&&stop&&!route.length)say(`附近有${stop.name}。按 E、Enter 或空白鍵${stop.kind==='place'?'觀察':'交談'}。`);
   }
   function refreshHighlight(){
     const activeId=visibleStops.some(stop=>stop.id===highlightedStopId)?highlightedStopId:null;
@@ -140,12 +152,102 @@ export function mountStreetWorld(container,{district,position,stops=[],onMove=()
   }
   function renderPlayer(){
     playerGroup.setAttribute('transform',`translate(${player.x.toFixed(2)} ${player.y.toFixed(2)})`);
+    playerGroup.dataset.y=player.y;
     playerGroup.dataset.facing=facing;
+    playerGroup.dataset.y=player.y;
     // Depth follows feet; destination labels stay in an independent HTML layer.
     const after=[...actors.children].find(child=>child!==playerGroup&&Number(child.dataset.y)>player.y);
     if(after){if(playerGroup.nextElementSibling!==after)actors.insertBefore(playerGroup,after);}
     else if(actors.lastElementChild!==playerGroup)actors.append(playerGroup);
+    if(ambientEngagedId){
+      const engaged=visibleStops.find(stop=>stop.id===ambientEngagedId);
+      if(!engaged||distance(player,engaged)>TALK_DISTANCE){ambientEngagedId=null;syncAmbient();}
+    }
     refreshNear();
+  }
+  function ambientReason(){
+    return residentPauseReason({enabled:ambientOn,paused:ambientPaused,hidden:doc.hidden,reducedMotion:reduce,offscreen:ambientOffscreen,modal:ambientModalOpen,approaching:ambientApproaching,engaged:Boolean(ambientEngagedId),pointerHeld:ambientPointerHeld,destroyed});
+  }
+  function cancelAmbientFrame(){
+    if(ambientRaf)win.cancelAnimationFrame(ambientRaf);
+    ambientRaf=0;ambientTime=0;
+  }
+  function renderResidents(){
+    if(!residents.length)return;
+    const reason=ambientReason();
+    stage.dataset.ambientState=reason||'active';
+    for(const resident of residents){
+      const entry=residentElements.get(resident.id);if(!entry)continue;
+      const {stop,actor,label}=entry,motion=reason?'paused':resident.phase;
+      stop.x=resident.x;stop.y=resident.y;
+      actor.setAttribute('transform',`translate(${resident.x.toFixed(2)} ${resident.y.toFixed(2)})`);
+      actor.dataset.y=resident.y;actor.dataset.facing=resident.facing;actor.dataset.residentMotion=motion;
+      actor.classList.toggle('is-walking',motion==='walking');
+      label.style.left=`${resident.x/10}%`;label.style.top=`${(resident.y-finite(stop.labelOffset,78))/6.2}%`;
+      label.dataset.residentMotion=motion;
+    }
+    const depth=[...actors.children].sort((a,b)=>Number(a.dataset.y)-Number(b.dataset.y));
+    for(let index=0;index<depth.length;index++)if(actors.children[index]!==depth[index])actors.insertBefore(depth[index],actors.children[index]||null);
+    // A passing neighbor changes the nearby button, never the screen-reader live region.
+    refreshNear(false);
+  }
+  function announceAmbientLines(){
+    const line=ambientDialogue.entries[ambientDialogue.index];
+    if(line&&(lastAmbientLine?.id!==line.id||lastAmbientLine?.text!==line.text)){
+      lastAmbientLine=line;onAmbientLine({...line});
+    }
+  }
+  function ambientTick(time){
+    ambientRaf=0;
+    if(ambientReason()||!residents.length){syncAmbient();return;}
+    if(!ambientTime)ambientTime=time;
+    const elapsed=(time-ambientTime)/1000;
+    if(elapsed>=1/30){
+      residents=residents.map(resident=>advanceResidentLife(resident,elapsed));ambientTime=time;
+      ambientDialogue=advanceResidentDialogue(ambientDialogue,elapsed);
+      renderResidents();announceAmbientLines();
+    }
+    if(!destroyed&&residents.length&&!ambientReason())ambientRaf=win.requestAnimationFrame(ambientTick);
+  }
+  function syncAmbient(){
+    if(!residents.length){cancelAmbientFrame();if(stage)delete stage.dataset.ambientState;return;}
+    if(ambientReason())cancelAmbientFrame();
+    else if(!ambientRaf){ambientTime=0;ambientRaf=win.requestAnimationFrame(ambientTick);}
+    renderResidents();
+  }
+  function resetResidents(){
+    cancelAmbientFrame();
+    residents=createResidentLife(residentConfigs,visibleStops,{projectPoint:projectToStreet,planRoute:planStreetRoute});
+    ambientDialogue=createResidentDialogue(residents);lastAmbientLine=null;
+  }
+  function observeAmbient(){
+    ambientObserver?.disconnect();ambientObserver=null;ambientOffscreen=false;
+    if(residents.length&&win.IntersectionObserver){
+      ambientObserver=new win.IntersectionObserver(entries=>{
+        const entry=entries.find(item=>item.target===stage);if(!entry)return;
+        ambientOffscreen=!entry.isIntersecting;syncAmbient();
+      },{threshold:0});
+      ambientObserver.observe(stage);
+    }
+    if(residents.length){
+      if(!ambientModalObserver&&win.MutationObserver&&doc.body){
+        ambientModalObserver=new win.MutationObserver(syncAmbientModal);
+        ambientModalObserver.observe(doc.body,{attributes:true,attributeFilter:['open'],childList:true,subtree:true});
+      }
+      syncAmbientModal();
+    }else{
+      ambientModalObserver?.disconnect();ambientModalObserver=null;ambientModalOpen=false;
+    }
+    syncAmbient();
+  }
+  function syncAmbientModal(){
+    if(destroyed||!residents.length)return;
+    const open=Boolean(doc.querySelector('dialog[open]'));
+    if(open===ambientModalOpen)return;
+    ambientModalOpen=open;
+    // Global dialogs can open outside this feature; cancel travel without an unrelated save.
+    if(open)stopMovement(false);
+    else syncAmbient();
   }
   function drawRoute(){
     const remaining=route.length?[player,...route.slice(routeIndex)]:[];
@@ -157,6 +259,7 @@ export function mountStreetWorld(container,{district,position,stops=[],onMove=()
   function cancelFrame(){if(raf)win.cancelAnimationFrame(raf);raf=0;lastTime=0;setMoving(false);}
   function stopMovement(notify=true){
     cancelFrame();route=[];routeIndex=0;targetId=null;held.clear();pointerDirections.clear();lastManualDirection=null;
+    ambientApproaching=false;ambientPointerHeld=false;syncAmbient();
     container.querySelectorAll('[data-direction]').forEach(button=>button.classList.remove('is-held'));
     drawRoute();
     if(notify)emitMove();
@@ -166,7 +269,7 @@ export function mountStreetWorld(container,{district,position,stops=[],onMove=()
   function openStop(id){
     const stop=visibleStops.find(item=>item.id===id);
     if(!stop||distance(player,stop)>TALK_DISTANCE||destroyed||doc.hidden)return;
-    stopMovement(true);
+    ambientEngagedId=id;stopMovement(true);
     say(`${stop.kind==='place'?'觀察':'遇見'}${stop.name}。`);
     onInteract(id);
   }
@@ -181,6 +284,7 @@ export function mountStreetWorld(container,{district,position,stops=[],onMove=()
   function beginRoute(to,id=null){
     if(destroyed||doc.hidden)return;
     cancelFrame();held.clear();lastManualDirection=null;targetId=id;
+    ambientApproaching=Boolean(id);ambientPointerHeld=false;syncAmbient();
     route=planStreetRoute(player,to);routeIndex=route.length>1?1:route.length;
     const stop=visibleStops.find(item=>item.id===id);
     status.textContent=stop?`走向${stop.name}…`:'小安正在散步…';
@@ -192,7 +296,9 @@ export function mountStreetWorld(container,{district,position,stops=[],onMove=()
   }
   function walkTo(id){
     const stop=visibleStops.find(item=>item.id===id);
-    if(!stop||destroyed)return false;
+    if(!stop||destroyed||doc.hidden)return false;
+    // Freeze every neighbor before capturing the destination. The target cannot run away.
+    ambientApproaching=true;ambientPointerHeld=false;syncAmbient();
     const approach=approachStopPosition(stop);
     stage.focus({preventScroll:true});beginRoute(approach,id);return true;
   }
@@ -229,6 +335,7 @@ export function mountStreetWorld(container,{district,position,stops=[],onMove=()
   }
   function startManual(direction,key){
     if(route.length){route=[];targetId=null;routeIndex=0;drawRoute();}
+    ambientApproaching=false;syncAmbient();
     held.delete(key);held.set(key,direction);ensureFrame();
   }
   function releaseManual(key){
@@ -242,16 +349,25 @@ export function mountStreetWorld(container,{district,position,stops=[],onMove=()
     beginRoute(next);
   }
   function populateStops(){
-    const actorMarkup=[...visibleStops].sort((a,b)=>a.y-b.y).map((stop,i)=>`<g class="street-npc" data-actor-stop="${esc(stop.id)}" data-y="${stop.y}" transform="translate(${stop.x} ${stop.y})"><ellipse class="street-clue-ring" cy="3" rx="28" ry="12" fill="#f8e8b3" fill-opacity=".5" stroke="#b17d2e" stroke-width="4"/>${stopArt(stop,i)}</g>`).join('');
+    const previousResidentCount=residents.length;
+    residents=residents.filter(resident=>visibleStops.some(stop=>stop.id===resident.id&&stop.kind==='resident'));
+    if(previousResidentCount!==residents.length){ambientDialogue=createResidentDialogue(residents);lastAmbientLine=null;}
+    const residentById=new Map(residents.map(resident=>[resident.id,resident]));
+    for(const stop of visibleStops){const resident=residentById.get(stop.id);if(resident){stop.x=resident.x;stop.y=resident.y;}}
+    const actorMarkup=[...visibleStops].sort((a,b)=>a.y-b.y).map((stop,i)=>`<g class="street-npc" data-actor-stop="${esc(stop.id)}" data-y="${stop.y}" transform="translate(${stop.x} ${stop.y})"><ellipse class="street-clue-ring" cy="3" rx="28" ry="12" fill="#f8e8b3" fill-opacity=".5" stroke="#b17d2e" stroke-width="4"/>${actorArt(stop,i)}</g>`).join('');
     actors.innerHTML=actorMarkup;
     playerGroup=doc.createElementNS('http://www.w3.org/2000/svg','g');
-    playerGroup.setAttribute('class','street-player');playerGroup.innerHTML=`<ellipse class="street-player-ring" cy="4" rx="24" ry="10" fill="none" stroke="#f8f3d2" stroke-width="4"/>${personArt('guide',true)}<path d="M-6-107 0-100l6-7z" fill="#2b7460"/>`;
+    playerGroup.setAttribute('class','street-player');playerGroup.innerHTML=`<ellipse class="street-player-ring" cy="4" rx="24" ry="10" fill="none" stroke="#f8f3d2" stroke-width="4"/>${playerArt()}<path d="M-6-107 0-100l6-7z" fill="#2b7460"/>`;
     actors.append(playerGroup);
-    stopLayer.innerHTML=visibleStops.map(stop=>`<button type="button" class="street-stop-button ${stop.kind==='place'?'is-place':''} ${stop.kind==='office'?'is-office':''}" data-stop="${esc(stop.id)}" data-label="走到${esc(stop.name)}${stop.kind==='place'?'，閱讀地方故事':'，和他交談'}" style="left:${stop.x/10}%;top:${(stop.y-78)/6.2}%"><span class="street-clue-label" aria-hidden="true" hidden>線索</span><span class="street-stop-label"><i aria-hidden="true">${stop.kind==='place'?'◇':stop.kind==='office'?'⌂':'●'}</i><span>${mapStopName(stop)}</span></span></button>`).join('');
+    stopLayer.innerHTML=visibleStops.map(stop=>`<button type="button" class="street-stop-button ${stop.kind==='place'?'is-place':''} ${stop.kind==='office'?'is-office':''}" data-stop="${esc(stop.id)}" data-label="走到${esc(stop.name)}${stop.kind==='place'?'，閱讀地方故事':'，和他交談'}" style="left:${stop.x/10}%;top:${(stop.y-finite(stop.labelOffset,78))/6.2}%;${residentById.has(stop.id)?'min-width:44px;min-height:44px;':''}"><span class="street-clue-label" aria-hidden="true" hidden>線索</span><span class="street-stop-label"><i aria-hidden="true">${stop.kind==='place'?'◇':stop.kind==='office'?'⌂':'●'}</i><span>${mapStopName(stop)}</span></span></button>`).join('');
     destinationList.innerHTML=visibleStops.map(stop=>`<button type="button" class="street-destination ${stop.kind==='office'?'is-office':''}" data-stop="${esc(stop.id)}" data-label="走到${esc(stop.name)}，${esc(stop.role|| (stop.kind==='place'?'地方故事':'街區居民'))}"><span class="street-destination-icon" aria-hidden="true">${stop.kind==='place'?'◇':stop.kind==='office'?'⌂':'●'}</span><span><strong>${esc(stop.name)}</strong><small>${esc(stop.role|| (stop.kind==='place'?'地方故事':'街區居民'))}</small><span class="street-destination-clue" aria-hidden="true" hidden>目前任務線索</span></span><span aria-hidden="true">↗</span></button>`).join('');
     refreshHighlight();
+    const actorNodes=new Map([...actors.querySelectorAll('[data-actor-stop]')].map(node=>[node.dataset.actorStop,node]));
+    const labelNodes=new Map([...stopLayer.querySelectorAll('[data-stop]')].map(node=>[node.dataset.stop,node]));
+    residentElements=new Map(residents.map(resident=>[resident.id,{stop:visibleStops.find(stop=>stop.id===resident.id),actor:actorNodes.get(resident.id),label:labelNodes.get(resident.id)}]));
     nearId=null;delete nearButton.dataset.ready;renderPlayer();
     playerGroup.classList.toggle('is-walking',moving&&!reduce);
+    syncAmbient();announceAmbientLines();
   }
   function build(){
     const directionButtons=[['up','↑','向上走'],['left','←','向左走'],['down','↓','向下走'],['right','→','向右走']].map(([direction,arrow,label])=>`<button type="button" data-direction="${direction}" aria-label="${label}">${arrow}</button>`).join('');
@@ -278,10 +394,19 @@ export function mountStreetWorld(container,{district,position,stops=[],onMove=()
       const destination=event.target.closest('[data-stop]');
       if(destination)walkTo(destination.dataset.stop);
     });
+    {
+      listen(container.querySelector('.street-world'),'pointerdown',event=>{
+        if(!residents.length||event.button!==0||!event.target.closest('[data-stop]'))return;
+        ambientPointerHeld=true;syncAmbient();
+      },true);
+      const releaseResidentPointer=()=>{if(ambientPointerHeld){ambientPointerHeld=false;syncAmbient();}};
+      listen(win,'pointerup',releaseResidentPointer);listen(win,'pointercancel',releaseResidentPointer);
+    }
     for(const button of container.querySelectorAll('[data-direction]')){
       listen(button,'pointerdown',event=>{
         if(event.button!==0)return;event.preventDefault();stage.focus({preventScroll:true});
         if(route.length){route=[];targetId=null;routeIndex=0;drawRoute();}
+        ambientApproaching=false;syncAmbient();
         button.setPointerCapture?.(event.pointerId);pointerDirections.set(event.pointerId,button.dataset.direction);button.classList.add('is-held');ensureFrame();
       });
       const release=event=>{
@@ -292,16 +417,17 @@ export function mountStreetWorld(container,{district,position,stops=[],onMove=()
       listen(button,'click',event=>{if(event.detail===0)nudge(button.dataset.direction);});
     }
   }
-  build();
+  resetResidents();build();observeAmbient();
   const sceneListenerCount=()=>listeners.length;
   // Scene listeners are removed on district replacement; environment listeners remain separate.
   let sceneCount=sceneListenerCount();
-  const hide=()=>{if(doc.hidden)stopMovement();};
+  const hide=()=>{if(doc.hidden)stopMovement();syncAmbient();};
   const blur=()=>stopMovement();
   const reduceChanged=event=>{
     // The option seeds the initial preference; later OS changes work in both directions.
     reduce=Boolean(instantTravel||event.matches);
     playerGroup?.classList.toggle('is-walking',moving&&!reduce);
+    syncAmbient();
     if(reduce&&route.length){player={...route.at(-1)};finishRoute();}
   };
   doc.addEventListener('visibilitychange',hide);win.addEventListener('blur',blur);
@@ -309,25 +435,40 @@ export function mountStreetWorld(container,{district,position,stops=[],onMove=()
 
   return {
     walkTo,
+    setAmbientPaused(value){
+      if(destroyed)return;
+      ambientPaused=Boolean(value);
+      if(ambientPaused)stopMovement();
+      // An explicit dialog-close resume releases the conversation hold; a route still wins.
+      if(!ambientPaused)ambientEngagedId=null;
+      syncAmbient();
+    },
     update(next={}){
       if(destroyed)return;
+      if(Object.prototype.hasOwnProperty.call(next,'ambientEnabled'))ambientOn=Boolean(next.ambientEnabled);
+      const lifeChanged=Object.prototype.hasOwnProperty.call(next,'residentLife')&&residentConfigKey(next.residentLife)!==residentConfigKey(residentConfigs);
+      if(Object.prototype.hasOwnProperty.call(next,'residentLife'))residentConfigs=next.residentLife;
       if(Object.prototype.hasOwnProperty.call(next,'highlightStopId'))highlightedStopId=typeof next.highlightStopId==='string'?next.highlightStopId:null;
       const changed=next.district&&next.district.id!==currentDistrict.id;
       if(changed){
         stopMovement(false);
+        cancelAmbientFrame();ambientObserver?.disconnect();ambientEngagedId=null;ambientPointerHeld=false;
         listeners.splice(0,sceneCount).forEach(remove=>remove());
         currentDistrict=next.district;player=projectToStreet(next.position||currentDistrict.spawn);lastEmitted={...player};nearId=null;
-        visibleStops=cleanStops(next.stops||[],currentDistrict.id);build();sceneCount=listeners.length;
+        visibleStops=cleanStops(next.stops||[],currentDistrict.id);resetResidents();build();observeAmbient();sceneCount=listeners.length;
       }else{
         if(next.district)currentDistrict=next.district;
-        if(next.stops){visibleStops=cleanStops(next.stops,currentDistrict.id);populateStops();}
+        if(next.stops)visibleStops=cleanStops(next.stops,currentDistrict.id);
+        if(lifeChanged)resetResidents();
+        if(next.stops||lifeChanged){populateStops();observeAmbient();}
         if(targetId&&!visibleStops.some(stop=>stop.id===targetId))stopMovement();
         refreshHighlight();
       }
+      syncAmbient();
     },
     destroy(){
       if(destroyed)return;
-      destroyed=true;cancelFrame();held.clear();pointerDirections.clear();route=[];
+      destroyed=true;cancelFrame();cancelAmbientFrame();ambientObserver?.disconnect();ambientObserver=null;ambientModalObserver?.disconnect();ambientModalObserver=null;held.clear();pointerDirections.clear();route=[];residentElements.clear();residents=[];
       listeners.forEach(remove=>remove());listeners=[];
       doc.removeEventListener('visibilitychange',hide);win.removeEventListener('blur',blur);media?.removeEventListener?.('change',reduceChanged);
       container.replaceChildren();
