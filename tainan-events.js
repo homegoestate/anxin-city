@@ -1,8 +1,8 @@
-// 官方活動日期快照；最新補充 2026-11-09，不是即時活動介接。
+// 官方活動日期快照；最新補充 2026-11-16，不是即時活動介接。
 // 新增時須有當年度確定日期；已結束紀錄保留，由臺灣日期篩選狀態。
 // 日期範圍不保證每天有節目或開館；請一起呈現 dateLabel 與 caution。
-// 研究證據：work/seasons-v12/research/events.md；work/weekly-20261102；work/weekly-20261109。
-export const tainanEventsReviewedAt = '2026-11-09';
+// 研究證據：work/seasons-v12/research/events.md；work/weekly-20261102；work/weekly-20261109；work/weekly-20261116。
+export const tainanEventsReviewedAt = '2026-11-16';
 
 export const tainanEvents = [
   {
@@ -244,5 +244,45 @@ export const tainanEvents = [
     },
     "reviewedAt": "2026-11-09",
     "caution": "本場免費；演出在戶外假日廣場，請於出發前查看館方場次及天候異動公告。"
+  },
+  {
+    "id": "hutoupi-water-green-2026",
+    "title": "2026虎頭埤水與綠・玩埤派對",
+    "startDate": "2026-11-21",
+    "endDate": "2026-11-22",
+    "dateLabel": "2026/11/21–11/22；節目依各日場次",
+    "venue": "新化虎頭埤風景區（水上舞台、新化神社休憩所旁）",
+    "districtIds": [
+      "xinhua"
+    ],
+    "category": "festival",
+    "description": "沿湖散步，也把埤塘的故事帶回家。兩天規劃馬戲、音樂與親子互動；11/22上午的《虎頭埤故事劇場》，用演出帶大家認識地方歷史。可以選一個想看的節目，留點時間慢慢看水面與樹影。",
+    "source": {
+      "title": "臺南市政府觀光旅遊局｜虎頭埤玩埤派對活動與接駁公告",
+      "url": "https://www.twtainan.net/zh-tw/event/newsdetail/8142/",
+      "publishedAt": "2026-11-02"
+    },
+    "reviewedAt": "2026-11-16",
+    "caution": "公告兩日09:00–19:00有臺南轉運站往返免費接駁，約每30分鐘一班；接駁時段不等於各節目時間。入園票價、體驗報名及天候異動請查園區與活動官網，不保證所有項目免費或仍有名額。"
+  },
+  {
+    "id": "tmcc-guitar-wu-2026-11-22",
+    "title": "星光音樂廣場・撥動心弦的吉他彈奏（五）",
+    "startDate": "2026-11-22",
+    "endDate": "2026-11-22",
+    "dateLabel": "2026/11/22（日）16:00–17:30",
+    "venue": "臺南文化中心星光音樂廣場（東區）",
+    "districtIds": [
+      "east"
+    ],
+    "category": "art",
+    "description": "星期天下午，聽吳勝楊以木吉他交織旋律與節奏。散步時也能留一段時間坐下來，跟同行的人聊聊最喜歡哪一段琴聲，讓熟悉的城市多一點音樂記憶。",
+    "source": {
+      "title": "臺南市政府文化局｜11/22吳勝楊吉他演出",
+      "url": "https://culture.tainan.gov.tw/act_month/Details?Parser=99,5,44,,,,25482",
+      "publishedAt": null
+    },
+    "reviewedAt": "2026-11-16",
+    "caution": "本卡只列11/22吳勝楊場，不代表11月每天演出。入場方式與戶外天候調整請依文化中心最新公告；本次來源未明列費用，不逕標免費。"
   }
 ];
