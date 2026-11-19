@@ -2,7 +2,7 @@ import { createExperienceUI } from './experience-ui.js?v=24.0.0';
 import { createServiceHub } from './service-hub.js?v=11.0.0';
 import { createEnhancements } from './enhancements.js?v=16.0.0';
 import { lazyFeature } from './lazy-feature.js?v=13.0.0';
-import { createCityGuide } from './city-guide.js?v=24.0.0';
+import { createCityGuide } from './city-guide.js?v=25.0.0';
 let enhancements, experienceUI, cityGuide;
 let quality='auto', exploreMode='homes';
 try { const saved=localStorage.getItem('anxin-city-quality-v13');if(['auto','high','standard','economy'].includes(saved))quality=saved; } catch {}
@@ -93,11 +93,63 @@ async function startCity(){
 }
 cityStatus.querySelector('button').onclick=startCity;
 // The functional navigation stays available while the optional WebGL scene loads.
-releaseLoading();startCity();
+releaseLoading();
 updateCount();
 
 
 
 
 const entryParams=new URLSearchParams(location.search),entry=entryParams.get('start');
+// Other established deep links open their own experience immediately.
+let tourOpening = false;
+async function showLifeTour(id, trigger) {
+  if (tourOpening) return;
+  tourOpening = true;
+  try {
+    const { openLifeTour } = await import('./life-tour.js?v=25.0.0');
+    await openLifeTour(id, trigger);
+  } catch (error) {
+    console.error('台南街區載入失敗', error);
+    if (!scene) startCity();
+    toast('街區載入未完成，可再點「走進立體台南」重試。');
+  } finally {
+    tourOpening = false;
+  }
+}
+const lifeEntry = $('#open-life-tour');
+// Keep a chosen district shareable. Switching districts is one continuous map visit.
+window.addEventListener('life-tour-stop', event => {
+  const url = new URL(location.href);
+  url.hash = '';
+  url.searchParams.delete('view');
+  if (event.detail?.id) {
+    url.searchParams.set('start', 'life');
+    url.searchParams.set('scene', event.detail.id);
+  } else {
+    url.searchParams.set('start', 'life');
+    url.searchParams.delete('scene');
+  }
+  history.replaceState(history.state, '', url);
+});
+document.addEventListener('click', event => {
+  const link = event.target.closest('#open-life-tour, a[data-life-stop]');
+  if (!link || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return;
+  event.preventDefault();
+  showLifeTour(link.dataset.lifeStop, link);
+});
+window.addEventListener('life-tour-close', () => {
+  if (!scene) startCity();
+  const url = new URL(location.href);
+  if (!url.searchParams.has('start') || url.searchParams.get('start') === 'life') {
+    url.searchParams.delete('start');
+    url.searchParams.delete('scene');
+    url.searchParams.set('view', 'city');
+    history.replaceState(history.state, '', url);
+  }
+});
+if (entry === 'life' || (!entry && !location.hash && entryParams.get('view') !== 'city')) {
+  showLifeTour(entryParams.get('scene'), lifeEntry);
+} else {
+  startCity();
+}
 if(['first-home','move-home','seller','legacy-family','tainan','policy','services','residents','culture','seasons','events'].includes(entry))requestAnimationFrame(()=>{if(entry==='culture')cultureWalk.open({placeId:entryParams.get('place')});else if(entry==='residents')residentChat.open(entryParams.get('resident'));else if(entry==='tainan'){const districtId=entryParams.get('district');if(districtId)tainanExplorer.openTarget({districtId});else tainanExplorer.open();}else if(entry==='seasons'||entry==='events')tainanExplorer.openTarget({tab:'seasons',month:Number(entryParams.get('month')||0),seasonMode:entry});else if(entry==='policy')enhancements.openGuide('first-home');else if(entry==='services')serviceHub.open();else enhancements.showPersona(entry);});
