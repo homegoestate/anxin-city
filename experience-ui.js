@@ -42,7 +42,7 @@ export function createExperienceUI({
   menu.innerHTML = `<header class="experience-dialog-top"><div><span class="office-eyebrow">安心城 · 功能選單</span><h2 id="menu-heading">想從哪裡繼續？</h2></div><button type="button" class="menu-close icon-button" aria-label="關閉功能選單">×</button></header>
     <p class="menu-lead">地政士陪你練習家的選擇，也認識台南生活。</p>
     <section class="menu-primary"><h3>先練習，再把問題問清楚</h3><div data-menu-primary></div></section>
-    <details class="menu-local"><summary>也想認識台南？</summary><p>在地故事、古蹟與四季，是我們生活的延伸。</p><div data-menu-local></div></details>
+    <details class="menu-local"><summary>也想認識台南？</summary><p>在地故事、古蹟與四季，是我們生活的延伸。</p><div data-menu-local><a class="menu-action" data-menu-action href="./atlas/">台南生活地圖 · 37 區與市政</a></div></details>
     <section class="menu-support"><h3>需要協助與準備</h3><div data-menu-support></div></section>
     <details class="menu-preferences"><summary>城市探索與畫質</summary><div class="experience-preferences">
       <label for="experience-quality">畫質</label>
@@ -170,7 +170,7 @@ export function createExperienceUI({
   setCityAvailable(true);
 
   $('#start-explore').onclick = () => enhancements.openPeople();
-  $('#start-tainan').onclick = () => tainanExplorer.open();
+
   $('#office-info').onclick = () => serviceHub.open();
   $('#skip-to-mission').onclick = event => { event.preventDefault(); enhancements.openPeople(); };
   const hub = $('#service-hub');

@@ -200,5 +200,6 @@ function downloadCard() {
 window.addEventListener('popstate',event=>{if(event.state?.streetMode){view='street';render({focus:true});return;}const step=event.state?.storyStep;if(STEPS.includes(step))go(step,{history:false});});
 window.history.replaceState({streetMode:true},'','#street');
 render();
-if(new URLSearchParams(window.location.search).get('walk')==='1')street.openWalk();
-else if(new URLSearchParams(window.location.search).get('daylife')==='1')street.openDaylife();
+const entryParams = new URLSearchParams(window.location.search);
+if(entryParams.get('walk')==='1')street.openWalk(entryParams.get('scene'));
+else if(entryParams.get('daylife')==='1')street.openDaylife();

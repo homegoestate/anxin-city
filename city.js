@@ -823,6 +823,17 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
   const brickArch = addGeo(new THREE.TorusGeometry(0.57, 0.14, 4, 14, Math.PI));
   const lotusPetal = material('lotusPetal', '#D6AAA4');
 
+  // Extend each vignette on its seaward side, away from the host district's footpaths.
+  function landscapeTerrace(root, x, z, elevation, width, depth, surface, rotation = 0) {
+    const terrace = group(root, x, elevation, z, rotation);
+    const scale = [width / 4.1, depth / 3.2, 1];
+    const bank = mesh(terrace, landscapeBase, mat.limestone, [0, -0.47, 0], scale, false);
+    bank.rotation.x = -Math.PI / 2;
+    const ground = mesh(terrace, landscapeTop, surface, [0, 0.008, 0], scale, false);
+    ground.rotation.x = -Math.PI / 2;
+    return terrace;
+  }
+
   function landscapeLabel(region) {
     const c = document.createElement('canvas'); c.width = 400; c.height = 160;
     const ctx = c.getContext('2d'); if (!ctx) return;
@@ -860,6 +871,22 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
     const wetland = disk(root, -0.94, LANDSCAPE_Y + 0.02, 1.03, 0.67, mat.pond); wetland.scale.y *= 0.56;
     shoreBird(root, -1.23, 1.08, -0.4); shoreBird(root, -0.72, 1.03, 0.35);
     for (const x of [-1.6, -0.35]) for (let i = 0; i < 3; i++) box(root, x + i * 0.07, LANDSCAPE_Y + 0.18, 1.19, 0.023, 0.36 + i * 0.03, 0.025, mat.foliageMid, false);
+    const pans = landscapeTerrace(root, -0.24, 2.43, 0.51, 3.55, 2.65, mat.sand);
+    for (const [index, x] of [-0.94, 0, 0.94].entries()) {
+      box(pans, x, 0.032, 0, 0.81, 0.035, 1.66, [mat.pond, mat.waterShallow, mat.white][index], false);
+      for (const z of [-0.86, 0.86]) box(pans, x, 0.09, z, 0.94, 0.15, 0.095, mat.limestone, false);
+    }
+    for (const x of [-1.41, -0.47, 0.47, 1.41]) box(pans, x, 0.09, 0, 0.095, 0.15, 1.81, mat.limestone, false);
+    box(pans, -0.24, 0.135, -0.37, 2.44, 0.08, 0.12, mat.bark, false);
+    const raft = group(root, 1.32, 0.1, 4.08, -0.32);
+    for (const x of [-0.24, -0.12, 0, 0.12, 0.24]) {
+      const float = cylinder(raft, x, 0, 0, 0.065, 1.28, mat.bark, false);
+      float.rotation.x = Math.PI / 2;
+    }
+    for (const z of [-0.4, 0.38]) box(raft, 0, 0.09, z, 0.65, 0.06, 0.11, mat.sand, false);
+    box(raft, 0, 0.24, -0.17, 0.28, 0.31, 0.38, mat.teal, false);
+    const oar = box(raft, 0.21, 0.22, 0.05, 0.04, 0.04, 1.31, mat.ochre, false);
+    oar.rotation.y = -0.23;
   }
   function cityLandscape(root) {
     box(root, 0, LANDSCAPE_Y + 0.018, 0, 3.55, 0.035, 2.5, mat.path, false);
@@ -882,6 +909,21 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
     for (let i = 0; i < 9; i++) box(root, -0.43 + i * 0.23, LANDSCAPE_Y + 0.17, 1.05, 0.025, 0.018, 0.49, mat.sand, false);
     for (const x of [-0.42, 1.4]) cylinder(root, x, LANDSCAPE_Y + 0.27, 1.1, 0.055, 0.54, mat.bark, false);
     for (const [x, z] of [[-1.35, 0.99], [-1.04, 1.13]]) box(root, x, LANDSCAPE_Y + 0.16, z, 0.26, 0.32, 0.26, mat.ochre, false);
+    const street = landscapeTerrace(root, 3.12, -0.2, 0.69, 3.75, 2.85, mat.path, -0.05);
+    box(street, 0, 0.085, 0.12, 3.14, 0.14, 1.49, mat.limestone, false);
+    for (const [index, height] of [1.12, 1.52, 1.28].entries()) {
+      const shop = group(street, (index - 1) * 0.99, 0.15, -0.2 + index * 0.035);
+      const wall = [mat.coral, mat.sand, mat.cream][index];
+      box(shop, 0, height / 2, -0.14, 0.94, height, 0.69, wall);
+      box(shop, 0, 0.29, 0.213, 0.59, 0.58, 0.035, mat.teal, false);
+      box(shop, 0, 0.64, 0.44, 0.98, 0.095, 0.53, mat.sand, false);
+      for (const x of [-0.41, 0.41]) {
+        box(shop, x, 0.32, 0.64, 0.09, 0.64, 0.1, wall, false);
+      }
+      for (const x of [-0.22, 0.22]) box(shop, x, height - 0.21, 0.213, 0.27, 0.26, 0.037, mat.window, false);
+      box(shop, 0, height + 0.05, -0.14, 1, 0.1, 0.79, mat.coralDark, false);
+      box(shop, 0, height + 0.15, 0.17, 0.58, 0.17, 0.11, wall, false);
+    }
   }
   function plainsLandscape(root) {
     for (let row = 0; row < 2; row++) for (let col = 0; col < 2; col++) {
@@ -906,6 +948,19 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
         mesh(root, roundGeo, lotusPetal, [x + Math.cos(a) * 0.045, LANDSCAPE_Y + 0.104, z + Math.sin(a) * 0.045], [0.048, 0.045, 0.048], false);
       }
     }
+    const fields = landscapeTerrace(root, -3.25, -0.34, 0.57, 3.8, 3.05, mat.ochre, 0.08);
+    box(fields, 0, 0.048, 0, 3.26, 0.065, 0.23, mat.pond, false);
+    for (const [col, x] of [-1.08, 0, 1.08].entries()) {
+      for (const [row, z] of [-0.65, 0.65].entries()) {
+        const color = [mat.greenLight, mat.gold, mat.green][(row + col) % 3];
+        box(fields, x, 0.047, z, 0.89, 0.07, 0.85, color, false);
+        for (const dx of [-0.26, 0, 0.26]) box(fields, x + dx, 0.105, z, 0.056, 0.055, 0.73, mat.foliageMid, false);
+      }
+    }
+    for (const x of [-0.54, 0.54]) box(fields, x, 0.039, 0, 0.14, 0.05, 2.17, mat.pond, false);
+    for (const x of [-0.81, -0.35]) box(fields, x, 0.19, 0, 0.075, 0.33, 0.085, mat.bark, false);
+    box(fields, -0.58, 0.34, 0, 0.63, 0.07, 0.12, mat.bark, false);
+    box(fields, -0.58, 0.15, 0, 0.35, 0.19, 0.05, mat.teal, false);
   }
   function hillsLandscape(root) {
     for (const [x, z, sx, sy, sz] of [[-0.85, -0.45, 0.9, 0.42, 0.8], [0.43, -0.5, 0.8, 0.55, 0.8]]) {
@@ -927,6 +982,18 @@ export function createCity({ canvas, onSelect = () => {}, onPersona = () => {}, 
     for (let i = 0; i < 5; i++) box(stall, -0.53 + i * 0.265, 1.22, 0, 0.265, 0.075, 0.78, i % 2 ? mat.cream : mat.coral, false);
     for (let i = 0; i < 8; i++) mesh(stall, roundGeo, i % 3 ? mat.ochre : mat.coral, [-0.39 + (i % 4) * 0.25, 0.53, -0.14 + Math.floor(i / 4) * 0.27], [0.085, 0.065, 0.09], false);
     box(root, -0.06, LANDSCAPE_Y + 0.14, 1.05, 0.35, 0.28, 0.38, mat.ochre, false);
+    const orchard = landscapeTerrace(root, 0.47, -2.56, 0.62, 3.8, 2.95, mat.greenLight, -0.1);
+    for (const [row, width] of [3.04, 2.72, 2.15].entries()) {
+      const rise = 0.16 + row * 0.24, z = 0.7 - row * 0.67;
+      box(orchard, 0, rise / 2, z, width, rise, 0.74, mat.ochre, false);
+      box(orchard, 0, rise + 0.028, z, width + 0.04, 0.065, 0.73, mat.green, false);
+      for (const x of [-width * 0.27, width * 0.27]) {
+        const crownY = rise + 0.53;
+        cylinder(orchard, x, rise + 0.26, z, 0.066, 0.5, mat.bark, false);
+        mesh(orchard, roundGeo, row % 2 ? mat.foliageMid : mat.foliageDark, [x, crownY, z], [0.42, 0.32, 0.37], false);
+        for (const dx of [-0.14, 0.14]) mesh(orchard, sphereGeo, mat.ochre, [x + dx, crownY - 0.03, z + 0.3], [0.08, 0.11, 0.08], false);
+      }
+    }
   }
   for (const region of Object.values(regions)) {
     const root = group(scene, region.center.x, 0, region.center.z, region.rotation); root.userData.regionId = region.id; region.root = root;

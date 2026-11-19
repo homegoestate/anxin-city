@@ -1,8 +1,8 @@
-import { createExperienceUI } from './experience-ui.js?v=16.0.0';
+import { createExperienceUI } from './experience-ui.js?v=24.0.0';
 import { createServiceHub } from './service-hub.js?v=11.0.0';
 import { createEnhancements } from './enhancements.js?v=16.0.0';
 import { lazyFeature } from './lazy-feature.js?v=13.0.0';
-import { createCityGuide } from './city-guide.js?v=13.0.0';
+import { createCityGuide } from './city-guide.js?v=24.0.0';
 let enhancements, experienceUI, cityGuide;
 let quality='auto', exploreMode='homes';
 try { const saved=localStorage.getItem('anxin-city-quality-v13');if(['auto','high','standard','economy'].includes(saved))quality=saved; } catch {}
@@ -26,7 +26,7 @@ async function exploreAction(action){
   }
  }catch(error){console.error(error);toast('這段散步資料暫時無法載入，請稍後再試。');}
 }
-const tainanExplorer=featureProxy('台南散步',()=>import('./tainan-ui.js?v=23.1.0'),m=>m.createTainanExplorer({onStartMission:id=>enhancements.showPersona(id),onFeedback:context=>enhancements.openFeedback(context),onExploreCulture:target=>cultureWalk.open(target),toast}),['open','openTarget']);
+const tainanExplorer=featureProxy('台南散步',()=>import('./tainan-ui.js?v=24.0.0'),m=>m.createTainanExplorer({onStartMission:id=>enhancements.showPersona(id),onFeedback:context=>enhancements.openFeedback(context),onExploreCulture:target=>cultureWalk.open(target),toast}),['open','openTarget']);
 let cultureInstance;
 const cultureWalk=featureProxy('文化走讀',()=>import('./culture-ui.js?v=17.0.0'),m=>cultureInstance=m.createCultureWalk({onExplore:action=>{cultureInstance.close();exploreAction(action);},onFeedback:context=>{cultureInstance.close();enhancements.openFeedback(context);},onResidents:()=>{cultureInstance.close();residentChat.open();},toast}),['open']);
 const residentChat=featureProxy('街坊聊聊',()=>import('./resident-ui.js?v=13.0.0'),m=>m.createResidentChat({onExplore:exploreAction,onMission:()=>enhancements.openPeople(),onFeedback:context=>enhancements.openFeedback({scene:'general',persona:'none',contextLabel:'街坊聊聊｜'+(context.residentName||'日常對話')}),toast}),['open']);
@@ -84,7 +84,7 @@ let cityStarting=false;
 async function startCity(){
  if(cityStarting)return;cityStarting=true;cityStatus.querySelector('button').disabled=true;
  try {
-  const {createCity}=await import('./city.js?v=13.0.0');
+  const {createCity}=await import('./city.js?v=24.0.0');
   scene?.dispose();
   scene=createCity({canvas:$('#city'),quality,onResident:id=>residentChat.open(id),onDistrict:focusRegion,onPersona:id=>enhancements.showPersona(id),onSelect:selectScene,onReady:cityReady,onRecovered:cityReady,onError:failCity,onQualityChange:state=>experienceUI.setQuality(state.mode)});
   scene.setExploreMode(exploreMode);scene.setNight(night);updatePaused();

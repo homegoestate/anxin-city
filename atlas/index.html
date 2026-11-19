@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f7f5eb">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <title>台南生活地圖｜宏國地政・易丞地政安心城</title>
+  <meta name="description" content="點選台南 37 個行政區，認識地方風景、文化故事、建設進度與市民服務，再走進安心城的台南街區。">
+  <link rel="icon" href="../first-day/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./atlas.css">
+  <script type="module" src="./atlas.js"></script>
+</head>
+<body>
+  <a class="skip" href="#district-picker">跳至行政區選擇</a>
+  <header class="mast">
+    <div class="wrap mast-inner">
+      <a class="brand" href="../" aria-label="宏國地政與易丞地政，回到安心城">
+        <svg viewBox="0 0 36 36" aria-hidden="true"><rect width="36" height="36" rx="9"/><path d="M6 18 18 8l12 10M10 16v12h6v-7h5v7h5V16"/></svg>
+        <span>宏國地政<span class="brand-bar">｜</span>易丞地政</span>
+      </a>
+      <nav aria-label="網站導覽"><a class="real-estate-nav" href="https://homegoestate.github.io/tainan-map/">台南房產地圖 ↗</a><a href="../">回安心城 <span aria-hidden="true">↗</span></a></nav>
+    </div>
+  </header>
+  <main class="wrap">
+    <header class="page-intro">
+      <div><p class="section-mark"><span></span>不動產安心城・地方走讀</p><h1>台南生活地圖</h1>
+      <p class="intro-lead">從鹽田、街市到淺山，選一區，讀讀在地生活。</p></div>
+      <a class="walk-postcard" href="../fucheng/">
+        <img src="../fucheng/assets/shennong.webp" width="768" height="512" alt="">
+        <span><small>神農街・故事插畫</small><strong>跟著街坊走讀府城 <i aria-hidden="true">↗</i></strong></span>
+      </a>
+    </header>
+    <noscript><p>互動地圖需開啟 JavaScript。你也可以先瀏覽<a href="https://www.twtainan.net/zh-tw/">台南旅遊網</a>。</p></noscript>
+    <div class="explore">
+      <section class="map-sheet" aria-labelledby="map-title">
+        <div class="map-tools">
+          <div><h2 id="map-title">行政區全圖</h2><p>點選區塊，或從選單找地方。</p></div>
+          <label class="picker-label"><span class="visually-hidden">選擇行政區</span><select id="district-picker" aria-label="選擇行政區"><option>載入行政區…</option></select></label>
+        </div>
+        <div class="map-stage">
+          <svg id="district-map" viewBox="0 0 600 600" aria-label="臺南市三十七區位置圖，可使用上方選單選區" role="img">
+            <defs>
+              <pattern id="paper-grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#b9be9f" stroke-opacity=".43" stroke-width=".8"/></pattern>
+              <pattern id="waves" width="21" height="9" patternUnits="userSpaceOnUse"><path d="M0 5q5-3 10.5 0T21 5" fill="none" stroke="#75a8a5" stroke-width="1.1"/></pattern>
+            </defs>
+            <rect width="600" height="600" fill="url(#paper-grid)" aria-hidden="true"/>
+            <g class="map-decor" aria-hidden="true">
+              <g class="compass" transform="translate(42,34)"><text x="0" y="0" text-anchor="middle">N</text><path d="m0 7-7 26 7-5z" fill="#385b4e"/><path d="m0 7 7 26-7-5z" fill="#f7f4df" stroke="#385b4e"/></g>
+              <path d="M6 262q13-8 37-4t41 0v18q-19 7-38 1t-40 0zM5 370q16-6 34-3t42 0v16q-14 5-37 0t-39 2z" fill="url(#waves)" opacity=".76"/>
+              <text x="32" y="296" class="sea-type" text-anchor="middle">臺<tspan x="32" dy="21">灣</tspan><tspan x="32" dy="21">海</tspan><tspan x="32" dy="21">峽</tspan></text>
+            </g>
+            <g id="boundaries"></g><g id="map-labels" aria-hidden="true"></g><g id="map-selection" aria-hidden="true"></g>
+          </svg>
+        </div>
+        <div class="map-bottom"><ul id="legend" aria-label="地方探索主題圖例"></ul><details class="map-credit"><summary>簡化區界・圖資來源</summary><div id="geometry-credit"></div></details></div>
+      </section>
+      <section class="district-sheet" id="district-sheet" aria-labelledby="district-title">
+        <div class="district-mast" id="district-mast">
+          <div class="district-sky" aria-hidden="true"><svg viewBox="0 0 160 120"><path id="mini-shape"/></svg></div>
+          <p id="region-name"></p><h2 id="district-title" tabindex="-1">行政區筆記</h2><p id="tagline"></p>
+        </div>
+        <div class="district-body">
+          <p id="local-feature"></p><details id="feature-sources" class="sources"></details>
+          <div class="observation"><h3><span aria-hidden="true">⌖</span> 在地生活觀察</h3><p id="living-tip"></p></div>
+          <div id="experience-links" class="experience-links"></div>
+          <a class="read-district" href="#district-content">看本區詳情 <span aria-hidden="true">↓</span></a>
+        </div>
+      </section>
+    </div>
+    <section class="district-content" id="district-content" aria-labelledby="content-title">
+      <h2 id="content-title">行政區走讀</h2>
+      <div class="tabs" aria-label="行政區資料分類" role="tablist">
+        <button type="button" role="tab" id="tab-places" aria-selected="true" aria-controls="district-panel">風景與文化</button>
+        <button type="button" role="tab" id="tab-projects" aria-selected="false" aria-controls="district-panel" tabindex="-1">地方發展</button>
+        <button type="button" role="tab" id="tab-services" aria-selected="false" aria-controls="district-panel" tabindex="-1">市政服務</button>
+      </div>
+      <div id="district-panel" role="tabpanel" aria-labelledby="tab-places" tabindex="0"></div>
+    </section>
+    <aside class="bus-panel" id="bus-panel" hidden></aside>
+    <aside class="property-link"><div><h2>從生活圈走進房產地圖</h2><p>宏國地政｜易丞地政整理台南生活圈與實價登錄，陪你從地方環境看一筆交易。</p></div><a href="https://homegoestate.github.io/tainan-map/">開啟台南房產地圖 <span aria-hidden="true">↗</span></a></aside>
+  </main>
+  <footer><div class="wrap"><span>宏國地政｜易丞地政</span><a href="../">安心城首頁 ↗</a></div></footer>
+  <p id="announcement" class="visually-hidden" role="status"></p>
+</body>
+</html>
