@@ -115,7 +115,7 @@ export async function openLifeTour(initialStoryId, trigger, { overview: showOver
   dialog.setAttribute('aria-labelledby', 'lt-title');
   dialog.dataset.render = 'loading';
   dialog.innerHTML = `<div class="lt-shell">
-    <header class="lt-bar"><div class="lt-identity"><span class="lt-seal" aria-hidden="true">安</span><div><small>宏國地政 × 易丞地政 · 台南生活散步</small><h1 id="lt-title" tabindex="-1">不動產安心城</h1></div></div>
+    <header class="lt-bar"><div class="lt-identity"><span class="lt-seal" aria-hidden="true">安</span><div><small>宏國地政 × 易丞地政 · 台南生活散步</small><h1 id="lt-title" tabindex="-1"><a class="lt-welcome-link" href="./?start=welcome" aria-label="不動產安心城，回到散步首頁">不動產安心城</a></h1></div></div>
     <nav class="lt-header-actions" aria-label="安心城導覽"><a class="lt-atlas-entry" data-life-atlas-home data-city-chapter="atlas" href="./atlas/" aria-label="開啟台南 37 區生活圖鑑">生活圖鑑</a><button type="button" class="lt-exit" data-life-activities aria-haspopup="dialog">故事與任務 ${icon('book')}</button></nav></header>
     <main class="lt-main"><section class="lt-stage" aria-label="台南 37 區的街坊場景"><canvas class="lt-canvas" aria-hidden="true"></canvas><div class="lt-labels"></div>
       <div class="lt-static" hidden role="img" aria-label="街區散步插畫"><canvas class="lt-map-art" hidden></canvas></div>
@@ -273,9 +273,15 @@ export async function openLifeTour(initialStoryId, trigger, { overview: showOver
   function showInvitation() {
     const stop = stopById.get(selected);
     if (!stop) {
-      invite.innerHTML = `<div class="lt-overview-invite"><button type="button" data-life-enter>從水仙宮市場出發 ${icon('arrow')}</button></div>`;
+      // The overview ticket gets its own row on a phone so the map stays touchable.
+      talk.before(invite);
+      invite.innerHTML = `<div class="lt-overview-invite"><button type="button" class="lt-arrival-ticket" data-life-enter>
+        <img class="lt-arrival-print" src="./assets/market-arrival-mobile.webp" width="72" height="72" alt="">
+        <span class="lt-arrival-place"><small>散步第一站 · 中西區</small><strong>水仙宮市場</strong><span>陪阿雯買晚餐的菜。</span></span>
+        <span class="lt-arrival-stub">出發 ${icon('arrow')}</span></button></div>`;
       return;
     }
+    stage.querySelector('.lt-map-caption').before(invite);
     const card = encounters[stop.id];
     invite.innerHTML = `<article class="lt-ticket" style="${cardStyle(card)}"><div class="lt-ticket-head"><div><p class="lt-loc">${icon('pin')}${escape(stop.name)} · ${locationLabel(stop)}</p><h2>${escape(card.title)}</h2></div>${emblem(card)}</div><p class="lt-teaser">${escape(card.teaser)}</p><div class="lt-ticket-actions"><button type="button" data-life-invite>${escape(card.invite)} ${icon('arrow')}</button><button type="button" data-life-people aria-haspopup="dialog">${icon('people')} 街上有誰</button></div></article>`;
     if(stop.districtId==='west-central')invite.querySelector('.lt-ticket').insertAdjacentHTML('beforeend','<div class="ca-invitation">'+nextStory(stop)+'</div>');
@@ -541,7 +547,7 @@ export async function openLifeTour(initialStoryId, trigger, { overview: showOver
   dialog.showModal();
   dialog.querySelector('#lt-title').focus({preventScroll:true});
   try {
-    const {createLifeWorld} = await import('./life-world.js?v=29.0.0');
+    const {createLifeWorld} = await import('./life-world.js?v=30.0.0');
     if (disposed) return;
     const initialStreet = dialog.dataset.view === 'street' ? selected : null;
     const created = await createLifeWorld({canvas,initialStreet,onChoose:id => street(id,true),onExit:id => travelTo(id),onResident:(id,key) => choose(id,true,key),onArrive:arrive,onError:fallback,

@@ -1,0 +1,339 @@
+/* The route is established before the body is parsed. The artwork is fetched
+   only when its matching cover selector applies. */
+html[data-city-entry="cover"] {
+  color-scheme: dark;
+  background: #142a25;
+}
+
+html[data-city-entry="cover"] body {
+  margin: 0;
+  overflow: auto;
+}
+
+html[data-city-entry="cover"] body > :is(#experience, #skip-to-mission, dialog) {
+  display: none !important;
+}
+
+#arrival-cover[hidden] {
+  display: none !important;
+}
+
+html[data-city-entry="cover"] #arrival-cover {
+  --arrival-ivory: #fff7e5;
+  --arrival-gold: #f4cf8b;
+  --arrival-inset: clamp(30px, 5.7vw, 108px);
+  position: relative;
+  isolation: isolate;
+  box-sizing: border-box;
+  display: flex !important;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100svh;
+  padding: max(30px, env(safe-area-inset-top)) max(var(--arrival-inset), env(safe-area-inset-right)) max(48px, env(safe-area-inset-bottom)) max(var(--arrival-inset), env(safe-area-inset-left));
+  overflow: hidden;
+  color: var(--arrival-ivory);
+  background: #142a25;
+  font: 400 16px/1.5 "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+}
+
+html[data-city-entry="cover"] #arrival-cover::before {
+  position: absolute;
+  z-index: -2;
+  inset: 0;
+  content: "";
+  background: url("./assets/market-arrival.webp") center right / cover no-repeat;
+}
+
+#arrival-cover::after {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  background:
+    linear-gradient(180deg, rgb(13 29 25 / 48%), transparent 24%, transparent 76%, rgb(16 32 28 / 36%)),
+    linear-gradient(90deg, rgb(13 33 27 / 97%) 0%, rgb(13 33 27 / 92%) 13%, rgb(13 33 27 / 78%) 28%, rgb(13 33 27 / 46%) 43%, rgb(13 33 27 / 8%) 61%, transparent 79%);
+}
+
+#arrival-cover *, #arrival-cover *::before, #arrival-cover *::after {
+  box-sizing: border-box;
+}
+
+.arrival-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.arrival-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-shadow: 0 1px 9px #10231db3;
+}
+
+.arrival-brand > div {
+  display: grid;
+  gap: 1px;
+}
+
+.arrival-emblem {
+  flex: none;
+  width: 43px;
+  height: 43px;
+  color: var(--arrival-ivory);
+}
+
+.arrival-brand strong {
+  font-family: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: .14em;
+}
+
+.arrival-brand span {
+  display: flex;
+  align-items: center;
+  gap: .45em;
+  font-size: 11px;
+  letter-spacing: .13em;
+}
+
+.arrival-brand i {
+  display: inline-block;
+  width: 1px;
+  height: .8em;
+  background: #f9e6bfad;
+}
+
+#arrival-cover a {
+  -webkit-tap-highlight-color: transparent;
+  text-decoration: none;
+}
+
+#arrival-cover a:focus-visible {
+  outline: 3px solid #fff9dc;
+  outline-offset: 5px;
+  box-shadow: 0 0 0 8px #243e33;
+}
+
+.arrival-mission {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 17px;
+  border: 1px solid rgb(255 247 225 / 57%);
+  border-radius: 999px;
+  color: #fff9e9;
+  background: rgb(15 34 28 / 75%);
+  font-size: 13px;
+  font-weight: 550;
+  letter-spacing: .08em;
+}
+
+.arrival-mission span {
+  font-family: system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.arrival-scene {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  padding: clamp(36px, 6vh, 96px) 0 clamp(16px, 3vh, 52px);
+}
+
+.arrival-story {
+  max-width: 100%;
+}
+
+.arrival-place {
+  display: flex;
+  align-items: center;
+  gap: .65em;
+  margin: 0 0 clamp(13px, 2.1vh, 25px);
+  color: #f7dbaa;
+  font-size: clamp(12px, .96vw, 15px);
+  font-weight: 600;
+  letter-spacing: .13em;
+}
+
+.arrival-place svg {
+  width: 18px;
+  height: 18px;
+}
+
+.arrival-place-rule {
+  display: block;
+  width: 25px;
+  height: 1px;
+  background: currentColor;
+  opacity: .72;
+}
+
+#arrival-title {
+  margin: 0;
+  color: var(--arrival-ivory);
+  font-family: "Noto Serif TC", "Songti TC", "LiSong Pro", "PMingLiU", serif;
+  font-size: clamp(68px, min(7.5vw, 13vh), 148px);
+  font-weight: 700;
+  line-height: 1.13;
+  letter-spacing: .045em;
+  text-shadow: 0 3px 24px rgb(14 34 26 / 20%);
+}
+
+#arrival-title > span {
+  display: block;
+}
+
+.arrival-period {
+  color: var(--arrival-gold);
+}
+
+.arrival-invitation {
+  margin: clamp(17px, 2.8vh, 31px) 0 0;
+  color: #f7f0df;
+  font-size: clamp(15px, 1.12vw, 20px);
+  line-height: 1.85;
+  letter-spacing: .045em;
+}
+
+.arrival-choices {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: clamp(22px, 4vh, 46px);
+}
+
+.arrival-choices a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  min-height: 54px;
+  padding: 12px 24px;
+  border-radius: 9px;
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.4;
+  letter-spacing: .035em;
+  white-space: nowrap;
+}
+
+.arrival-choices svg {
+  flex: none;
+  width: 21px;
+  height: 21px;
+}
+
+.arrival-market {
+  border: 1px solid #ffdfaa;
+  color: #2b3025;
+  background: var(--arrival-gold);
+  box-shadow: 0 4px 20px rgb(8 19 14 / 23%);
+}
+
+.arrival-map {
+  border: 1px solid #e3e7dcb0;
+  color: var(--arrival-ivory);
+  background: rgb(19 44 36 / 85%);
+}
+
+@media (hover: hover) {
+  .arrival-market:hover { background: #ffe0a8; }
+  .arrival-map:hover, .arrival-mission:hover { background: #355244; }
+}
+
+@media (max-width: 1024px) and (orientation: portrait) {
+  html[data-city-entry="cover"] #arrival-cover {
+    --arrival-inset: clamp(20px, 6vw, 37px);
+    padding-top: max(19px, env(safe-area-inset-top));
+    padding-bottom: max(26px, env(safe-area-inset-bottom));
+  }
+
+  html[data-city-entry="cover"] #arrival-cover::before {
+    inset: 0 0 auto;
+    height: 76%;
+    background-image: url("./assets/market-arrival-mobile.webp");
+    background-position: center 38%;
+  }
+
+  #arrival-cover::after {
+    background:
+      linear-gradient(180deg, rgb(12 27 23 / 62%), transparent 17%, transparent 34%, rgb(20 42 37 / 12%) 40%, rgb(20 42 37 / 85%) 62%, #142a25 75%);
+  }
+
+  .arrival-brand { gap: 8px; }
+  .arrival-emblem { width: 37px; height: 37px; }
+  .arrival-brand strong { font-size: 16px; }
+  .arrival-brand span { font-size: 10px; }
+  .arrival-mission { padding-inline: 13px; font-size: 12px; }
+
+  .arrival-scene {
+    align-items: flex-end;
+    padding: clamp(170px, 30svh, 350px) 0 0;
+  }
+
+  .arrival-story { width: 100%; }
+  .arrival-place { margin-bottom: 10px; gap: .55em; font-size: 12px; }
+  .arrival-place svg { width: 15px; height: 15px; }
+  .arrival-place-rule { width: 18px; }
+
+  #arrival-title {
+    font-size: clamp(39px, 11.2vw, 76px);
+    line-height: 1.25;
+    letter-spacing: .005em;
+    white-space: nowrap;
+  }
+
+  #arrival-title > span { display: inline; }
+  .arrival-period { font-size: .68em; }
+  .arrival-invitation { margin-top: 12px; font-size: 15px; line-height: 1.75; }
+  .arrival-choices {
+    display: grid;
+    grid-template-columns: minmax(max-content, 1.2fr) minmax(max-content, 1fr);
+    gap: 8px;
+    max-width: 415px;
+    margin-top: 20px;
+  }
+  .arrival-choices a { min-height: 49px; padding: 12px 14px; gap: 7px; font-size: 14px; }
+  .arrival-choices svg { width: 17px; height: 17px; }
+}
+
+@media (max-width: 355px) and (orientation: portrait) {
+  html[data-city-entry="cover"] #arrival-cover { --arrival-inset: 16px; }
+  .arrival-choices a { padding-inline: 10px; }
+  .arrival-invitation { font-size: 14px; }
+}
+
+@media (max-height: 540px) and (orientation: landscape) {
+  html[data-city-entry="cover"] #arrival-cover {
+    --arrival-inset: clamp(20px, 5vw, 48px);
+    padding-top: max(12px, env(safe-area-inset-top));
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+
+  .arrival-emblem { width: 34px; height: 34px; }
+  .arrival-brand strong { font-size: 15px; }
+  .arrival-brand span { font-size: 10px; }
+  .arrival-mission { min-height: 44px; }
+  .arrival-scene { padding: 12px 0 0; }
+  .arrival-place { margin-bottom: 7px; font-size: 11px; }
+  #arrival-title { font-size: clamp(36px, 6.9vw, 62px); line-height: 1.25; letter-spacing: .01em; }
+  #arrival-title > span { display: inline; }
+  .arrival-period { font-size: .65em; }
+  .arrival-invitation { margin-top: 7px; font-size: 14px; line-height: 1.6; }
+  .arrival-choices { gap: 9px; margin-top: 14px; }
+  .arrival-choices a { min-height: 44px; padding: 9px 15px; font-size: 14px; }
+  .arrival-choices svg { width: 17px; height: 17px; }
+}
+
+@media (forced-colors: active) {
+  .arrival-choices a, .arrival-mission { border: 1px solid LinkText; }
+}

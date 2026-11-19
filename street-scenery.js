@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { neighborsFor } from './street-neighbors.js?v=29.0.0';
+import { finishMarketSurfaces, marketPaving, marketQuarter } from './market-quarter.js?v=30.0.0';
 
 // Roads and pedestrian circuits use local metres. +Z faces the entrance.
 const mainRoad=[[-39,4],[-17,3.1],[-8,3.7],[-5.7,3.55],[-4,3.15],[.3,3.03],[4.6,3.18],[8.1,3.85],[15,2.1],[34,-1]];
@@ -32,11 +33,14 @@ export function pedestrianCircuit(index,visitor){
   return [[-3.45,3.13],[-5.72,3.31],[-7.07,1.5],[-7.78,-.25],[-8.10,.29],[-7.49,2.28],[-5.9,4.23],[-3.57,5.36+skew],[-1.1,5.76],[-.08,4.86],[-.80,3.55+skew]];
 }
 function drawGround(root,type,index,place){
-  const p=palettes[type],rand=randomAt(index*509+63),cv=document.createElement('canvas');
+  const market=place.id==='shuixian-morning';
+  const p=market?{...palettes.town,road:'#a9aaa0',border:'#978c76',verge:'#e7ceaa',mark:'#e4d5b5'}:palettes[type];
+  const rand=randomAt(index*509+63),cv=document.createElement('canvas');
   cv.width=cv.height=1536;
   const c=cv.getContext('2d'),size=92,px=cv.width/size;
   c.scale(px,px);c.translate(size/2,size/2);
   c.fillStyle=p.cover;c.fillRect(-46,-46,92,92);
+  if(market)marketPaving(c,rand);
   for(let i=0;i<7300;i++){
     const x=rand()*92-46,z=rand()*92-46;
     c.fillStyle=i%3?'#70855824':'#eacb8e40';c.fillRect(x,z,.08+rand()*.61,.05+rand()*.13);
@@ -306,11 +310,14 @@ function exits(k,root,place){
 export function makeStreetNeighborhood(k,place){
   const root=new THREE.Group(),objects=new THREE.Group(),type=familyFor(place);
   root.name=place.district+'街景';drawGround(root,type,place.index,place);
-  if(type==='salt'||type==='water')coastalWork(k,objects,type==='salt',place);
+  if(place.id==='shuixian-morning')marketQuarter(k,objects);
+  else if(type==='salt'||type==='water')coastalWork(k,objects,type==='salt',place);
   else if(type==='town')town(k,objects,place.index);
   else countryside(k,objects,type==='hill',place.index,place);
   if(place.motif)nameBoard(k,objects,place);
-  root.add(k.bake(objects));exits(k,root,place);return root;
+  const built=k.bake(objects);
+  if(place.id==='shuixian-morning')finishMarketSurfaces(built,randomAt(205));
+  root.add(built);exits(k,root,place);return root;
 }
 const navigationRoads=[mainRoad,bypass,westFork,eastFork];
 const roadNetwork=[];

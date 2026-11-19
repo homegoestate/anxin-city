@@ -3,10 +3,12 @@
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="referrer" content="strict-origin-when-cross-origin"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-GqsWfEjHm73zbHa7lGbVXfv95jxypKuCtjd6kntjIRA='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://hongguo-anxin-feedback-20261024.yang-ceo.chatgpt.site; object-src 'none'; base-uri 'self'; form-action 'none'">
-  <meta name="theme-color" content="#194f49"><meta name="description" content="宏國地政｜易丞地政的互動安心城。從產權、登記、稅務與交易安全出發，陪角色練習買房、換屋、賣屋與傳承選擇，也認識台南的文化與生活。">
-  <title>宏國・易丞｜不動產安心城</title>
-  <meta property="og:type" content="website"><meta property="og:site_name" content="宏國地政｜易丞地政"><meta property="og:title" content="陪小安逛台南｜宏國地政 × 易丞地政・不動產安心城"><meta property="og:description" content="從水仙宮市場出發，逛台南 37 個立體街區、和居民聊幾句、拍一張自己的台南明信片。也能接續買房、換屋、賣屋與傳承任務。"><meta property="og:url" content="https://homegoestate.github.io/anxin-city/"><meta property="og:image" content="https://homegoestate.github.io/anxin-city/assets/tainan37-preview.jpg?v=29"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#142a25"><meta name="description" content="從水仙宮市場出發，陪小安逛台南 37 區、跟街坊聊聊天，再用首購、換屋與傳承任務練習關於家的選擇。宏國地政｜易丞地政・不動產安心城。">
+  <title>陪小安逛台南｜不動產安心城・宏國地政 × 易丞地政</title>
+  <meta property="og:type" content="website"><meta property="og:locale" content="zh_TW"><meta property="og:site_name" content="宏國地政｜易丞地政・不動產安心城"><meta property="og:title" content="陪小安逛台南｜不動產安心城"><meta property="og:description" content="水仙宮市場開攤了。陪小安走進早市、和街坊打聲招呼，再去台南 37 區走走。"><meta property="og:url" content="https://homegoestate.github.io/anxin-city/"><meta property="og:image" content="https://homegoestate.github.io/anxin-city/assets/arrival-share.jpg?v=30"><meta property="og:image:alt" content="台南水仙宮市場的微縮街景，街坊在菜攤前迎接小安。"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23194f49'/%3E%3Cpath d='M14 32L32 17L50 32V49H37V36H27V49H14Z' fill='%23f7f1e3'/%3E%3C/svg%3E">
+  <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
+  <template id="arrival-play-styles">
   <link rel="stylesheet" href="./style.css"><link rel="stylesheet" href="./enhancements.css?v=8.0.0"><link rel="stylesheet" href="./game.css?v=8.0.0"><link rel="stylesheet" href="./tainan.css?v=8.0.0">
   <link rel="stylesheet" href="./readability.css?v=8.0.0">
   <link rel="stylesheet" href="./tool-journey.css?v=8.0.0">
@@ -14,15 +16,41 @@
   <link rel="stylesheet" href="./home.css?v=10.0.0">
   <link rel="stylesheet" href="./culture.css?v=10.0.0"><link rel="stylesheet" href="./fucheng/style.css?v=17.0.0">
   <link rel="stylesheet" href="./experience-v11.css?v=13.0.0"><link rel="stylesheet" href="./mission-mobile.css?v=11.0.0"><link rel="stylesheet" href="./feedback-v11.css?v=11.0.0">
-  <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
-  <!-- Fetch the whole module graph in parallel instead of one import level at a time. -->
-  <link rel="modulepreload" href="./app.js?v=29.0.0"><link rel="modulepreload" href="./experience-ui.js?v=24.0.0"><link rel="modulepreload" href="./service-hub.js?v=11.0.0"><link rel="modulepreload" href="./enhancements.js?v=27.0.0"><link rel="modulepreload" href="./lazy-feature.js?v=13.0.0"><link rel="modulepreload" href="./city-guide.js?v=25.0.0"><link rel="modulepreload" href="./video-links.js?v=6.0.0"><link rel="modulepreload" href="./tool-routes.js?v=6.0.0"><link rel="modulepreload" href="./loan.js"><link rel="modulepreload" href="./feedback-client.js?v=11.0.0"><link rel="modulepreload" href="./policy-data.js?v=8.0.0"><link rel="modulepreload" href="./game-ui.js?v=27.0.0"><link rel="modulepreload" href="./legacy-policy.js?v=3.0.0"><link rel="modulepreload" href="./game-engine.js?v=6.0.0"><link rel="modulepreload" href="./scenario-profile.js"><link rel="modulepreload" href="./city-runtime.js?v=13.0.0"><link rel="modulepreload" href="./vendor/OrbitControls.js"><link rel="modulepreload" href="./resident-data.js?v=10.0.0"><link rel="modulepreload" href="./vendor/three.module.js"><link rel="modulepreload" href="./vendor/three.core.js">
   <link rel="stylesheet" href="./seasons-v12.css?v=12.0.0">
   <link rel="stylesheet" href="./quality-v13.css?v=13.0.0"><link rel="stylesheet" href="./city-guide.css?v=13.0.0"><link rel="stylesheet" href="./first-day-entry.css?v=24.0.0">
   <link rel="stylesheet" href="./life-tour.css?v=28.0.0"><link rel="stylesheet" href="./life-postcard.css?v=26.0.0"><link rel="stylesheet" href="./city-activities.css?v=28.0.0"><link rel="stylesheet" href="./city-almanac.css?v=28.0.0">
   <link rel="stylesheet" href="./map-labels.css?v=29.0.0"><link rel="stylesheet" href="./street-links.css?v=29.0.0">
+  <link rel="stylesheet" href="./arrival-map.css?v=30.0.0">
+  <link rel="modulepreload" href="./app.js?v=30.0.0"><link rel="modulepreload" href="./vendor/three.module.js"><link rel="modulepreload" href="./vendor/three.core.js">
+  </template>
+  <script src="./arrival-route.js?v=30.0.0"></script>
+  <link rel="stylesheet" href="./arrival-cover.css?v=30.0.0">
+  <noscript><style>#experience,#skip-to-mission{display:none!important}</style></noscript>
 </head>
 <body class="city-first">
+  <main id="arrival-cover" aria-labelledby="arrival-title" hidden>
+    <header class="arrival-header">
+      <div class="arrival-brand">
+        <svg class="arrival-emblem" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+          <rect x="1.5" y="1.5" width="41" height="41" rx="10" stroke="currentColor" stroke-width="1.3"/>
+          <path d="m8 22 14-12 14 12m-24-3v14h7v-9h6v9h7V19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div><strong>不動產安心城</strong><span>宏國地政 <i aria-hidden="true"></i> 易丞地政</span></div>
+      </div>
+      <a class="arrival-mission" href="./?start=first-home">首購任務 <span aria-hidden="true">↗</span></a>
+    </header>
+    <div class="arrival-scene">
+      <div class="arrival-story">
+        <p class="arrival-place"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M16.2 8.5c0 4.2-6.2 9.1-6.2 9.1s-6.2-4.9-6.2-9.1a6.2 6.2 0 1 1 12.4 0Z" stroke="currentColor" stroke-width="1.45"/><circle cx="10" cy="8.3" r="2" stroke="currentColor" stroke-width="1.45"/></svg>台南・中西區<span class="arrival-place-rule" aria-hidden="true"></span> 水仙宮市場</p>
+        <h1 id="arrival-title"><span>陪小安</span><span>逛台南<span class="arrival-period" aria-hidden="true">。</span></span></h1>
+        <p class="arrival-invitation">「這把蔥的尾巴是不是露出袋子了？」<br>跟阿雯聊兩句，再去台南 37 區走走。</p>
+        <nav class="arrival-choices" aria-label="選擇台南散步的起點">
+          <a class="arrival-market" data-arrival-market href="./?start=life&amp;scene=shuixian-morning&amp;arrive=street">走進水仙宮市場 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4.5 12h14M13 5.5l6.5 6.5-6.5 6.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+          <a class="arrival-map" data-arrival-map href="./?start=life"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m3 6.1 5.8-2.5 6.4 2.8L21 4v13.9l-5.8 2.5-6.4-2.8L3 20Zm5.8-2.5v14m6.4-11.2v14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>看台南地圖</a>
+        </nav>
+      </div>
+    </div>
+  </main>
   <a href="#start-explore" id="skip-to-mission" class="skip-link">跳到人生任務</a>
   <main id="experience">
     <div id="city-stage" aria-label="可旋轉縮放的立體不動產城市">
@@ -38,7 +66,7 @@
       <p class="entry-eyebrow">產權・登記・稅務・交易安全</p>
       <h1 id="hero-title">家的重要選擇，<br>先陪你練習一次。</h1>
       <p class="entry-instruction">從一位角色開始，看看不同選擇，<br>如何影響資金、時間與家人的安排。</p>
-      <div class="entry-actions"><a class="first-day-entry" href="./first-day/lantern/"><span><small>可散步街區 · 四位主角 · 府城故事</small>今晚，巷口留一盞燈</span><span aria-hidden="true">→</span></a><a class="atlas-entry" href="./?start=life" id="open-life-tour"><img src="./atlas/overview.svg" width="44" height="44" alt=""><span><strong>走進立體台南</strong><small>陪小安逛 37 區、和居民聊聊</small></span><span aria-hidden="true">→</span></a><a class="tainan-hero-button" href="./first-day/">也可以繼續小安的第一天 →</a><button class="tainan-hero-button" id="start-explore">選其他人生任務 →</button></div>
+      <div class="entry-actions"><a class="first-day-entry" href="./first-day/lantern/"><span><small>可散步街區 · 四位主角 · 府城故事</small>今晚，巷口留一盞燈</span><span aria-hidden="true">→</span></a><a class="atlas-entry" href="./?start=life" id="open-life-tour"><img loading="lazy" src="./atlas/overview.svg" width="44" height="44" alt=""><span><strong>走進立體台南</strong><small>陪小安逛 37 區、和居民聊聊</small></span><span aria-hidden="true">→</span></a><a class="tainan-hero-button" href="./first-day/">也可以繼續小安的第一天 →</a><button class="tainan-hero-button" id="start-explore">選其他人生任務 →</button></div>
       <p class="entry-boundary">四個選擇 · 可隨時暫停<br>人物與數字為情境練習，進度留在這台裝置。</p>
     </section>
     <div class="office-strip"><p>楊明宗・楊翊晟 地政士<br>各自獨立執業</p><button id="office-info" aria-haspopup="dialog" aria-controls="service-hub">事務所與聯絡資訊 ↗</button><a class="office-phone" href="tel:062582589">06-258-2589</a></div>
@@ -63,5 +91,5 @@
   <dialog id="checklist-dialog" class="sheet-dialog"><div class="dialog-top"><div><span class="eyebrow">YOUR NEXT STEP</span><h2>我的準備清單</h2></div><button class="icon-button" data-close-dialog aria-label="關閉準備清單">×</button></div><p class="dialog-lead">把準備好的勾起來，帶著清楚的問題開始諮詢。</p><div id="all-checklists"></div><div class="dialog-footer"><p>勾選僅儲存在這台裝置；摘要下載到本機。</p><button class="primary-button" id="download-summary">下載諮詢準備摘要 <span>↓</span></button></div></dialog>
   <dialog id="help-dialog" class="sheet-dialog help-dialog"><div class="dialog-top"><div><span class="eyebrow">WELCOME TO ANXIN CITY</span><h2>關於家的事，一起安心前行。</h2></div><button class="icon-button" data-close-dialog aria-label="關閉操作說明">×</button></div><p class="welcome-note">這是宏國地政｜易丞地政的互動練習城市，從產權、登記、稅務與交易安全出發。你可以跟街坊聊日常、認識地方特色、到文化走讀看古蹟與生活故事，也能陪首購、換屋、賣屋與傳承角色，練習每一步選擇。</p><div class="help-grid"><div><b>01</b><h3>先做一個任務</h3><p>點「玩小安在台南的第一天」開始短篇故事，或選「其他人生任務」陪一位角色做四個選擇。想聊日常或認識台南，從功能選單繼續探索。</p></div><div><b>02</b><h3>換個角度看看</h3><p>拖曳旋轉、滾輪縮放。手機可單指旋轉、雙指縮放。</p></div><div><b>03</b><h3>帶走下一步</h3><p>試試不同結局、重選比較，再把想問的問題帶到官方 LINE。</p></div></div><div class="experience-note"><strong>關於這個體驗版本</strong><p>與 8 位虛構街坊聊日常、接著探索景點與有日期的活動；也能陪人生任務角色做四個選擇、到台南37區散步集章，或用文化走讀認識古蹟、節俗與地方記憶。可帶著摘要前往官方 LINE，由您確認送出；使用回饋會保存供後續改善。未串接正式案件或預約。</p></div><p class="keyboard-hint">鍵盤操作：1 買房 · 2 賣房 · 3 傳承 · Esc 返回全景／關閉視窗</p></dialog>
   <noscript><p>互動任務需要 JavaScript。您可以先<a href="https://homegoestate.github.io/">前往宏國・易丞官網</a>或<a href="https://line.me/R/ti/p/%40604gpqef">官方 LINE</a>。</p><style>#loading{display:none!important}</style></noscript>
-  <script type="module" src="./boot.js?v=29.0.0"></script>
+  <script type="module" src="./boot.js?v=30.0.0"></script>
 </body></html>

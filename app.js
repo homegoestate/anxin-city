@@ -121,7 +121,7 @@ async function showLifeTour(id, trigger, options = {}) {
   if (tourOpening) return;
   tourOpening = true;
   try {
-    const { openLifeTour } = await import('./life-tour.js?v=29.0.0');
+    const { openLifeTour } = await import('./life-tour.js?v=30.0.0');
     await openLifeTour(id, trigger, options);
   } catch (error) {
     console.error('台南街區載入失敗', error);

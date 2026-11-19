@@ -7,7 +7,7 @@ import { createCrowd, idlePose, stepPose } from './life-crowd.js?v=29.0.0';
 import { createOverviewWalkers, overviewTrails } from './life-overview-walkers.js?v=28.0.0';
 import { districtWalks } from './district-stories.js?v=27.0.0';
 import { makeDistrictMiniature } from './district-miniatures.js?v=27.0.0';
-import { makeStreetNeighborhood, planWalk, walkablePoint } from './street-scenery.js?v=29.0.0';
+import { makeStreetNeighborhood, planWalk, walkablePoint } from './street-scenery.js?v=30.0.0';
 
 // SVG label points are inside their districts. The small southern districts use
 // two other interior points so their neighbouring scenes can sit side by side.
