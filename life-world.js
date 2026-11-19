@@ -3,11 +3,12 @@ import { OrbitControls } from './vendor/OrbitControls.js';
 import { districtShapes } from './atlas/geometry.js';
 import { createModelKit, makeLandmark, makePerson } from './life-models.js?v=28.0.0';
 import { createAmenity } from './life-amenities.js';
-import { createCrowd, idlePose, stepPose } from './life-crowd.js?v=29.0.0';
+import { createCrowd, createMarketVendors, idlePose, stepPose, vendorPose } from './life-crowd.js?v=31.0.0';
 import { createOverviewWalkers, overviewTrails } from './life-overview-walkers.js?v=28.0.0';
 import { districtWalks } from './district-stories.js?v=27.0.0';
 import { makeDistrictMiniature } from './district-miniatures.js?v=27.0.0';
-import { makeStreetNeighborhood, planWalk, walkablePoint } from './street-scenery.js?v=30.0.0';
+import { makeStreetNeighborhood, marketVendorAt, planWalk, walkablePoint } from './street-scenery.js?v=31.0.0';
+import { dressMarketScene } from './market-craft.js?v=31.0.0';
 
 // SVG label points are inside their districts. The small southern districts use
 // two other interior points so their neighbouring scenes can sit side by side.
@@ -273,7 +274,7 @@ function disposeObjects(group) {
   for(const material of materials) material.dispose();
 }
 
-export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError,onResident,onExit,initialStreet=null}) {
+export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError,onResident,onExit,onMarketVendor,initialStreet=null}) {
   const renderer = new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:'low-power'});
   renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.65));
   renderer.setClearColor(0x56969a);
@@ -353,10 +354,16 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
   const touching=new Set();
   const overviewAim=new THREE.Vector3(0,.22,0),overviewOffset=new THREE.Vector3(0,100,82);
   const localOffset=new THREE.Vector3(21,54,118);
+  const marketOffset=new THREE.Vector3(16,45,118);
+  const streetOffset=place=>place.id==='shuixian-morning'?marketOffset:localOffset;
+  let marketFinish=null,vendors=[],marketTime=0;
   let regionBounds=null;
   function viewSpan(place){
     const aspect=width/height;
-    if(place) return Math.max(9.65,(aspect<1.08?13.30:15.2)/aspect)*place.scale;
+    if(place){
+      if(place.id==='shuixian-morning')return Math.max(8.8,(aspect<1.08?12.8:14.6)/aspect)*place.scale;
+      return Math.max(9.65,(aspect<1.08?13.30:15.2)/aspect)*place.scale;
+    }
     if(regionBounds) return Math.max(34,regionBounds.height,regionBounds.width/aspect);
     return Math.max(83,111/aspect);
   }
@@ -367,7 +374,8 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
     townsfolk.resize(next/height);
   }
   function lightAt(target,radius){
-    sun.target.position.copy(target); sun.position.copy(target).add(new THREE.Vector3(-35,75,45));
+    sun.target.position.copy(target);
+    sun.position.copy(target).add(streetPlace?.id==='shuixian-morning'?new THREE.Vector3(34,53,23):new THREE.Vector3(-35,75,45));
     const shadow=sun.shadow.camera;
     shadow.left=shadow.bottom=-radius; shadow.right=shadow.top=radius;
     shadow.updateProjectionMatrix();
@@ -386,7 +394,7 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
     const initialSpan=span/camera.zoom;
     camera.zoom=1; setSpan(initialSpan);
     return {fromAim:controls.target.clone(),fromOffset:camera.position.clone().sub(controls.target),fromSpan:initialSpan,
-      aim:destination(place),offset:place?localOffset:overviewOffset};
+      aim:destination(place),offset:place?streetOffset(place):overviewOffset};
   }
   function cameraMotion(c,t,place){
     const f=smooth(t), aim=c.fromAim.clone().lerp(c.aim,f), offset=c.fromOffset.clone().lerp(c.offset,f);
@@ -432,6 +440,7 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
     if(place===streetPlace) return;
     const former=streetPlace;stroll=null;
     if(former){
+      if(marketFinish){marketFinish();marketFinish=null;vendors=[];}
       former.root.scale.copy(former.mapScale);
       if(former.detail){
         former.detail.removeFromParent();disposeObjects(former.detail);
@@ -444,6 +453,7 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
     map.visible=!place;
     renderer.shadowMap.autoUpdate=!!place;renderer.shadowMap.needsUpdate=true;
     hemisphere.intensity=place?1.85:1.55;sun.intensity=place?1.94:1.99;
+    hemisphere.color.setHex(0xf0fbff);hemisphere.groundColor.setHex(0xafb7a8);
     controls.enablePan=!place;controls.zoomToCursor=!place;
     clearHover();
     for(const p of places.values()) p.root.visible=!place||place===p;
@@ -451,6 +461,8 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
     if(place){
       place.root.scale.setScalar(place.scale);
       const localKit=createModelKit(),detail=makeStreetNeighborhood(localKit,place);
+      const isMarket=place.id==='shuixian-morning';
+      if(isMarket)vendors=createMarketVendors(localKit,detail);
       if(place.motif){
         place.resident=addResident(localKit,detail,place.style);
         place.landmark.position.set(0,.12,-.95);place.landmark.scale.setScalar(1.52);
@@ -467,6 +479,14 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
       }
       crowd.root.visible=true;crowd.hold(null);
       sun.color.setHex(streetColors[place.id.split('-').at(-1)].sun);
+      if(isMarket){
+        marketTime=0;
+        hemisphere.color.setHex(0xf3faf7);hemisphere.groundColor.setHex(0xc4ad94);
+        hemisphere.intensity=1.59;sun.color.setHex(0xffe9c9);sun.intensity=2.42;
+        const terrainMeshes=detail.children.filter(child=>!child.userData.marketVendor);
+        marketFinish=dressMarketScene([...terrainMeshes.map(o=>[o,'quarter']),[place.landmark,'landmark'],[place.resident.root,'person'],[crowd.root,'person'],[player.root,'person'],...vendors.map(v=>[v.rig.root,'person'])]);
+        vendorPose(place.resident,0,1.05);
+      }
     }else{
       scene.background=overviewSky;scene.fog=null;controls.minZoom=.62;controls.maxZoom=7;
       sun.color.setHex(0xfff2df);
@@ -509,10 +529,16 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
     const animated=ambientActive();
     if(stroll)advanceStroll(dt);
     if(animated){
-      ambientTime+=Math.min(dt,140)/1000;
+      const elapsed=Math.min(dt,220)/1000;
+      ambientTime+=elapsed;
       if(streetPlace){
-        crowd.update(Math.min(dt,140)/1000,ambientTime);
-        idlePose(streetPlace.resident,ambientTime+1.8);
+        crowd.update(elapsed,ambientTime);
+        if(vendors.length){
+          marketTime+=elapsed;
+          for(const {rig,offset} of vendors)vendorPose(rig,marketTime,offset);
+          if(conversation==='resident'||motion?.key==='resident')idlePose(streetPlace.resident,marketTime);
+          else vendorPose(streetPlace.resident,marketTime,1.05);
+        }else idlePose(streetPlace.resident,ambientTime+1.8);
         if(player.root.visible&&!motion&&!stroll) idlePose(player,ambientTime+.5);
       }else townsfolk.update(Math.min(dt,140)/1000);
     }
@@ -555,7 +581,7 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
     if(!same){
       camera.zoom=1;
       const aim=destination(p);
-      placeView(aim,localOffset,viewSpan(p));lightAt(aim,Math.max(8,viewSpan(p)));
+      placeView(aim,streetOffset(p),viewSpan(p));lightAt(aim,Math.max(8,viewSpan(p)));
     }
     // When a conversation ends, return the player to the shop frontage before
     // the pedestrian resumes walking along the lane.
@@ -666,9 +692,9 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
       return true;
     });
     if(!hit) return;
-    let obj=hit.object,guest=null,exit=null,overviewGuest=false;
+    let obj=hit.object,guest=null,exit=null,vendor=null,overviewGuest=false;
     while(obj){
-      guest ||= obj.userData.guestKey;exit ||= obj.userData.exitId;overviewGuest ||= !!obj.userData.overviewWalker;
+      guest ||= obj.userData.guestKey;exit ||= obj.userData.exitId;vendor ||= obj.userData.marketVendor;overviewGuest ||= !!obj.userData.overviewWalker;
       if(obj.userData.stopId)break;
       obj=obj.parent;
     }
@@ -677,6 +703,10 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
     if(streetPlace){
       if(!motion&&!conversation){
         const local=streetPlace.root.worldToLocal(hit.point.clone());
+        if(streetPlace.id==='shuixian-morning'&&onMarketVendor){
+          const stall=vendor||marketVendorAt(local);
+          if(stall){onMarketVendor(stall);return;}
+        }
         if(local.y<.30&&walkablePoint(local.x,local.z))beginStroll([local.x,local.z]);
       }
       return;
@@ -796,6 +826,7 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
   function destroy(){
     if(disposed) return;
     disposed=true; motion=null; cancelAnimationFrame(frame);clearTimeout(timer);
+    marketFinish?.();marketFinish=null;
     portraits.clear();crowd?.dispose();for(const sky of skies.values())sky.dispose();reduced.removeEventListener('change',syncMotionPreference);
     resizeObserver.disconnect(); observer.disconnect(); layers.disconnect();
     document.removeEventListener('visibilitychange',suspend);document.removeEventListener('visibilitychange',checkTopLayer);

@@ -12,13 +12,18 @@ const residents = [
   ['legacy-family','傳承一家','照顧與傳承安排']
 ];
 
-export function connectActivities({onMission,onStop,onService,onFeedback,onChecklist,onSeasons,onCulture}) {
+export function connectActivities({onMission,onStop,onService,onFeedback,onChecklist,onSeasons,onCulture,onBudget}) {
   const menu=document.createElement('dialog'), reader=document.createElement('dialog');
   menu.id='city-activities'; reader.id='city-chapter';
   menu.setAttribute('aria-labelledby','activities-title');reader.setAttribute('aria-labelledby','chapter-title');
   menu.innerHTML='<header><div><small>宏國地政 × 易丞地政</small><h2 id="activities-title">故事與任務</h2></div><button data-back type="button">回到街上</button></header><div class="ca-scroll"><button type="button" class="ca-lantern" data-city-chapter="lantern"><span>府城巷弄 · 街坊故事</span><strong>今晚，巷口留一盞燈</strong><span>陪阿荷準備一張邀請卡 →</span></button><h3>陪一位居民做四個選擇</h3><div class="ca-people">'+residents.map(([id,name,topic])=>'<button type="button" data-city-mission="'+id+'"><strong>'+name+'</strong><small>'+topic+'</small></button>').join('')+'</div><details><summary>更多散步、工具與聯絡</summary><div class="ca-more"><button data-city-chapter="first-day">小安的第一天與點交任務</button><button data-city-chapter="fucheng">府城四段散步</button><button data-city-chapter="atlas">37 區生活圖鑑</button><button data-city-extra="seasons">四季與活動</button><button data-city-extra="culture">文化走讀</button><button data-city-extra="checklist">我的準備清單</button><button data-city-extra="service">試算工具、官網與官方 LINE</button><button data-city-extra="feedback">給安心城一點建議</button></div></details></div>';
   reader.innerHTML='<header><strong id="chapter-title"></strong><button data-back type="button">回到街上</button></header><div class="ca-page"></div>';
   document.body.append(menu,reader);
+  const lantern=menu.querySelector('.ca-lantern');
+  lantern.insertAdjacentHTML('beforebegin', `<a class="ca-market-story" href="./?start=life&amp;scene=shuixian-morning&amp;arrive=street"><small>水仙宮市場 → 安平</small><strong>阿雯的共桌邀請</strong><span>跟著菜籃裡的線索去找阿秀 →</span></a>`);
+  const people=menu.querySelector('.ca-people');
+  people.insertAdjacentHTML('afterend', `<button type="button" class="ca-budget" aria-haspopup="dialog"><strong>收支比怎麼算？</strong><span>選個角色，試算一個月的收支 →</span></button>`);
+  menu.querySelector('.ca-budget').addEventListener('click',event=>onBudget(event.currentTarget));
   let opener=null,frame=null;
   const base=new URL('./',document.baseURI);
   const urls=Object.fromEntries(Object.entries(chapters).map(([id,{path}])=>[id,new URL(path,base)]));

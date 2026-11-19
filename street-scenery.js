@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { neighborsFor } from './street-neighbors.js?v=29.0.0';
-import { finishMarketSurfaces, marketPaving, marketQuarter } from './market-quarter.js?v=30.0.0';
+import { marketPaving, marketQuarter } from './market-quarter.js?v=31.0.0';
 
 // Roads and pedestrian circuits use local metres. +Z faces the entrance.
 const mainRoad=[[-39,4],[-17,3.1],[-8,3.7],[-5.7,3.55],[-4,3.15],[.3,3.03],[4.6,3.18],[8.1,3.85],[15,2.1],[34,-1]];
@@ -29,6 +29,12 @@ const palettes={
 function randomAt(n){return ()=>{n=(Math.imul(n,1664525)+1013904223)>>>0;return n/4294967296;};}
 export function pedestrianCircuit(index,visitor){
   const skew=((index%3)-1)*.22;
+  if(index===0){
+    // Both paths cross the camera's central aisle. One turns back beside the
+    // red canopy, the other passes the right-hand counter and returns by the fork.
+    if(visitor)return [[.48,5.38],[2.46,5.19],[4.53,4.32],[5.32,3.61],[4.08,2.92],[2.98,3.08],[2.02,3.75],[.25,4.57],[-.31,5.07]];
+    return [[-3.75,3.18],[-2.53,3.36],[-.62,3.42],[.73,3.33],[1.06,3.75],[.03,4.15],[-2.03,4.52],[-3.66,4.20],[-4.48,3.65],[-4.36,3.32]];
+  }
   if(visitor)return [[1.3,3.8],[3.75,3.05+skew],[6.0,3.2],[7.5,3.84],[6.75,4.63],[4.48,5.48],[2.52,5.72],[1.18,5.21]];
   return [[-3.45,3.13],[-5.72,3.31],[-7.07,1.5],[-7.78,-.25],[-8.10,.29],[-7.49,2.28],[-5.9,4.23],[-3.57,5.36+skew],[-1.1,5.76],[-.08,4.86],[-.80,3.55+skew]];
 }
@@ -315,9 +321,18 @@ export function makeStreetNeighborhood(k,place){
   else if(type==='town')town(k,objects,place.index);
   else countryside(k,objects,type==='hill',place.index,place);
   if(place.motif)nameBoard(k,objects,place);
-  const built=k.bake(objects);
-  if(place.id==='shuixian-morning')finishMarketSurfaces(built,randomAt(205));
-  root.add(built);exits(k,root,place);return root;
+  root.add(k.bake(objects));exits(k,root,place);return root;
+}
+
+// The stalls and the road are separate visible surfaces inside two large
+// baked meshes. Classify the actual closest triangle, never an invisible box.
+export function marketVendorAt({x,y,z}){
+  if(y<.28||y>2.47)return null;
+  if(x>=-4.38&&x<=-1.68&&z>=-.14&&z<=1.66)return 'greens';
+  if(x>=.22&&x<=1.49&&z>=1.06&&z<=1.82)return 'steam';
+  if(x>=-6.56&&x<=-4.92&&z>=-.56&&z<=.38)return 'steam';
+  if(x>=.12&&x<=2.15&&z>=8.45&&z<=9.85)return 'steam';
+  return null;
 }
 const navigationRoads=[mainRoad,bypass,westFork,eastFork];
 const roadNetwork=[];

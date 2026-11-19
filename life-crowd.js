@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { createModelKit, makePerson } from './life-models.js?v=28.0.0';
 
-import { pedestrianCircuit } from './street-scenery.js?v=29.0.0';
+import { pedestrianCircuit } from './street-scenery.js?v=31.0.0';
 
 const lanes = [
   {key:'neighbor',speed:.83,scale:.92,pace:5.8,rest:1.6},
@@ -35,6 +35,35 @@ export function stepPose(rig,phase,amount=1) {
   rig.body.position.x=Math.cos(phase)*.018*amount;
   rig.body.position.y=Math.cos(phase)**2*.027*amount;
   rig.body.rotation.set((rig.lean||0)+.020*amount,-swing*.051,swing*.019);
+}
+
+// From the lane, the free hand has to clear the shoulder silhouette for a
+// greeting to read. Between greetings the vendor settles back into work.
+export function vendorPose(rig,time,offset=0){
+  idlePose(rig,time+offset);
+  const cycle=(time+offset)%7.5;
+  const hello=smooth(cycle/.58)*(1-smooth((cycle-2.05)/.64));
+  const arm=rig.arms[rig.carried===1?0:1],side=rig.carried===1?-1:1;
+  arm.rotation.x-=.21+hello*.24;
+  arm.rotation.z+=side*hello*(2.03+.19*Math.sin(cycle*10.1));
+  rig.body.rotation.y+=.11*hello;
+  rig.body.rotation.z+=side*.055*hello;
+  rig.body.position.y+=hello*.022;
+}
+
+export function createMarketVendors(kit,detail){
+  const vendors=[];
+  for(const [key,look,x,z,scale,yaw,offset] of [
+    ['greens','yujing-morning',-2.42,1.62,.84,.09,.83],
+    ['steam','yanshui-evening',.95,.69,.87,-.12,3.45]
+  ]){
+    const rig=makePerson(kit,look,true,{detail:'far'});
+    rig.root.position.set(x,.12,z);rig.root.scale.setScalar(scale);
+    rig.root.rotation.y=yaw;rig.root.userData.marketVendor=key;
+    detail.add(rig.root);vendorPose(rig,0,offset);
+    vendors.push({rig,offset});
+  }
+  return vendors;
 }
 
 function updateWalker(walker,dt=0) {
@@ -74,7 +103,7 @@ export function createCrowd(id,index) {
     if((index+i)%2)points.reverse();
     const curve=new THREE.CatmullRomCurve3(points,true,'centripetal');
     curve.arcLengthDivisions=96;
-    const length=curve.getLength(),run=length/(lane.speed*(1+(index%5)*.025));
+    const length=curve.getLength(),run=length/(lane.speed*(index===0?1.20:1+(index%5)*.025));
     const walker={
       rig,lane,curve,length,run,rest:lane.rest+(index%3)*.17,point:new THREE.Vector3(),tangent:new THREE.Vector3(),
       elapsed:0,start:i?.89:.02,phase:i*1.64+index*.43,releasing:0,releaseYaw:0

@@ -1,4 +1,4 @@
-import { CanvasTexture, CylinderGeometry, Float32BufferAttribute, PlaneGeometry, RepeatWrapping, Shape, ShapeGeometry, SRGBColorSpace } from 'three';
+import { BufferGeometry, CylinderGeometry, Float32BufferAttribute, LatheGeometry, PlaneGeometry, Shape, ShapeGeometry, Vector2 } from 'three';
 
 const linen=0xffe8bc, jade=0x2e756a, ink=0x3a534d;
 const brick=0xb47157, red=0xc6533b, honey=0xefad5e, wood=0x996746;
@@ -19,29 +19,6 @@ export function marketPaving(c,rand){
   c.fillStyle='#98937f';c.fillRect(-4.9,7.83,10.7,.18);
   c.fillStyle='#d7cbb1';
   for(let i=0;i<34;i++)c.fillRect(-4.84+i*.312,7.86,.23,.075);
-}
-
-// One repeating grain on the vertex-coloured batch breaks up the flat plaster
-// and timber. Project in metres so it holds its scale around corners and roofs.
-export function finishMarketSurfaces(mesh,rand){
-  const tile=document.createElement('canvas');tile.width=tile.height=128;
-  const c=tile.getContext('2d');
-  c.fillStyle='#fffdf9';c.fillRect(0,0,128,128);
-  for(let i=0;i<2900;i++){
-    c.fillStyle=i%5?'#7b65581b':'#99847634';
-    c.fillRect(rand()*128,rand()*128,.4+rand()*1.35,.4+rand()*.76);
-  }
-  const tex=new CanvasTexture(tile);
-  tex.colorSpace=SRGBColorSpace;tex.wrapS=tex.wrapT=RepeatWrapping;tex.anisotropy=4;
-  const {position,normal}=mesh.geometry.attributes,uv=new Float32Array(position.count*2);
-  for(let i=0;i<position.count;i++){
-    const x=position.getX(i),y=position.getY(i),z=position.getZ(i);
-    const ax=Math.abs(normal.getX(i)),ay=Math.abs(normal.getY(i)),az=Math.abs(normal.getZ(i));
-    uv[2*i]=(ax>az&&ax>ay?z:x)*.68;
-    uv[2*i+1]=(ay>ax&&ay>az?z:y)*.68;
-  }
-  mesh.geometry.setAttribute('uv',new Float32BufferAttribute(uv,2));
-  mesh.material=mesh.material.clone();mesh.material.map=tex;
 }
 
 function molding(k,p,x,y,z,w,tint=linen){
@@ -161,7 +138,7 @@ function steamer(k,p,x,y,z,s){
   k.post(g,0xedc994,0,.62,0,.392,.035);
   for(const [x,z] of [[-.16,.09],[.15,.10],[-.02,-.17]]){
     k.part(g,k.farBall,0xffe2ad,x,.69,z,.125,.094,.11);
-    k.rock(g,0xd8bc8b,x+.012,.763,z,.048,.019,.023);
+    k.rock(g,0xba5b45,x+.012,.775,z,.024,.017,.023);
   }
   // Bent wire-like wisps dissolve into the light at their narrow tips.
   for(const [dx,h] of [[-.10,.40],[.12,.29]]){
@@ -236,6 +213,139 @@ function fruitStand(k,p,x,z,tint){
   for(let i=0;i<3;i++)k.box(slip,0xad7557,(i-1)*.055,.06,.032,.023,.075-i%2*.017,.011);
 }
 
+function gridSurface(columns,rows,point){
+  const positions=[],indices=[];
+  for(let j=0;j<=rows;j++)for(let i=0;i<=columns;i++)positions.push(...point(i/columns,j/rows));
+  for(let j=0;j<rows;j++)for(let i=0;i<columns;i++){
+    const a=j*(columns+1)+i,b=a+1,c=a+columns+1;
+    indices.push(a,c,b,b,c,c+1);
+  }
+  const geometry=new BufferGeometry();
+  geometry.setAttribute('position',new Float32BufferAttribute(positions,3));
+  geometry.setIndex(indices);geometry.computeVertexNormals();
+  return geometry;
+}
+
+// Each stitched panel dips between its stitched edges. The hanging scallops
+// have a warm contrasting binding which can still be read from a phone.
+function canvasShade(k,p,x,z,tint){
+  const stall=k.group(p,x,0,z),w=.385;
+  for(let i=0;i<7;i++){
+    const center=(i-3)*w,a=i%2?0xffe4ae:tint;
+    const sculpt=(u,v)=>.065*Math.sin(i*1.7+v*1.4)-.072*Math.sin(u*Math.PI)*Math.sin(v*Math.PI);
+    const roof=gridSurface(5,5,(u,v)=>[(u-.5)*w,2.34-v*.236+sculpt(u,v),-.79+v*1.69]);
+    k.part(stall,roof,a,center,0,0);
+    const valance=(u,v)=>[(u-.5)*w,2.104+sculpt(u,1)-v*(.31+.109*Math.sin(u*Math.PI)),.903+.063*Math.sin(u*Math.PI)*v];
+    k.part(stall,gridSurface(7,2,valance),a,center,0,0);
+    k.part(stall,gridSurface(7,1,(u,v)=>{
+      const [x,y,z]=valance(u,.90+.055*v);return [x,y,z+.005];
+    }),i%2?0xd2a67b:0xd8ac72,center,0,0);
+  }
+}
+
+function produceLeaves(){
+  return gridSurface(4,6,(u,v)=>{
+    const half=.038+.39*Math.pow(Math.sin(v*Math.PI),.77);
+    const side=(u-.5)*2;
+    return [-side*half,v,.14*Math.sin(v*Math.PI)+.14*v*v-.12*side*side*Math.sin(v*Math.PI)];
+  });
+}
+function cabbage(k,p,leaf,x,y,z,s,turn){
+  const g=k.group(p,x,y,z);g.rotation.y=turn;g.scale.setScalar(s);
+  for(let i=0;i<6;i++){
+    const a=i*2.4,curl=k.group(g,Math.sin(a)*.041,0,Math.cos(a)*.04);
+    curl.rotation.y=a;curl.rotation.x=.22+(i%3)*.24;
+    k.part(curl,leaf,[0x337244,0x558d43,0x89ab52][i%3],0,.035,0,.54,.68,.52);
+    k.rock(curl,0xe0dda4,0,.172,.054,.055,.17,.055,true);
+    k.rod(curl,0xa5bd67,[0,.29,.069],[0,.55,.093],.013);
+  }
+}
+function vegetableCounter(k,p){
+  const leaf=produceLeaves(),g=k.group(p,-3.10,0,.68);
+  for(let i=0;i<4;i++)cabbage(k,g,leaf,(i-1.5)*.34,.85,.24,.64+(i%2)*.14,i*.81);
+  const scallions=k.group(g,.35,.93,.51);scallions.rotation.z=-.94;scallions.rotation.x=.46;
+  for(let i=0;i<6;i++){
+    const x=(i-2.5)*.042,top=.44+.041*(i%3),z=.018*(i%2);
+    k.rod(scallions,0xeee2b2,[x,-.10,z],[x*.8,.15,z],.026);
+    k.rod(scallions,i%2?0x628950:0x47794c,[x*.8,.15,z],[x*1.6,top,z+.035],.024);
+  }
+  k.box(scallions,0xb45645,0,.09,.016,.25,.039,.082);
+  // A few whole daikon, their white roots tilted together over the crate lip.
+  for(let i=0;i<3;i++){
+    const root=k.group(g,-.87+i*.14,.91,.41);root.rotation.z=-.43;root.rotation.x=.82;
+    k.part(root,k.farBall,0xefdda7,0,0,0,.075,.22,.071);
+    k.rod(root,0xf5e8c7,[0,-.15,0],[.028,-.26,0],.019);
+    k.part(root,leaf,0x488342,0,.16,0,.20,.24,.26);
+  }
+  for(const [x,z] of [[-.75,.60],[.68,.60]]){
+    k.box(g,0x8a5637,x,.47,z,.44,.84,.10);
+    for(let n=0;n<4;n++)k.box(g,n%2?0xb3784c:0xc18c57,x,.25+n*.14,z+.07,.49,.093,.062);
+  }
+  k.box(g,0xb18257,0,.54,.596,.73,.47,.058);
+  k.box(g,0x365b50,0,.54,.639,.65,.40,.04);k.letters(g,'青菜',0,.55,.669,.59,.32);
+}
+
+function settingCloth(k,p){
+  const g=k.group(p,.86,0,1.48);g.rotation.y=.12;
+  for(const x of [-.47,.47])for(const z of [-.18,.18])k.box(g,0x825639,x,.32,z,.061,.62,.061);
+  k.box(g,wood,0,.62,0,1.10,.10,.55);
+  const colors=[[0xffeacf,0xa1bec1],[0xa1bec1,0x618793]],cell=.141;
+  // The pattern continues from the tabletop down the folded front hem.
+  for(let row=0;row<6;row++)for(let col=0;col<8;col++){
+    const x=(col-3.5)*cell,color=colors[row%2][col%2];
+    if(row<4)k.box(g,color,x,.678,(row-1.5)*cell,cell+.001,.014,cell+.001);
+    else k.box(g,color,x,.67-(row-3.5)*cell,.285,cell+.001,cell+.001,.013);
+  }
+  steamer(k,g,.28,.686,0,.63);
+  const bowl=k.group(g,-.23,.686,.015);bowl.rotation.x=.22;bowl.scale.setScalar(1.24);
+  const rim=new LatheGeometry([[.075,0],[.083,.027],[.139,.047],[.219,.106],[.265,.185],[.268,.20],[.254,.207],[.238,.18],[.193,.119],[.119,.080],[.005,.071]].map(v=>new Vector2(...v)),20);
+  k.part(bowl,rim,0xfff0cf,0,0,0);
+  k.part(bowl,new LatheGeometry([new Vector2(.263,.172),new Vector2(.268,.187)],20),0x658887,0,0,0);
+  k.part(bowl,k.farBall,0xac4939,-.018,.080,.037,.069,.009,.036);
+  const tail=k.rock(bowl,0xc3543f,.061,.086,.041,.031,.013,.037);tail.rotation.y=-.23;
+  k.part(bowl,k.farBall,0x513e36,-.050,.09,.048,.009,.006,.009);
+}
+
+function roofCrest(k,p){
+  const g=k.group(p,0,0,-1.67);
+  for(const side of [-1,1]){
+    const crest=k.group(g,0,0,0);crest.rotation.y=side>0?0:Math.PI;
+    const curls=[[.22,3.85],[.43,3.98],[.61,3.95],[.82,3.81],[1.05,3.78],[1.26,3.88],[1.38,4.00]];
+    for(let i=1;i<curls.length;i++){
+      const [x,y]=curls[i-1],[xx,yy]=curls[i];
+      k.rod(crest,0x41796c,[x,y,0],[xx,yy,0],.058);
+      k.rod(crest,0xd69a53,[x,y-.051,.021],[xx,yy-.051,.021],.026);
+      if(i>1)k.rock(crest,i%2?0xeaad60:0xbe6241,x,y+.063,0,.050,.094,.039).rotation.z=-.44;
+    }
+    k.rock(crest,0x4b857a,.40,4.02,.026,.126,.093,.091,true);
+    k.rock(crest,0xc76041,.30,4.01,.058,.093,.049,.067);
+    k.rock(crest,linen,.38,4.047,.103,.029,.031,.019);
+    k.rod(crest,0xdeaa67,[.45,4.057,0],[.52,4.175,-.015],.030);
+    for(const x of [.78,1.80]){
+      for(let i=0;i<3;i++)k.post(g,i%2?0x578073:0xd19d52,side*x,.56+i*.44,1,.128,.052);
+    }
+  }
+}
+
+// Narrow branches sit beyond the frontage, framing the roofs without passing
+// in front of the people or street signs.
+function figBough(k,p,x,z,side){
+  const g=k.group(p,x,0,z);g.rotation.y=side>0?0:Math.PI;
+  const joints=[[0,.12],[.10,2.72],[.46,4.10],[1.49,4.77],[2.86,5.14],[3.63,5.27]];
+  for(let n=1;n<joints.length;n++){
+    const [a,b]=joints[n-1],[c,d]=joints[n];k.rod(g,0x72553e,[a,b,-.02*n],[c,d,-.02*n],.222-n*.033);
+  }
+  for(let i=0;i<10;i++){
+    const base=.62+i*.30,j=4.28+Math.sqrt(i*.096),dir=i%2?1:-1;
+    k.rod(g,0x846547,[base,j,0],[base+.40,j+.29,dir*.43],.039);
+    for(let n=0;n<6;n++){
+      const a=i*2.37+n*1.27,dx=base+.41+Math.cos(a)*.39,dy=j+.32+Math.sin(a)*.19;
+      const leaf=k.rock(g,[0x537647,0x749448,0x98a751,0xb1b664][(n+i)%4],dx,dy,dir*.42+.27*Math.sin(a),.25,.095,.119);
+      leaf.rotation.z=Math.sin(a)*.67;leaf.rotation.y=a;
+    }
+  }
+}
+
 function banyan(k,p,x,z,s){
   const g=k.group(p,x,.1,z);g.scale.setScalar(s);
   for(const [dx,dy] of [[-.68,2.0],[.64,2.14],[.06,2.63]]){
@@ -280,6 +390,11 @@ export function marketQuarter(kit,p){
   greens(k,p,5.45,.27,.76);
   fruitStand(k,p,-3,.68,0x98503e);
   fruitStand(k,p,3.04,.49,0x558374);
+  canvasShade(k,p,-3,.68,0xb25541);
+  canvasShade(k,p,3.04,.49,0x437b70);
+  roofCrest(k,p);
+  vegetableCounter(k,p);settingCloth(k,p);
+  figBough(k,p,-8.70,-2.78,1);figBough(k,p,8.70,-3.03,-1);
   // At the near verge: an opening onto the lane, bordered by a vendor's cart
   // and two baskets. All three sit inside the island between the branching roads.
   bambooCart(k,p,1.13,9.14,1.58,true);

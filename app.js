@@ -1,7 +1,7 @@
 import { createExperienceUI } from './experience-ui.js?v=24.0.0';
 import { createServiceHub } from './service-hub.js?v=11.0.0';
 import { createEnhancements } from './enhancements.js?v=27.0.0';
-import { connectActivities } from './city-activities.js?v=27.0.0';
+import { connectActivities } from './city-activities.js?v=31.0.0';
 import { lazyFeature } from './lazy-feature.js?v=13.0.0';
 import { createCityGuide } from './city-guide.js?v=25.0.0';
 let enhancements, experienceUI, cityGuide;
@@ -114,14 +114,22 @@ updateCount();
 
 
 const entryParams=new URLSearchParams(location.search),entry=entryParams.get('start');
-const activities=connectActivities({onMission:id=>enhancements.showPersona(id),onStop:id=>showLifeTour(id,lifeEntry),onService:()=>serviceHub.open(),onFeedback:()=>enhancements.openFeedback(),onChecklist:openChecklist,onSeasons:()=>tainanExplorer.openTarget({tab:'seasons'}),onCulture:()=>cultureWalk.open({})});
+const activities=connectActivities({onMission:id=>enhancements.showPersona(id),onStop:id=>showLifeTour(id,lifeEntry),onService:()=>serviceHub.open(),onFeedback:()=>enhancements.openFeedback(),onChecklist:openChecklist,onSeasons:()=>tainanExplorer.openTarget({tab:'seasons'}),onCulture:()=>cultureWalk.open({}),onBudget:showMarketBudget});
+async function showMarketBudget(trigger) {
+  try {
+    const {openMarketBudget}=await import('./market-budget.js?v=31.0.0');
+    if (!trigger?.closest('dialog:not([open])')) openMarketBudget({trigger});
+  } catch {
+    toast('收支練習載入未完成，可以從「故事與任務」再試一次。');
+  }
+}
 // Other established deep links open their own experience immediately.
 let tourOpening = false;
 async function showLifeTour(id, trigger, options = {}) {
   if (tourOpening) return;
   tourOpening = true;
   try {
-    const { openLifeTour } = await import('./life-tour.js?v=30.0.0');
+    const { openLifeTour } = await import('./life-tour.js?v=31.0.0');
     await openLifeTour(id, trigger, options);
   } catch (error) {
     console.error('台南街區載入失敗', error);
@@ -180,6 +188,11 @@ window.addEventListener('life-tour-close', () => {
 });
 // Both historical city entrances now share this world, including when a LINE link opens a mission.
 async function enterCity(){
+  if (entry==='budget') {
+    await showLifeTour('anping-afternoon',lifeEntry,{arriveStreet:true});
+    await showMarketBudget(document.querySelector('#life-tour [data-life-activities]') || lifeEntry);
+    return;
+  }
   await showLifeTour(entryParams.get('scene'),lifeEntry,{overview:entry==='life'||entryParams.get('view')==='city',arriveStreet:entryParams.get('arrive')==='street'});
   if ((entry==='life'||!entry) && (entryParams.has('guideMonth') || entryParams.has('guideArea'))) {
     await openSeasonGuide(document.querySelector('[data-season-guide]'),entryParams.get('guideMonth'),entryParams.get('guideArea'));

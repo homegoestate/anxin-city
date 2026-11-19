@@ -6,6 +6,7 @@ import { tainanEvents } from './tainan-events.js';
 import { eventStatus, taiwanDate } from './seasons-state.js';
 import { neighborsFor } from './street-neighbors.js?v=29.0.0';
 import { projectLabels, wireMapLabels } from './map-labels.js?v=29.0.0';
+import { makeMarketStory, vendorCall } from './market-story.js?v=31.0.0';
 
 const stopById = new Map(lifeStops.map(stop => [stop.id, stop]));
 const stories = new Map([...dayStories, ...districtWalks].map(story => [story.id, story]));
@@ -122,7 +123,7 @@ export async function openLifeTour(initialStoryId, trigger, { overview: showOver
       <div class="lt-map-tools"><button type="button" data-life-districts aria-haspopup="dialog">${icon('pin')} 37 區選單</button><button type="button" data-life-overview>${icon('map')} 全市全景</button>
       <label class="lt-region-filter"><span class="lt-sr">地圖地名顯示方式</span><select data-life-region><option value="">全市地名</option><option value="landmarks">只看圖示</option><optgroup label="依主題看地名">${tourRegions.map(region => `<option value="${region.id}">${escape(region.name)}</option>`).join('')}</optgroup></select></label><button type="button" data-season-guide aria-haspopup="dialog">${icon('calendar')} 台南風味曆</button></div>
       <div class="lt-play-tools"><button type="button" data-life-pause aria-label="暫停街景動畫" aria-pressed="false" title="暫停街景動畫">${icon('pause')}<span>暫停</span></button></div>
-      <div class="lt-invite"></div>
+      <div class="ms-calls" role="group" aria-label="市場攤販的招呼" hidden></div><div class="lt-invite"></div>
       <div class="lt-map-caption"><p class="lt-hint"></p><small>街景為縮放意象</small></div>
     </section><aside class="lt-talk" aria-labelledby="lt-stop-title" hidden></aside></main>
     <nav class="lt-street-links" aria-label="沿街走到鄰區" hidden></nav>
@@ -143,6 +144,7 @@ export async function openLifeTour(initialStoryId, trigger, { overview: showOver
   const mini = dialog.querySelector('.lt-mini');
   const hint = dialog.querySelector('.lt-hint');
   const live = dialog.querySelector('[role="status"]');
+  const calls = stage.querySelector('.ms-calls');
   const pins = new Map();
   for (const stop of lifeStops) {
     const line = document.createElement('span');
@@ -177,6 +179,63 @@ export async function openLifeTour(initialStoryId, trigger, { overview: showOver
   let mapShapes = null;
   const motionQuery = matchMedia('(prefers-reduced-motion: reduce)');
   let paused = motionQuery.matches;
+  let vendor = 'greens';
+  let vendorTimer = 0;
+  let pendingMarketHost = null;
+  const panelKey = 'anxin-market-open-page.v1';
+  function rememberPanel(id) {
+    try {
+      if (id) sessionStorage.setItem(panelKey,id);
+      else sessionStorage.removeItem(panelKey);
+    } catch { /* The quest checkpoint is independent of a panel being open. */ }
+  }
+  function savedPanel() {
+    try { return sessionStorage.getItem(panelKey); } catch { return null; }
+  }
+  const resumePanel = savedPanel();
+  const marketStory = makeMarketStory({
+    current: () => selected,
+    refresh: () => {
+      if (selected && dialog.dataset.view === 'street') showInvitation();
+      else if (!talk.hidden) {
+        const entry = talk.querySelector('[data-market-action="resume"]');
+        if (entry) entry.outerHTML = marketStory.entry(selected);
+      }
+    },
+    announce: message => { live.textContent = message; },
+    openPanel: (title,body) => {
+      openMini(title,body,'market-story');
+      const heading = mini.querySelector('h2');
+      heading.tabIndex = -1; heading.focus({preventScroll:true});
+      const page = mini.querySelector('[data-market-phase]');
+      rememberPanel(page.dataset.marketPhase === 'vendor' ? null : selected);
+    },
+    closePanel: () => { rememberPanel(null); if (mini.open) mini.close(); },
+    meet: id => {
+      if (mini.open) mini.close();
+      if (dialog.dataset.view === 'arrived' && selected === id && guest === 'resident') {
+        marketStory.markArrival(id); marketStory.render(); return;
+      }
+      pendingMarketHost = id;
+      choose(id,true,'resident',true);
+    },
+    travel: id => { if (!world?.walkToExit?.(id)) travelTo(id); },
+    visit: id => street(id,true)
+  });
+  function rotateVendor(focus = false) {
+    vendor = vendor === 'greens' ? 'steam' : 'greens';
+    calls.innerHTML = vendorCall(vendor);
+    if (focus) calls.querySelector('[data-market-switch]').focus({preventScroll:true});
+  }
+  function updateCalls() {
+    clearInterval(vendorTimer);
+    calls.hidden = selected !== marketId || dialog.dataset.view !== 'street';
+    if (calls.hidden) return;
+    calls.innerHTML = vendorCall(vendor);
+    if (!paused && !textMode) vendorTimer = setInterval(() => {
+      if (!document.hidden && !mini.open && dialog.matches(':modal') && !calls.matches(':hover, :focus-within') && !document.querySelector('dialog[open]:not(#life-tour):not(.lt-mini)')) rotateVendor();
+    },10000);
+  }
   const canvas = stage.querySelector('canvas');
   const artCanvas = stage.querySelector('.lt-map-art');
   const personName = (stop, key) => key === 'neighbor' ? neighborFor(stop).neighbor : key === 'visitor' ? '散步客' : stop.resident;
@@ -238,6 +297,7 @@ export async function openLifeTour(initialStoryId, trigger, { overview: showOver
     pauseButton.setAttribute('aria-label', `${action}街景動畫`);
     pauseButton.title = `${action}街景動畫`;
     world?.setPaused?.(paused);
+    updateCalls();
   }
   function motionChange() { paused = motionQuery.matches; updatePause(); }
   motionQuery.addEventListener('change', motionChange);
@@ -272,6 +332,7 @@ export async function openLifeTour(initialStoryId, trigger, { overview: showOver
   const locationLabel = stop => escape(featuredIds.has(stop.id) ? stop.title : stop.resident);
   function showInvitation() {
     const stop = stopById.get(selected);
+    updateCalls();
     if (!stop) {
       // The overview ticket gets its own row on a phone so the map stays touchable.
       talk.before(invite);
@@ -281,16 +342,19 @@ export async function openLifeTour(initialStoryId, trigger, { overview: showOver
         <span class="lt-arrival-stub">出發 ${icon('arrow')}</span></button></div>`;
       return;
     }
-    stage.querySelector('.lt-map-caption').before(invite);
+    if (stop.id === marketId) talk.before(invite);
+    else stage.querySelector('.lt-map-caption').before(invite);
     const card = encounters[stop.id];
     invite.innerHTML = `<article class="lt-ticket" style="${cardStyle(card)}"><div class="lt-ticket-head"><div><p class="lt-loc">${icon('pin')}${escape(stop.name)} · ${locationLabel(stop)}</p><h2>${escape(card.title)}</h2></div>${emblem(card)}</div><p class="lt-teaser">${escape(card.teaser)}</p><div class="lt-ticket-actions"><button type="button" data-life-invite>${escape(card.invite)} ${icon('arrow')}</button><button type="button" data-life-people aria-haspopup="dialog">${icon('people')} 街上有誰</button></div></article>`;
-    if(stop.districtId==='west-central')invite.querySelector('.lt-ticket').insertAdjacentHTML('beforeend','<div class="ca-invitation">'+nextStory(stop)+'</div>');
+    const entry = marketStory.entry(stop.id,true);
+    if (entry) invite.querySelector('.lt-ticket-actions').insertAdjacentHTML(stop.id === marketId ? 'afterend' : 'beforebegin',entry);
   }
   function street(id, focus = false, announce = true, continuing = false) {
     const stop = stopById.get(id);
     if (disposed || !stop) return;
     if (id !== selected && !continuing) clearTrail();
-    selected = id; guest = 'resident'; lastChoice = null;
+    selected = id; guest = 'resident'; lastChoice = null; pendingMarketHost = null;
+    marketStory.markArrival(id);
     dialog.dataset.view = 'street'; dialog.dataset.stop = id;
     delete dialog.dataset.guest;
     talk.hidden = true; talk.replaceChildren();
@@ -316,6 +380,7 @@ export async function openLifeTour(initialStoryId, trigger, { overview: showOver
   function arrive(id, key = guest) {
     if (disposed || selected !== id || guest !== key || dialog.dataset.view !== 'walking') return;
     const stop = stopById.get(id);
+    marketStory.markArrival(id);
     dialog.dataset.view = 'arrived'; dialog.dataset.guest = guest;
     const who = personName(stop, guest);
     const card = encounters[id];
@@ -325,7 +390,7 @@ export async function openLifeTour(initialStoryId, trigger, { overview: showOver
     talk.innerHTML = `<div class="lt-talk-inner" style="${cardStyle(card)}"><div class="lt-detail-top"><p class="lt-loc">${icon('pin')}${escape(stop.name)}${featuredIds.has(id) ? ' · '+escape(stop.title) : ''}</p><button type="button" data-life-return>回街上 ${icon('arrow')}</button></div>
       <div class="lt-neighbor"><span class="lt-portrait" aria-hidden="true">${stampArt(card)}</span><div><small class="lt-speaker">${escape(who)} · 故事角色</small><h2 id="lt-stop-title" tabindex="-1">${escape(guest === 'resident' ? card.title : guest === 'neighbor' ? neighborFor(stop).role : '路上的招呼')}</h2></div></div>
       <div class="lt-topics" role="group" aria-label="選擇對話主題"><button type="button" data-life-topic="encounter" aria-pressed="true">${guest === 'resident' ? '街坊小事' : '打招呼'}</button>${guest === 'resident' ? `<button type="button" data-life-topic="life" aria-pressed="false">${featuredIds.has(id) ? '聊日常' : '認識地方'}</button>${stop.facility ? '<button type="button" data-life-topic="facility" aria-pressed="false">問建設</button>' : ''}${events.length ? '<button type="button" data-life-topic="event" aria-pressed="false">看活動</button>' : ''}` : ''}</div>
-      <div class="lt-bubble"><div class="lt-reply" aria-live="polite">${interaction(stop)}</div></div>
+      ${guest === 'resident' ? marketStory.entry(id) : ''}<div class="lt-bubble"><div class="lt-reply" aria-live="polite">${interaction(stop)}</div></div>
       <nav class="lt-onward" aria-label="繼續探索本區"><button type="button" data-life-activities data-district="${escape(stop.districtId)}" aria-haspopup="dialog">在這裡接任務 ${icon('arrow')}</button><button type="button" data-season-guide="${escape(stop.districtId)}" aria-haspopup="dialog">這一區吃什麼、幾月來？ ${icon('arrow')}</button>${featuredIds.has(id) ? `<a data-life-street data-city-chapter="first-day" href="./first-day/?walk=1&amp;scene=${encodeURIComponent(stop.id)}">自由走逛${escape(districtName(stop))}街區 ${icon('arrow')}</a>` : ''}<a data-life-atlas data-city-chapter="atlas" href="./atlas/?district=${encodeURIComponent(stop.districtId)}">${escape(districtName(stop))}生活圖鑑 ${icon('arrow')}</a></nav></div>`;
     const portrait = talk.querySelector('.lt-portrait');
     const portraitUrl = world?.portraitFor?.(key);
@@ -338,6 +403,7 @@ export async function openLifeTour(initialStoryId, trigger, { overview: showOver
     talk.scrollTop = 0;
     live.textContent = `抵達${stop.name}，和${who}打個招呼。`;
     if (moveFocus) talk.querySelector('h2').focus({ preventScroll:true });
+    if (pendingMarketHost === id && guest === 'resident') { pendingMarketHost = null; marketStory.render(); }
   }
   function choose(id, focus = true, key = 'resident', continuing = false) {
     const stop = stopById.get(id);
@@ -349,8 +415,10 @@ export async function openLifeTour(initialStoryId, trigger, { overview: showOver
     }
     if (selected !== id && !continuing) clearTrail();
     selected = id; guest = key; moveFocus = focus; lastChoice = null;
+    if (guest !== 'resident' || pendingMarketHost !== id) pendingMarketHost = null;
     showRoutes();
     dialog.dataset.view = 'walking'; dialog.dataset.stop = id; dialog.dataset.guest = key;
+    updateCalls();
     talk.hidden = true; talk.replaceChildren();
     hint.textContent = `去找${personName(stop, guest)}…`;
     live.textContent = hint.textContent;
@@ -363,6 +431,7 @@ export async function openLifeTour(initialStoryId, trigger, { overview: showOver
     const former = selected;
     clearTrail();
     selected = null; guest = 'resident'; lastChoice = null;
+    pendingMarketHost = null;
     delete dialog.dataset.stop; delete dialog.dataset.guest;
     dialog.dataset.view = 'overview';
     talk.hidden = true; talk.replaceChildren(); showInvitation(); showRoutes(); updateButtons(); updateStatic();
@@ -381,6 +450,7 @@ export async function openLifeTour(initialStoryId, trigger, { overview: showOver
     old?.destroy();
     stage.querySelector('.lt-static').hidden = false;
     pauseButton.hidden = true;
+    updateCalls();
     const photo = dialog.querySelector('[data-life-photo]');
     if (photo) photo.innerHTML = `${icon('camera')} 製作地圖明信片`;
     import('./atlas/geometry.js').then(({districtShapes}) => {
@@ -426,7 +496,7 @@ export async function openLifeTour(initialStoryId, trigger, { overview: showOver
   }
   function album() {
     loadStamps(); updateButtons();
-    openMini('我的散步手帖', `<p class="lt-album-copy">${heldStamps.size === lifeStops.length ? '37 枚街景章都在這裡了。挑一枚，再去見見那位街坊。' : `與各區街坊完成一件小事，收下一枚街景章。已收集 ${heldStamps.size}／${lifeStops.length}。`}</p><div class="lt-album-grid">${lifeStops.map(stop => {
+    openMini('我的散步手帖', `${marketStory.journal()}<p class="lt-album-copy">${heldStamps.size === lifeStops.length ? '37 枚街景章都在這裡了。挑一枚，再去見見那位街坊。' : `與各區街坊完成一件小事，收下一枚街景章。已收集 ${heldStamps.size}／${lifeStops.length}。`}</p><div class="lt-album-grid">${lifeStops.map(stop => {
       const card = encounters[stop.id], has = heldStamps.has(stop.id);
       return `<button type="button" data-life-album-stop="${stop.id}" data-collected="${has}" style="${cardStyle(card)}" aria-label="${districtName(stop)}，${has ? '已收集' : '待收集'}，${escape(card.stamp)}，前往街區">${emblem(card)}<small>${districtName(stop)} · ${has ? '已收集' : '待收集'}</small><strong>${escape(card.stamp)}</strong></button>`;
     }).join('')}</div>`, 'album');
@@ -447,6 +517,7 @@ export async function openLifeTour(initialStoryId, trigger, { overview: showOver
   function close() {
     if (disposed) return;
     disposed = true;
+    clearInterval(vendorTimer); rememberPanel(null);
     clearTrail();
     if (mini.open) mini.close();
     if (dialog.open) dialog.close();
@@ -457,6 +528,14 @@ export async function openLifeTour(initialStoryId, trigger, { overview: showOver
     window.dispatchEvent(new CustomEvent('life-tour-close'));
   }
   mini.addEventListener('click', e => { if (e.target === mini) mini.close(); });
+  mini.addEventListener('close', () => {
+    if (!mini.open && mini.dataset.kind === 'market-story') {
+      rememberPanel(null);
+      if (!disposed && dialog.contains(document.activeElement) && document.activeElement.closest('.lt-mini')) {
+        (dialog.querySelector('.lt-talk:not([hidden]) [data-market-action="resume"]') || calls.querySelector('[data-market-vendor]'))?.focus({preventScroll:true});
+      }
+    }
+  });
   mini.addEventListener('input', event => {
     if (event.target.matches('[data-life-search]')) filterDistricts(event.target.value);
   });
@@ -479,7 +558,10 @@ export async function openLifeTour(initialStoryId, trigger, { overview: showOver
     const button = event.target.closest('button');
     if (!button) return;
     const d = button.dataset;
-    if ('lifeDistricts' in d) districtMenu();
+    if ('marketVendor' in d) marketStory.openVendor(d.marketVendor);
+    else if ('marketSwitch' in d) rotateVendor(true);
+    else if ('marketAction' in d) marketStory.handle(d.marketAction,button);
+    else if ('lifeDistricts' in d) districtMenu();
     else if ('lifeDistrict' in d) { mini.close(); street(d.lifeDistrict,true); }
     else if ('lifeOverview' in d) overview();
     else if ('lifeEnter' in d) street(marketId,true);
@@ -546,11 +628,15 @@ export async function openLifeTour(initialStoryId, trigger, { overview: showOver
   updatePause();
   dialog.showModal();
   dialog.querySelector('#lt-title').focus({preventScroll:true});
+  if (selected && resumePanel === selected && marketStory.phase() !== 'idle') marketStory.handle('resume');
   try {
-    const {createLifeWorld} = await import('./life-world.js?v=30.0.0');
+    const {createLifeWorld} = await import('./life-world.js?v=31.0.0');
     if (disposed) return;
     const initialStreet = dialog.dataset.view === 'street' ? selected : null;
-    const created = await createLifeWorld({canvas,initialStreet,onChoose:id => street(id,true),onExit:id => travelTo(id),onResident:(id,key) => choose(id,true,key),onArrive:arrive,onError:fallback,
+    const created = await createLifeWorld({canvas,initialStreet,onChoose:id => street(id,true),onExit:id => travelTo(id),onMarketVendor:key => marketStory.openVendor(key),onResident:(id,key) => {
+      if (key === 'resident' && selected === id && marketStory.entry(id)) marketStory.handle('resume');
+      else choose(id,true,key);
+    },onArrive:arrive,onError:fallback,
       onSelectLabels:(rows, protectedAreas = []) => {
         if (!disposed && !textMode && dialog.dataset.view === 'overview') {
           labelRows = rows;
