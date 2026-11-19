@@ -1,0 +1,11 @@
+#life-photo { margin:auto; padding:0; width:min(650px,calc(100% - 22px)); max-width:none; max-height:94dvh; border:1px solid #9a9b7e; border-radius:18px; background:#fbf7e9; color:#203c32; box-shadow:0 16px 75px #102e2d69; font-family:"PingFang TC","Microsoft JhengHei",sans-serif; }
+#life-photo::backdrop { background:#173e39ad; }
+#life-photo .lp-sheet { display:grid; grid-template-rows:auto minmax(0,1fr) auto; max-height:93dvh; }
+#life-photo header,#life-photo footer { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px clamp(12px,3vw,22px); }
+#life-photo h2 { margin:0; font-size:clamp(18px,3.1vw,24px); }
+#life-photo button { width:43px; height:43px; border:1px solid #a4af9f; border-radius:50%; background:transparent; color:inherit; cursor:pointer; }
+#life-photo .lp-print { min-height:0; overflow:auto; text-align:center; background:#dce0cf; padding:8px; scrollbar-width:thin; }
+#life-photo img { display:block; max-height:max(50dvh,calc(93dvh - 145px)); max-width:100%; width:auto; height:auto; margin:auto; box-shadow:0 2px 9px #33473e40; }
+#life-photo footer small { color:#405747; font-size:13px; }
+#life-photo footer a { display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:0 16px; flex-shrink:0; background:#1e5347; color:white; border-radius:9px; font-weight:bold; text-decoration:none; }
+#life-photo [hidden] { display:none !important; }

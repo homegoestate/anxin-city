@@ -102,12 +102,12 @@ updateCount();
 const entryParams=new URLSearchParams(location.search),entry=entryParams.get('start');
 // Other established deep links open their own experience immediately.
 let tourOpening = false;
-async function showLifeTour(id, trigger) {
+async function showLifeTour(id, trigger, options = {}) {
   if (tourOpening) return;
   tourOpening = true;
   try {
-    const { openLifeTour } = await import('./life-tour.js?v=25.0.0');
-    await openLifeTour(id, trigger);
+    const { openLifeTour } = await import('./life-tour.js?v=26.0.0');
+    await openLifeTour(id, trigger, options);
   } catch (error) {
     console.error('台南街區載入失敗', error);
     if (!scene) startCity();
@@ -135,7 +135,7 @@ document.addEventListener('click', event => {
   const link = event.target.closest('#open-life-tour, a[data-life-stop]');
   if (!link || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return;
   event.preventDefault();
-  showLifeTour(link.dataset.lifeStop, link);
+  showLifeTour(link.dataset.lifeStop, link, {overview: !link.dataset.lifeStop});
 });
 window.addEventListener('life-tour-close', () => {
   if (!scene) startCity();
@@ -148,7 +148,7 @@ window.addEventListener('life-tour-close', () => {
   }
 });
 if (entry === 'life' || (!entry && !location.hash && entryParams.get('view') !== 'city')) {
-  showLifeTour(entryParams.get('scene'), lifeEntry);
+  showLifeTour(entryParams.get('scene'), lifeEntry, {overview: entry === 'life'});
 } else {
   startCity();
 }

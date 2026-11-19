@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { streetSetting, marketFront, orchardFront, laneFront, hillsideFront, watersideFront, saltFront } from './life-streetscape.js';
 
 // All models are built in local coordinates, with the front of each shop facing +Z.
 // Combining their coloured surfaces keeps even a whole market to one draw call.
@@ -9,8 +10,13 @@ export function createModelKit() {
   const soft = new THREE.IcosahedronGeometry(1, 1);
   const cylinder = new THREE.CylinderGeometry(1, 1, 1, 12);
   const cone = new THREE.ConeGeometry(1, 1, 9);
+  const tapered = new THREE.CylinderGeometry(.79, 1, 1, 14);
+  const hoopShape = new THREE.TorusGeometry(1,.080,6,22);
+  const letterPlane = new THREE.PlaneGeometry();
+  const letterCells=new Map();
+  let paper,pen,ink;
   const simpleMaterials = new Map();
-  const sources = new Set([cube, ball, crown, soft, cylinder, cone]);
+  const sources = new Set([cube, ball, crown, soft, cylinder, cone,tapered,hoopShape,letterPlane]);
   const surface = new THREE.MeshLambertMaterial({ vertexColors: true });
   const v = new THREE.Vector3(), normal = new THREE.Vector3(), transform = new THREE.Matrix4(), normalMatrix = new THREE.Matrix3();
   function part(parent, geometry, color, x, y, z, sx=1, sy=1, sz=1) {
@@ -27,6 +33,32 @@ export function createModelKit() {
   const rock = (p,c,x,y,z,w,h,d,round=false) => part(p,round?soft:crown,c,x,y,z,w,h,d);
   const post = (p,c,x,y,z,r,h) => part(p,cylinder,c,x,y,z,r,h,r);
   const peak = (p,c,x,y,z,rx,h,rz) => part(p,cone,c,x,y,z,rx,h,rz);
+  const taper = (p,c,x,y,z,rx,h,rz) => part(p,tapered,c,x,y,z,rx,h,rz);
+  const hoop = (p,c,x,y,z,rx,ry,thick=rx) => part(p,hoopShape,c,x,y,z,rx,ry,thick);
+  function letters(p,word,x,y,z,w,h,color='#fff2d0') {
+    if(!ink){
+      paper=document.createElement('canvas'); paper.width=2048; paper.height=1024;
+      pen=paper.getContext('2d');
+      const map=new THREE.CanvasTexture(paper);
+      map.colorSpace=THREE.SRGBColorSpace; map.anisotropy=4;
+      ink=new THREE.MeshBasicMaterial({map,alphaTest:.20,polygonOffset:true,polygonOffsetFactor:-1});
+    }
+    const key=word+color;
+    if(!letterCells.has(key)){
+      const index=letterCells.size;
+      if(index>=64) throw new Error('招牌字版超出容量');
+      const left=(index%8)*256,top=Math.floor(index/8)*128;
+      pen.fillStyle=color; pen.textAlign='center'; pen.textBaseline='middle';
+      pen.font='bold 93px "Microsoft JhengHei", "Noto Sans TC", sans-serif';
+      pen.fillText(word,left+128,top+66,244);
+      ink.map.needsUpdate=true;
+      letterCells.set(key,[left/2048,1-(top+128)/1024]);
+    }
+    const m=new THREE.Mesh(letterPlane,ink);
+    m.userData.letters=letterCells.get(key);
+    m.position.set(x,y,z); m.scale.set(w,h,1); p.add(m);
+    return m;
+  }
   const group = (p,x=0,y=0,z=0) => { const g=new THREE.Group(); g.position.set(x,y,z); p.add(g); return g; };
   function rod(p,c,a,b,r) {
     const start=new THREE.Vector3(...a), end=new THREE.Vector3(...b), d=end.sub(start);
@@ -38,10 +70,19 @@ export function createModelKit() {
   function bake(root) {
     root.updateWorldMatrix(true,true);
     const inverse = root.matrixWorld.clone().invert();
-    const positions=[], normals=[], colors=[], indices=[];
+    const positions=[], normals=[], colors=[], indices=[],glyphPositions=[],glyphUV=[],glyphIndices=[];
     root.traverse(obj=>{
       if (!obj.isMesh) return;
       transform.multiplyMatrices(inverse,obj.matrixWorld);
+      if(obj.userData.letters){
+        const [u,v0]=obj.userData.letters,geo=obj.geometry,points=geo.getAttribute('position'),uv=geo.getAttribute('uv'),start=glyphPositions.length/3;
+        for(let i=0;i<points.count;i++){
+          v.fromBufferAttribute(points,i).applyMatrix4(transform); glyphPositions.push(v.x,v.y,v.z);
+          glyphUV.push(u+uv.getX(i)/8,v0+uv.getY(i)/8);
+        }
+        for(const i of geo.index.array) glyphIndices.push(start+i);
+        return;
+      }
       normalMatrix.getNormalMatrix(transform);
       const geo=obj.geometry, start=positions.length/3;
       const points=geo.getAttribute('position'), ns=geo.getAttribute('normal'), color=obj.material.color;
@@ -57,20 +98,24 @@ export function createModelKit() {
     for(const [name,array] of [['position',positions],['normal',normals],['color',colors]]) geo.setAttribute(name,new THREE.Float32BufferAttribute(array,3));
     geo.setIndex(indices);
     geo.computeBoundingSphere();
-    return new THREE.Mesh(geo,surface);
+    const mesh=new THREE.Mesh(geo,surface);
+    if(glyphPositions.length){
+      const glyph=new THREE.BufferGeometry();
+      glyph.setAttribute('position',new THREE.Float32BufferAttribute(glyphPositions,3));
+      glyph.setAttribute('uv',new THREE.Float32BufferAttribute(glyphUV,2));
+      glyph.setIndex(glyphIndices); glyph.computeBoundingSphere();
+      mesh.add(new THREE.Mesh(glyph,ink));
+    }
+    return mesh;
   }
   function releaseSources() {
     for(const source of sources) source.dispose();
     for(const material of simpleMaterials.values()) material.dispose();
   }
-  return {box,oval,rock,post,peak,rod,group,part,bake,releaseSources};
+  return {box,oval,rock,post,peak,taper,hoop,letters,rod,group,part,bake,releaseSources};
 }
 
 const wood=0x9b6440, darkwood=0x664334, cream=0xffe4ae, spruce=0x376d58;
-const yards = {
-  'shuixian-morning': 0xcba87b, 'yujing-morning':0xb7ba76, 'anping-afternoon':0xcdab8d,
-  'dongshan-afternoon':0x9cab76, 'yanshui-evening':0xb4b299, 'beimen-evening':0xc9baa0
-};
 
 function roof(k,p,x,y,z,w,h,d,color,trim) {
   const slope=Math.atan2(h,d/2), run=Math.hypot(h,d/2);
@@ -97,11 +142,12 @@ function tree(k,p,x,z,s=1,fruit=false) {
   k.post(t,wood,0,.92,0,.19,1.87);
   k.rod(t,wood,[0,1.12,0],[-.54,1.84,0],.12);
   k.rod(t,wood,[0,1.25,0],[.61,1.93,.04],.13);
-  [[-.65,2.1,.04,.85,0x548754],[.58,2.18,-.02,1,0x699758],[0,2.69,-.15,1.11,0x88a65d],[0,2.07,.36,.76,0x558855]].forEach(([tx,ty,tz,r,c])=>{
-    const leaf=k.rock(t,c,tx,ty,tz,r,r*.81,r*.79,true); leaf.rotation.z=tx;
+  [[-.66,2.09,.06,.81,0x4e855d],[.58,2.19,-.04,.91,0x689758],[0,2.59,-.15,1.07,0x87a75c],[0,2.04,.35,.76,0x52845a],[-.61,2.49,.03,.53,0x779d5e],[.54,2.59,.14,.51,0x9bad68]].forEach(([tx,ty,tz,r,c])=>{
+    const leaf=k.rock(t,c,tx,ty,tz,r,r*.72,r*.79,true); leaf.rotation.z=tx*.45;
   });
   for(const [a,b,c,twist] of [[-.83,2.23,.53,-.82],[-.70,2.49,.50,.9],[.51,2.54,.56,-.69],[1.01,2.30,.45,.9],[.12,2.94,.50,.92],[-.16,2.20,.87,-1]]){
-    const leaf=k.oval(t,0x83a45f,a,b,c,.078,.20,.042); leaf.rotation.z=twist;
+    const leaf=k.rock(t,0x8caf65,a,b,c,.099,.19,.063,true); leaf.rotation.z=twist;
+    const second=k.rock(t,0x779c59,a+.11,b-.04,c-.022,.081,.15,.047,true);second.rotation.z=-twist;
   }
   if(fruit) [[-.84,1.88,.5],[-.46,2.19,.74],[.1,2.04,.87],[.7,2.16,.68],[.94,1.94,.5],[.19,2.65,.62]].forEach(([a,b,c],i)=>produce(k,t,a,b,c,i%2?0xf4b53c:0xe78234,true));
 }
@@ -122,7 +168,12 @@ function stall(k,p,x,z,cover,produceColor) {
 function lantern(k,p,x,y,z,s=1) {
   k.post(p,wood,x,y+s*.45,z,.026*s,.57*s);
   k.oval(p,0xcb5135,x,y,z,.24*s,.30*s,.24*s);
+  for(const side of [-1,1]){
+    const seam=k.oval(p,0xee9665,x+side*.115*s,y,z+.17*s,.018*s,.224*s,.018*s);
+    seam.rotation.z=side*.045;
+  }
   k.post(p,0xffc367,x,y+.26*s,z,.16*s,.07*s);
+  k.post(p,0xdda44e,x,y-.26*s,z,.13*s,.063*s);
   k.post(p,0xf5b34f,x,y-.36*s,z,.05*s,.19*s);
 }
 function cottage(k,p,x,z,w,d,wall,tiles) {
@@ -138,6 +189,26 @@ function cottage(k,p,x,z,w,d,wall,tiles) {
   }
 }
 
+function templeRoof(k,p,x,y,z,w,h,d,c,edge) {
+  // Across the eaves the roof sweeps up into four swallowtails. Parallel
+  // ceramic rolls follow the curve, including the curved corners of each tier.
+  const strips=Math.ceil(w/.22);
+  for(let i=0;i<strips;i++){
+    const t=(i+.5)/strips*2-1,xx=x+t*w/2,rise=.27*Math.pow(Math.abs(t),3.6);
+    const depth=d*(1+.075*Math.abs(t));
+    for(const s of [-1,1]){
+      const points=[[xx,y+h+rise*.44,z],[xx,y+h*.30+rise*.72,z+s*depth*.25],[xx,y+rise,z+s*depth*.5]];
+      for(let j=0;j<2;j++){
+        const a=points[j],b=points[j+1],dy=a[1]-b[1],dz=b[2]-a[2];
+        const panel=k.box(p,c,xx,(a[1]+b[1])/2,(a[2]+b[2])/2,w/strips+.022,.12,Math.hypot(dy,dz)+.07);
+        panel.rotation.x=Math.atan(dy/dz);
+        k.rod(p,i%4===0?edge:c,[a[0],a[1]+.073,a[2]],[b[0],b[1]+.073,b[2]],.052);
+      }
+      k.box(p,edge,xx,y+rise-.015,z+s*depth*.50,w/strips+.025,.12,.15);
+    }
+    k.box(p,edge,xx,y+h+rise*.44+.07,z,w/strips+.027,.15,.18);
+  }
+}
 function market(k,p) {
   const temple=k.group(p,0,0,-1.62);
   k.box(temple,0xb37d58,0,.15,0,4.65,.3,2.38);
@@ -153,17 +224,19 @@ function market(k,p) {
     for(const dx of [-.18,0,.18]) k.box(temple,0xd6a55b,x+dx,1.34,.679,.042,.75,.04);
     for(const dy of [-.22,0,.22]) k.box(temple,0xd6a55b,x,1.34+dy,.689,.55,.042,.04);
   }
-  k.box(temple,0x5b795a,0,2.02,1.09,1.05,.34,.12);
-  for(const x of [-.28,0,.28]) k.box(temple,0xffce70,x,2.03,1.16,.11,.14,.032);
-  roof(k,temple,0,2.48,0,4.66,.84,2.78,0xb45b47,0xe29756);
-  roof(k,temple,0,3.12,-.06,3.36,.55,1.29,0x4e8476,0xe6a64b);
+  for(const x of [-1.76,-1.26,-.76,-.26,.26,.76,1.26,1.76]){
+    k.box(temple,0x4f8374,x,2.40,1.15,.43,.16,.19);
+    k.oval(temple,0xedb568,x,2.40,1.25,.107,.055,.023);
+  }
+  templeRoof(k,temple,0,2.48,0,4.66,.84,2.78,0xb4513e,0xe9a45c);
+  templeRoof(k,temple,0,3.12,-.06,3.36,.55,1.29,0x467b71,0xe4ad63);
   for(const side of [-1,1]){
     k.rod(temple,0xf2bd65,[side*1.49,3.7,-.06],[side*1.85,4,-.06],.10);
     k.rod(temple,0xf2bc64,[side*2.17,2.53,1.38],[side*2.48,2.79,1.38],.09);
     lantern(k,temple,side*1.34,1.84,1.20,.84);
   }
-  stall(k,p,-3,.91,0xc9684b,0x6c9350);
-  stall(k,p,3.04,.7,0x6a9991,0xdf963c);
+  stall(k,p,-3,.68,0xc95c49,0x6c9350);
+  stall(k,p,3.04,.49,0x568a82,0xdf963c);
   for(let i=0;i<3;i++) k.box(p,0xe5c497,0,.064,(i*.56-.24),1.38,.125,.48);
 }
 function mango(k,p){
@@ -186,7 +259,7 @@ function alley(k,p){
   cottage(k,p,1.82,-1.81,2.89,1.81,0xe5b885,0x657c76);
   brick(k,p,-3.31,.16,1.76,1.55);
   brick(k,p,3.24,-.01,1.47,1.5);
-  const gate=k.group(p,-1.45,0,-.27);
+  const gate=k.group(p,-.59,.05,-.27);
   k.box(gate,darkwood,0,.91,.11,1.40,1.83,.12);
   k.oval(gate,0xc79247,0,1.08,.22,.51,.5,.085);
   for(let i=0;i<9;i++){
@@ -240,11 +313,14 @@ function coffee(k,p){
   }
 }
 function harbor(k,p){
-  k.oval(p,0x9fc4ad,0,.055,-.73,4.55,.23,2.40);
-  k.oval(p,0x659c99,0,.17,-.73,4.38,.18,2.21);
-  for(let i=0;i<11;i++){
-    const x=(i%6-2.5)*1.23,z=-2.13+Math.floor(i/6)*2.42+(i%2)*.13;
-    k.box(p,0xc0ddbd,x,.333,z,.43,.045,.045);
+  k.box(p,0x57958f,0,.17,-.69,5.44,.26,4.28);
+  for(const side of [-1,1]){
+    k.box(p,0x969c83,side*3.26,.16,-.69,1.17,.29,4.34);
+    for(let n=0;n<8;n++)k.box(p,n%3?0xbab79a:0xc6c2a4,side*2.79,.337,-2.51+n*.52,.37,.14,.498);
+  }
+  for(let i=0;i<12;i++){
+    const x=(i%4-1.5)*1.12,z=-2.28+Math.floor(i/4)*1.56+(i%2)*.17;
+    k.box(p,i%3?0x85b7a6:0xb4d2b9,x,.308,z,.45+(i%2)*.19,.017,.035);
   }
   const span=2.98, n=15;
   const deck=x=>.48+1.16*(1-(x/span)**2);
@@ -268,8 +344,12 @@ function harbor(k,p){
     const tx=x+(i-1.5)*.13;
     k.rod(p,i%2?0x809757:0xa19c5a,[tx,.20,-.12],[tx+(i-1.5)*.12,.72+(i%2)*.22,-.1],.033);
   }
-  const skiff=k.group(p,2.2,.33,-1.93); skiff.rotation.y=-.20;
-  k.oval(skiff,0x9c6946,0,.14,0,.95,.16,.24); k.oval(skiff,0xc69360,0,.25,0,.64,.06,.17);
+  const skiff=k.group(p,.26,.31,.75); skiff.rotation.y=-.34;
+  k.oval(skiff,0x8b5943,0,.13,0,.95,.15,.28); k.oval(skiff,0xd2a67b,0,.225,0,.78,.079,.218);
+  k.oval(skiff,0x806a54,0,.250,0,.63,.064,.17);
+  for(const dx of [-.39,.22])k.box(skiff,0xbd9065,dx,.306,0,.115,.047,.34);
+  k.rod(skiff,0xa5794f,[-.74,.36,-.27],[.63,.36,.30],.029);
+  const paddle=k.oval(skiff,wood,.66,.36,.31,.19,.037,.071);paddle.rotation.y=-.42;
   tree(k,p,-3.51,-2.63,.78);
 }
 function salt(k,p){
@@ -278,8 +358,9 @@ function salt(k,p){
     const x=-2.85+2.24*col,z=-1.50+1.82*r;
     k.box(p,[0x91b7b1,0x94bdbe,0xb3cab9,0xa6c6bd,0x86aca8,0xafccbf][r*3+col],x,.22,z,2.05,.085,1.61);
     if((r+col)%2===0) {
-      k.peak(p,0xece5c6,x-.22,.59,z,.63,.72,.53);
-      k.peak(p,0xfff2d9,x+.17,.47,z+.13,.44,.50,.36);
+      k.peak(p,0xf0e9d3,x-.22,.59,z,.63,.72,.53);
+      k.peak(p,0xfff3df,x+.17,.47,z+.13,.44,.50,.36);
+      for(const [dx,dz,s] of [[-.60,.13,.13],[.40,.22,.105],[-.17,.40,.083],[-.47,.32,.059]]) k.rock(p,0xf1e7cf,x+dx,.28,z+dz,s,.82*s,.72*s);
     } else k.box(p,0xd2e4cd,x,.27,z,.82,.031,.07);
   }
   const hut=k.group(p,3.00,0,-1.54);
@@ -299,78 +380,145 @@ function salt(k,p){
   k.box(p,wood,-3.42,.25,.88,.64,.13,.18);
 }
 
-const builders={'shuixian-morning':market,'yujing-morning':mango,'anping-afternoon':alley,'dongshan-afternoon':coffee,'yanshui-evening':harbor,'beimen-evening':salt};
+const builders={'shuixian-morning':[market,marketFront],'yujing-morning':[mango,orchardFront],
+  'anping-afternoon':[alley,laneFront],'dongshan-afternoon':[coffee,hillsideFront],
+  'yanshui-evening':[harbor,watersideFront],'beimen-evening':[salt,saltFront]};
 export function makeLandmark(k,id) {
   const p=new THREE.Group();
-  k.oval(p,yards[id],0,.02,-.05,4.92,.14,3.46);
-  // The pale southern lane is shared by the two characters and stays clear of the scenery.
-  k.oval(p,0xe2cf9f,0,.10,2.44,3.99,.10,.82);
-  builders[id](k,p);
+  streetSetting(k,p,id);
+  for(const build of builders[id])build(k,p);
   return k.bake(p);
 }
 
 const outfits={
-  'shuixian-morning':[0xbc7c64,0x778563,0x554034,'bun'],
-  'yujing-morning':[0xe0af56,0x667e68,0x553d32,'brim'],
-  'anping-afternoon':[0xb8765f,0x758d81,0x4f3b32,'bob'],
-  'dongshan-afternoon':[0xe0d5ac,0x617f67,0x554238,'bun'],
-  'yanshui-evening':[0xdfccad,0x647a71,0x9d9b86,'silver'],
-  'beimen-evening':[0x9cb9aa,0x738472,0x4b4740,'brim'],
-  player:[0x417764,0xcaba91,0x473b33,'wave']
+  'shuixian-morning':[0xc06f5a,0x66775f,0x523b36,'bun'],
+  'yujing-morning':[0xe0af56,0x677f75,0x553d32,'brim'],
+  'anping-afternoon':[0xba6e5f,0x66827c,0x4f3b32,'bob'],
+  'dongshan-afternoon':[0xdbc6a2,0x567d68,0x554238,'bun'],
+  'yanshui-evening':[0xcbb48c,0x546e6d,0xb3aaa0,'silver'],
+  'beimen-evening':[0x80aaa4,0x707d65,0x4b4740,'brim'],
+  player:[0x29796f,0xc7a980,0x493f39,'cap']
 };
-export function makePerson(k,id,animated=false) {
-  const [shirt,trousers,hair,style]=outfits[id],skin=0xe8ad81;
+const neighbors={
+  'shuixian-morning':[0x719aa6,0xd0b694,0x4c4138,'bob'],
+  'yujing-morning':[0xb58a61,0x638b91,0x524033,'cap'],
+  'anping-afternoon':[0xb19cb7,0x6e827b,0x593d34,'braid'],
+  'dongshan-afternoon':[0x799eab,0xa99970,0x674a3a,'wave'],
+  'yanshui-evening':[0xa89bb2,0x637e75,0x5d463b,'bob'],
+  'beimen-evening':[0x86a8b1,0xc1a67e,0x543d32,'cap'],
+};
+export function makePerson(k,id,animated=false,appearance=0) {
+  const variant=typeof appearance==='number'?appearance:appearance?.variant||0;
+  const pedestrian=variant>0,player=id==='player',resident=!pedestrian&&!player;
+  const [shirt,trousers,hair,style]=variant===2?[0xc69448,0x63778a,0x685246,'wave']:variant===1?(neighbors[id]||outfits.player):(outfits[id]||outfits.player);
+  const skin=variant===2?0xc88d70:variant===1?0xf1bb98:id==='beimen-evening'?0xd8a17e:0xe6ad89;
   const root=new THREE.Group(), body=new THREE.Group(), legs=[], arms=[];
   const torso=new THREE.Group();
-  k.oval(torso,shirt,0,.97,0,.36,.49,.257);
+  const overshirt=k.taper(torso,shirt,0,1.03,0,.348,.65,.232);
+  overshirt.rotation.z=Math.PI;
+  k.oval(torso,shirt,0,1.265,0,.343,.175,.224);
+  k.oval(torso,trousers,0,.704,0,.295,.131,.205);
   k.oval(torso,skin,0,1.44,0,.137,.14,.12);
-  k.oval(torso,skin,0,1.80,0,.389,.437,.343);
+  k.oval(torso,skin,0,1.79,0,.375,.419,.332);
   for(const side of [-1,1]){
-    k.oval(torso,skin,side*.371,1.78,0,.073,.112,.064);
-    k.oval(torso,0x483e36,side*.14,1.84,.307,.04,.055,.025);
-    k.oval(torso,0xffebd7,side*.14-.009,1.863,.329,.012,.014,.009);
+    k.oval(torso,skin,side*.357,1.77,0,.067,.089,.065);
+    k.oval(torso,0xeb9f84,side*.373,1.765,.044,.035,.045,.024);
+    k.oval(torso,0x493d39,side*.136,1.833,.302,.041,.053,.029);
+    k.oval(torso,0xffebd7,side*.136-.012,1.852,.329,.013,.014,.009);
+    const brow=k.oval(torso,hair,side*.144,1.922,.282,.071,.018,.020);
+    brow.rotation.z=side*.13;
     k.oval(torso,0xde937d,side*.235,1.70,.258,.059,.025,.020);
+    if(!player){
+      const collar=k.oval(torso,variant===2?0xf2d28b:0xf1dcba,side*.092,1.36,.176,.068,.079,.032);
+      collar.rotation.z=side*.56;
+    }
   }
-  k.oval(torso,skin,0,1.75,.34,.06,.061,.043);
+  k.oval(torso,skin,0,1.75,.331,.06,.061,.053);
   k.rod(torso,0x9f6550,[-.064,1.66,.317],[.00,1.645,.327],.012);
   k.rod(torso,0x9f6550,[.00,1.645,.327],[.064,1.66,.317],.012);
-  k.oval(torso,hair,0,1.99,-.058,.405,.286,.335);
-  for(let i=0;i<3;i++){
-    const lock=k.oval(torso,hair,-.20+i*.18,2.035-(i%2)*.061,.199,.154,.115,.137);
-    lock.rotation.z=-.34;
+  k.oval(torso,hair,0,1.98,-.060,.389,.267,.329);
+  for(const [dx,dy,w,h,tilt] of [[-.24,1.974,.12,.136,-.60],[-.05,2.039,.208,.102,.31],[.173,2.014,.160,.109,.44],[.276,1.953,.096,.109,.47]]){
+    const lock=k.oval(torso,hair,dx,dy,.184,w,h,.131);
+    lock.rotation.z=tilt;
   }
-  if(style==='bun') k.oval(torso,hair,.02,2.22,-.20,.217,.193,.19);
-  if(style==='bob') for(const side of [-1,1]) k.oval(torso,hair,.318*side,1.84,-.035,.108,.272,.223);
+  if(style==='bun'){
+    k.oval(torso,0xb7654c,.019,2.15,-.19,.184,.093,.17);
+    k.oval(torso,hair,.028,2.265,-.24,.204,.175,.19);
+    k.rod(torso,0xdeaa72,[-.13,2.19,-.13],[.24,2.31,-.13],.016);
+  }
+  if(style==='bob'||style==='braid'){
+    for(const side of [-1,1]) k.oval(torso,hair,.308*side,1.82,-.059,.094,.233,.203);
+    k.oval(torso,hair,0,1.81,-.179,.348,.24,.18);
+    if(style==='braid')for(const dx of [-.24,.24]){
+      for(let i=0;i<3;i++)k.oval(torso,hair,dx,1.71-i*.082,-.15,.075-i*.012,.065,.077);
+      k.oval(torso,0xb88789,dx,1.53,-.15,.059,.029,.059);
+    }
+  }
+  if(style==='cap'){
+    const cap=player?0xedb546:0x698ba2;
+    k.oval(torso,cap,.01,2.099,-.010,.383,.176,.337);
+    k.oval(torso,cap,.029,2.060,.253,.306,.044,.236);
+    k.oval(torso,player?0xc98543:0x587682,.01,2.264,-.008,.042,.029,.046);
+    k.rod(torso,player?0xf2d07c:0x8eafbb,[.01,2.254,.035],[.012,2.106,.283],.009);
+  }
   if(style==='brim'){
     k.oval(torso,0xd5aa64,0,2.085,0,.52,.073,.449);
     k.oval(torso,0xe3bd77,0,2.167,-.02,.36,.18,.30);
     k.oval(torso,0x9c6a43,0,2.137,0,.36,.041,.308);
   }
-  if(style==='silver') for(const s of [-1,1]) k.rod(torso,hair,[s*.09,1.953,.292],[s*.21,1.958,.25],.022);
-  if(id==='player'){
-    k.oval(torso,cream,0,1.05,.182,.183,.35,.083);
+  if(style==='silver'){
+    for(const s of [-1,1])k.hoop(torso,0x716857,s*.139,1.836,.329,.094,.072,.12);
+    k.rod(torso,0x716857,[-.046,1.846,.342],[.046,1.846,.342],.011);
+  }
+  if(player){
+    k.taper(torso,cream,0,1.036,.153,.164,.58,.092);
+    for(const yy of [.95,1.02,1.09])k.box(torso,0x97a99a,0,yy,.245,.20,.018,.019);
+    for(const s of [-1,1]){
+      const lapel=k.oval(torso,0x579187,s*.128,1.296,.18,.072,.105,.038);
+      lapel.rotation.z=s*.44;
+    }
     k.rod(torso,0xaa7e4c,[.209,1.32,.176],[-.27,.76,.221],.043);
     k.box(torso,0xb7854c,-.285,.745,.213,.31,.25,.12);
     k.box(torso,0xe4b56f,-.285,.796,.28,.30,.064,.037);
-  } else if(['shuixian-morning','dongshan-afternoon'].includes(id)) {
-    k.oval(torso,id==='shuixian-morning'?0x91aa79:0x567660,0,.94,.19,.264,.324,.084);
-    k.box(torso,cream,0,.98,.276,.132,.072,.021);
+    k.box(torso,cream,-.285,.773,.304,.043,.041,.024);
+  }else if(resident&&['shuixian-morning','dongshan-afternoon'].includes(id)) {
+    const apron=id==='shuixian-morning'?0x87a181:0x547c69;
+    k.taper(torso,apron,0,.93,.135,.268,.50,.147);
+    for(const s of [-1,1])k.rod(torso,apron,[s*.118,1.15,.226],[s*.169,1.37,.145],.027);
+    k.box(torso,0xaeb793,0,.91,.276,.171,.113,.023);
+    k.box(torso,cream,0,.961,.295,.173,.018,.016);
+  }else{
+    for(let j=0;j<3;j++)k.oval(torso,cream,0,1.24-j*.13,.224,.015,.016,.013);
+    k.box(torso,variant===2?0xe1b773:shirt,-.167,1.16,.206,.115,.097,.020);
+    if(variant===2){
+      for(const s of [-1,1])k.rod(torso,0x687570,[s*.20,1.365,.14],[s*.22,1.04,.193],.032);
+      k.oval(torso,0x89928a,0,1.07,-.196,.268,.343,.144);
+    }
   }
+  if(pedestrian)body.scale.setScalar(variant===2?.92:id==='shuixian-morning'?.94:.82);
   const torsoMesh=k.bake(torso); body.add(torsoMesh);
   for(const s of [-1,1]){
     const leg=new THREE.Group(), arm=new THREE.Group(), lower=new THREE.Group(), upper=new THREE.Group();
     leg.position.set(s*.155,.70,0);
-    k.oval(lower,trousers,0,-.245,0,.13,.275,.13);
-    k.oval(lower,0x655144,0,-.574,.048,.137,.123,.20);
+    k.taper(lower,trousers,0,-.245,0,.124,.49,.121).rotation.z=Math.PI;
+    k.oval(lower,trousers,0,-.027,0,.134,.11,.137);
+    k.taper(lower,player||variant===1?0xc3af8e:trousers,0,-.464,0,.117,.071,.12);
+    k.oval(lower,cream,0,-.525,.014,.103,.078,.11);
+    const shoe=player?0xf3d9a7:variant===1?0xc49169:0x795d49;
+    k.oval(lower,shoe,0,-.598,.059,.132,.090,.194);
+    k.oval(lower,player?0xac8b6e:0x66564a,0,-.651,.057,.132,.041,.193);
+    for(const j of [0,1])k.box(lower,0xe6cdac,0,-.533,.105+j*.054,.094,.012,.017);
     leg.add(k.bake(lower)); body.add(leg); legs.push(leg);
     arm.position.set(s*.32,1.22,0);
-    k.oval(upper,shirt,s*.045,-.166,0,.117,.215,.121);
-    k.oval(upper,skin,s*.082,-.405,.034,.094,.112,.097);
-    if(s>0&&id==='dongshan-afternoon'){
+    const sleeve=k.oval(upper,shirt,s*.039,-.146,0,.121,.187,.125);sleeve.rotation.z=s*.15;
+    k.oval(upper,skin,s*.075,-.304,.021,.072,.143,.079);
+    k.oval(upper,skin,s*.082,-.432,.055,.084,.099,.088);
+    k.oval(upper,skin,s*.043,-.411,.105,.049,.057,.047);
+    if(s>0&&resident&&id==='dongshan-afternoon'){
       k.post(upper,cream,.12,-.36,.15,.112,.163);
       k.post(upper,darkwood,.12,-.273,.15,.087,.014);
     }
-    if(s<0&&['shuixian-morning','yujing-morning','anping-afternoon'].includes(id)){
+    if(s<0&&(resident||id==='shuixian-morning'&&variant===1)&&['shuixian-morning','yujing-morning','anping-afternoon'].includes(id)){
       const basket=id!=='anping-afternoon', c=basket?0xc1985f:0xb78f62;
       for(const dx of [-.128,.128]) k.rod(upper,c,[dx-.10,-.39,.09],[dx*1.26-.10,-.55,.09],.023);
       k.box(upper,c,-.10,-.65,.10,.43,.25,.22);
