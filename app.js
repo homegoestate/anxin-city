@@ -121,7 +121,7 @@ async function showLifeTour(id, trigger, options = {}) {
   if (tourOpening) return;
   tourOpening = true;
   try {
-    const { openLifeTour } = await import('./life-tour.js?v=28.0.0');
+    const { openLifeTour } = await import('./life-tour.js?v=29.0.0');
     await openLifeTour(id, trigger, options);
   } catch (error) {
     console.error('台南街區載入失敗', error);
@@ -150,6 +150,8 @@ window.addEventListener('life-tour-stop', event => {
   const url = new URL(location.href);
   url.hash = '';
   url.searchParams.delete('view');
+  if (event.detail?.id && document.querySelector('#life-tour')?.dataset.view === 'street') url.searchParams.set('arrive','street');
+  else url.searchParams.delete('arrive');
   if (event.detail?.id) {
     url.searchParams.set('start', 'life');
     url.searchParams.set('scene', event.detail.id);
@@ -171,13 +173,14 @@ window.addEventListener('life-tour-close', () => {
   if (!url.searchParams.has('start') || url.searchParams.get('start') === 'life') {
     url.searchParams.delete('start');
     url.searchParams.delete('scene');
+    url.searchParams.delete('arrive');
     url.searchParams.set('view', 'city');
     history.replaceState(history.state, '', url);
   }
 });
 // Both historical city entrances now share this world, including when a LINE link opens a mission.
 async function enterCity(){
-  await showLifeTour(entryParams.get('scene'),lifeEntry,{overview:entry==='life'||entryParams.get('view')==='city'});
+  await showLifeTour(entryParams.get('scene'),lifeEntry,{overview:entry==='life'||entryParams.get('view')==='city',arriveStreet:entryParams.get('arrive')==='street'});
   if ((entry==='life'||!entry) && (entryParams.has('guideMonth') || entryParams.has('guideArea'))) {
     await openSeasonGuide(document.querySelector('[data-season-guide]'),entryParams.get('guideMonth'),entryParams.get('guideArea'));
     return;

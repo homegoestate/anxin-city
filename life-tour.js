@@ -4,6 +4,8 @@ import { lifeFor } from './first-day/daylife-life-data.js';
 import { dayStories } from './first-day/daylife-data.js?v=21.0.0';
 import { tainanEvents } from './tainan-events.js';
 import { eventStatus, taiwanDate } from './seasons-state.js';
+import { neighborsFor } from './street-neighbors.js?v=29.0.0';
+import { projectLabels, wireMapLabels } from './map-labels.js?v=29.0.0';
 
 const stopById = new Map(lifeStops.map(stop => [stop.id, stop]));
 const stories = new Map([...dayStories, ...districtWalks].map(story => [story.id, story]));
@@ -16,8 +18,6 @@ function nextStory(stop){
   const [id,label]=prompts[region]||prompts.city;
   return '<button type="button" data-city-mission="'+id+'">'+label+' →</button>';
 }
-const labelIds = new Set([...featuredIds, 'shanhua-morning', 'qigu-morning', 'baihe-morning', 'guiren-morning', 'longqi-morning']);
-const mobileLabelIds = new Set(['beimen-evening','xinying-morning','shanhua-morning','yujing-morning','guanmiao-morning','shuixian-morning']);
 const regionOf = new Map(tourRegions.flatMap(region => region.stops.map(stop => [stop.id, region.id])));
 const districtFeatures = { beimen: '鹽田', yujing: '果園', anping: '劍獅', 'west-central': '市場', dongshan: '咖啡園', yanshui: '月津港' };
 const statusText = { ongoing: '活動期間', upcoming: '即將開始', ended: '已結束' };
@@ -67,80 +67,6 @@ function replyHtml(stop, topic, events) {
   return `<p>${escape(stop.hello)}</p>`;
 }
 
-// A marker can sit to either side of its model. The leader always ends at the projected anchor.
-function projectLabels(layer, pins, rows, choice, keepClear = []) {
-  const width = layer.clientWidth;
-  const height = layer.clientHeight;
-  if (!width || !height) return;
-  const region = choice === 'landmarks' ? '' : choice;
-  const rects = [...keepClear];
-  const shown = new Set();
-  const pinWidth = width < 520 ? 46 : 56;
-  const pinHeight = width < 520 ? 27 : 29;
-  const compact = width < 600;
-  const dotPins = [];
-  function fits(cx, cy, w, h) {
-    const left = cx - w / 2, top = cy - h / 2, right = cx + w / 2, bottom = cy + h / 2;
-    return left >= 2 && top >= 2 && right <= width - 2 && bottom <= height - 2 &&
-      !rects.some(r => left < r.right + 2 && right > r.left - 2 && top < r.bottom + 2 && bottom > r.top - 2);
-  }
-  function placePin(pin, x, y, cx, cy, w, h, dot) {
-    pin.button.hidden = false;
-    pin.button.dataset.compact = String(dot);
-    pin.button.style.transform = `translate(${Math.round(cx - w / 2)}px,${Math.round(cy - h / 2)}px)`;
-    const distance = Math.hypot(cx - x, cy - y);
-    pin.line.hidden = dot && distance <= 11;
-    if (!pin.line.hidden) {
-      pin.line.style.width = `${distance}px`;
-      pin.line.style.transform = `translate(${x}px,${y}px) rotate(${Math.atan2(cy - y, cx - x)}rad)`;
-    }
-    rects.push({left: cx - w / 2, top: cy - h / 2, right: cx + w / 2, bottom: cy + h / 2});
-  }
-  for (const { id, x, y, visible } of rows) {
-    const pin = pins.get(id);
-    if (!pin || !visible || (region && regionOf.get(id) !== region) || !Number.isFinite(x) || !Number.isFinite(y)) continue;
-    if (choice === 'landmarks' || (!region && !(compact ? mobileLabelIds : labelIds).has(id))) {
-      dotPins.push({ id, x, y, pin });
-      continue;
-    }
-    const left = Math.max(pinWidth / 2 + 4, Math.min(width - pinWidth / 2 - 4, x));
-    const top = Math.max(pinHeight / 2 + 4, Math.min(height - pinHeight / 2 - 4, y - pinHeight / 2 - 8));
-    const yOffsets = [0, -pinHeight - 5, pinHeight + 6, -2 * (pinHeight + 5), 2 * (pinHeight + 5)];
-    const xOffsets = [0, -pinWidth / 2 - 3, pinWidth / 2 + 3, -pinWidth - 5, pinWidth + 5];
-    let placement = null;
-    for (const dx of xOffsets) {
-      for (const dy of yOffsets) {
-        const cx = left + dx, cy = top + dy;
-        if (!fits(cx, cy, pinWidth, pinHeight)) continue;
-        const score = dx * dx + dy * dy;
-        if (!placement || score < placement.score) placement = { cx, cy, score };
-      }
-    }
-    if (!placement) { dotPins.push({ id, x, y, pin }); continue; }
-    const { cx, cy } = placement;
-    shown.add(id);
-    placePin(pin, x, y, cx, cy, pinWidth, pinHeight, false);
-  }
-  for (const {id, x, y, pin} of dotPins) {
-    shown.add(id);
-    let cx = x, cy = y;
-    if (!fits(x, y, 20, 20)) {
-      search: for (const distance of [15, 25, 36, 48, 60]) {
-        for (const [dx,dy] of [[0,-1],[1,0],[-1,0],[0,1],[.7,-.7],[-.7,-.7],[.7,.7],[-.7,.7]]) {
-          if (fits(x + dx * distance, y + dy * distance, 20, 20)) {
-            cx = x + dx * distance; cy = y + dy * distance;
-            break search;
-          }
-        }
-      }
-    }
-    placePin(pin, x, y, cx, cy, 20, 20, true);
-  }
-  for (const [id, pin] of pins) {
-    if (!shown.has(id)) pin.button.hidden = pin.line.hidden = true;
-  }
-}
-
 const marketId = 'shuixian-morning';
 const heldStamps = new Map();
 const storageKey = id => `anxin-life-stamp.v1.${id}`;
@@ -174,9 +100,10 @@ const icon = kind => `<svg class="lt-icon" viewBox="0 0 24 24" fill="none" strok
 const cardStyle = card => `--stamp-ink:${card.ink};--stamp-paper:${card.paper}`;
 const emblem = card => `<span class="lt-emblem" style="${cardStyle(card)}">${stampArt(card)}</span>`;
 
-export async function openLifeTour(initialStoryId, trigger, { overview: showOverview = false } = {}) {
+export async function openLifeTour(initialStoryId, trigger, { overview: showOverview = false, arriveStreet = false } = {}) {
   if (activeTour) {
-    if (stopById.has(initialStoryId)) activeTour.choose(initialStoryId);
+    if (stopById.has(initialStoryId) && arriveStreet) activeTour.street(initialStoryId,true);
+    else if (stopById.has(initialStoryId)) activeTour.choose(initialStoryId);
     else if (showOverview) activeTour.overview();
     return;
   }
@@ -193,11 +120,12 @@ export async function openLifeTour(initialStoryId, trigger, { overview: showOver
     <main class="lt-main"><section class="lt-stage" aria-label="台南 37 區的街坊場景"><canvas class="lt-canvas" aria-hidden="true"></canvas><div class="lt-labels"></div>
       <div class="lt-static" hidden role="img" aria-label="街區散步插畫"><canvas class="lt-map-art" hidden></canvas></div>
       <div class="lt-map-tools"><button type="button" data-life-districts aria-haspopup="dialog">${icon('pin')} 37 區選單</button><button type="button" data-life-overview>${icon('map')} 全市全景</button>
-      <label class="lt-region-filter"><span class="lt-sr">地圖地名顯示方式</span><select data-life-region><option value="">精選地名</option><option value="landmarks">只看圖示</option><optgroup label="依主題看地名">${tourRegions.map(region => `<option value="${region.id}">${escape(region.name)}</option>`).join('')}</optgroup></select></label><button type="button" data-season-guide aria-haspopup="dialog">${icon('calendar')} 台南風味曆</button></div>
+      <label class="lt-region-filter"><span class="lt-sr">地圖地名顯示方式</span><select data-life-region><option value="">全市地名</option><option value="landmarks">只看圖示</option><optgroup label="依主題看地名">${tourRegions.map(region => `<option value="${region.id}">${escape(region.name)}</option>`).join('')}</optgroup></select></label><button type="button" data-season-guide aria-haspopup="dialog">${icon('calendar')} 台南風味曆</button></div>
       <div class="lt-play-tools"><button type="button" data-life-pause aria-label="暫停街景動畫" aria-pressed="false" title="暫停街景動畫">${icon('pause')}<span>暫停</span></button></div>
       <div class="lt-invite"></div>
       <div class="lt-map-caption"><p class="lt-hint"></p><small>街景為縮放意象</small></div>
     </section><aside class="lt-talk" aria-labelledby="lt-stop-title" hidden></aside></main>
+    <nav class="lt-street-links" aria-label="沿街走到鄰區" hidden></nav>
     <nav class="lt-nav" aria-label="精選散步街區與手帖"><div class="lt-stops">${featuredStops.map(stop => `<button type="button" data-life-stop="${escape(stop.id)}" style="${cardStyle(encounters[stop.id])}" aria-pressed="false" aria-label="前往${escape(stop.name)}${escape(stop.title)}">${emblem(encounters[stop.id])}<span class="lt-stop-label"><strong>${districtName(stop)}</strong><small>${districtFeatures[stop.districtId]}</small></span></button>`).join('')}</div>
     <button type="button" data-life-album aria-label="開啟散步手帖">${icon('book')}<span>散步手帖</span><b data-life-count>0/${lifeStops.length}</b></button></nav>
     <span class="lt-sr" role="status" aria-live="polite" aria-atomic="true"></span></div>
@@ -208,6 +136,7 @@ export async function openLifeTour(initialStoryId, trigger, { overview: showOver
   const labelLayer = dialog.querySelector('.lt-labels');
   const talk = dialog.querySelector('.lt-talk');
   const invite = dialog.querySelector('.lt-invite');
+  const routes = dialog.querySelector('.lt-street-links');
   const overviewButton = dialog.querySelector('[data-life-overview]');
   const regionPicker = dialog.querySelector('[data-life-region]');
   const pauseButton = dialog.querySelector('[data-life-pause]');
@@ -234,6 +163,7 @@ export async function openLifeTour(initialStoryId, trigger, { overview: showOver
     labelLayer.append(line, button);
     pins.set(stop.id, { button, line });
   }
+  wireMapLabels(dialog, labelLayer, pins);
   let world = null;
   let selected = null;
   let guest = 'resident';
@@ -250,6 +180,57 @@ export async function openLifeTour(initialStoryId, trigger, { overview: showOver
   const canvas = stage.querySelector('canvas');
   const artCanvas = stage.querySelector('.lt-map-art');
   const personName = (stop, key) => key === 'neighbor' ? neighborFor(stop).neighbor : key === 'visitor' ? '散步客' : stop.resident;
+  let trail = [];
+  const trailKey = 'anxin-life-street-trail.v1';
+  function restoreTrail(id) {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(trailKey));
+      if (saved?.at !== id || !Array.isArray(saved.trail) || !saved.trail.every(step => stopById.has(step))) return false;
+      trail = saved.trail;
+      return true;
+    } catch { return false; }
+  }
+  function saveTrail(at) {
+    try {
+      if (at) sessionStorage.setItem(trailKey, JSON.stringify({at, trail}));
+      else sessionStorage.removeItem(trailKey);
+    } catch { /* This walk can still be retraced while the street is open. */ }
+  }
+  function clearTrail() {
+    trail = [];
+    saveTrail(null);
+  }
+  function showRoutes() {
+    const stop = stopById.get(selected);
+    routes.hidden = !stop;
+    if (!stop) { routes.replaceChildren(); return; }
+    const previous = stopById.get(trail[trail.length - 1]);
+    const back = previous ? `<button type="button" class="lt-street-back" data-life-backtrack aria-label="走回上一站，${escape(previous.name)} ${escape(previous.title)}"><span aria-hidden="true">↶</span> 回${escape(previous.name)}</button>` : '';
+    const options = neighborsFor(selected).map(next => `<button type="button" class="lt-street-next" data-life-neighbor="${escape(next.id)}"><span><strong>${escape(next.name)}</strong><small>${escape(next.title)}</small></span>${icon('arrow')}</button>`);
+    routes.innerHTML = `<div class="lt-street-direction"><strong>沿街走到鄰區</strong>${back}</div><div class="lt-street-options">${options.join('')}</div>`;
+    routes.dataset.stop = stop.id;
+  }
+  function crossStreet(id) {
+    street(id, false, true, true);
+    saveTrail(id);
+    const title = invite.querySelector('h2');
+    title.tabIndex = -1;
+    title.focus({preventScroll:true});
+    if (!paused) {
+      const view = textMode ? stage.querySelector('.lt-static') : canvas;
+      view.animate?.([{opacity:.5},{opacity:1}], {duration:325, easing:'ease-out'});
+    }
+  }
+  function travelTo(id) {
+    if (!selected || !neighborsFor(selected).some(stop => stop.id === id)) return;
+    if (trail[trail.length - 1] === id) trail.pop();
+    else trail.push(selected);
+    crossStreet(id);
+  }
+  function travelBack() {
+    const previous = trail.pop();
+    if (previous) crossStreet(previous);
+  }
   function updatePause() {
     const action = paused ? '播放' : '暫停';
     pauseButton.innerHTML = `${icon(paused ? 'play' : 'pause')}<span>${action}</span>`;
@@ -299,15 +280,18 @@ export async function openLifeTour(initialStoryId, trigger, { overview: showOver
     invite.innerHTML = `<article class="lt-ticket" style="${cardStyle(card)}"><div class="lt-ticket-head"><div><p class="lt-loc">${icon('pin')}${escape(stop.name)} · ${locationLabel(stop)}</p><h2>${escape(card.title)}</h2></div>${emblem(card)}</div><p class="lt-teaser">${escape(card.teaser)}</p><div class="lt-ticket-actions"><button type="button" data-life-invite>${escape(card.invite)} ${icon('arrow')}</button><button type="button" data-life-people aria-haspopup="dialog">${icon('people')} 街上有誰</button></div></article>`;
     if(stop.districtId==='west-central')invite.querySelector('.lt-ticket').insertAdjacentHTML('beforeend','<div class="ca-invitation">'+nextStory(stop)+'</div>');
   }
-  function street(id, focus = false, announce = true) {
-    if (disposed || !stopById.has(id)) return;
+  function street(id, focus = false, announce = true, continuing = false) {
+    const stop = stopById.get(id);
+    if (disposed || !stop) return;
+    if (id !== selected && !continuing) clearTrail();
     selected = id; guest = 'resident'; lastChoice = null;
     dialog.dataset.view = 'street'; dialog.dataset.stop = id;
     delete dialog.dataset.guest;
     talk.hidden = true; talk.replaceChildren();
-    showInvitation(); updateButtons(); updateStatic();
+    showInvitation(); showRoutes(); updateButtons(); updateStatic();
     world?.street?.(id);
-    hint.textContent = textMode ? '街區圖文導覽' : '點行人打招呼 · 拖曳環視';
+    hint.textContent = textMode ? '街區圖文導覽' : '點路面走動 · 點路牌換區';
+    live.textContent = `抵達${stop.name}，${stop.title}。`;
     if (announce) window.dispatchEvent(new CustomEvent('life-tour-stop', {detail:{id}}));
     if (focus) invite.querySelector('[data-life-invite]')?.focus({preventScroll:true});
   }
@@ -349,7 +333,7 @@ export async function openLifeTour(initialStoryId, trigger, { overview: showOver
     live.textContent = `抵達${stop.name}，和${who}打個招呼。`;
     if (moveFocus) talk.querySelector('h2').focus({ preventScroll:true });
   }
-  function choose(id, focus = true, key = 'resident') {
+  function choose(id, focus = true, key = 'resident', continuing = false) {
     const stop = stopById.get(id);
     if (!stop || disposed) return;
     if (!['resident','neighbor','visitor'].includes(key)) key = 'resident';
@@ -357,7 +341,9 @@ export async function openLifeTour(initialStoryId, trigger, { overview: showOver
       if (focus) talk.querySelector('h2').focus({preventScroll:true});
       return;
     }
+    if (selected !== id && !continuing) clearTrail();
     selected = id; guest = key; moveFocus = focus; lastChoice = null;
+    showRoutes();
     dialog.dataset.view = 'walking'; dialog.dataset.stop = id; dialog.dataset.guest = key;
     talk.hidden = true; talk.replaceChildren();
     hint.textContent = `去找${personName(stop, guest)}…`;
@@ -369,13 +355,14 @@ export async function openLifeTour(initialStoryId, trigger, { overview: showOver
   }
   function overview(focus = true, announce = true) {
     const former = selected;
+    clearTrail();
     selected = null; guest = 'resident'; lastChoice = null;
     delete dialog.dataset.stop; delete dialog.dataset.guest;
     dialog.dataset.view = 'overview';
-    talk.hidden = true; talk.replaceChildren(); showInvitation(); updateButtons(); updateStatic();
+    talk.hidden = true; talk.replaceChildren(); showInvitation(); showRoutes(); updateButtons(); updateStatic();
     if (announce) window.dispatchEvent(new CustomEvent('life-tour-stop', {detail:{id:null}}));
     world?.overview();
-    hint.textContent = textMode ? '選擇行政區，開啟圖文散步' : '點地標或行人出發 · 拖曳環視';
+    hint.textContent = textMode ? '選擇行政區，開啟圖文散步' : '點地名或行人出發，＋數字可展開鄰近區名';
     live.textContent = '台南 37 區全景，選一處街坊出發。';
     if (focus && former) (dialog.querySelector(`[data-life-stop="${former}"]`) || dialog.querySelector('[data-life-districts]')).focus({preventScroll:true});
   }
@@ -454,6 +441,7 @@ export async function openLifeTour(initialStoryId, trigger, { overview: showOver
   function close() {
     if (disposed) return;
     disposed = true;
+    clearTrail();
     if (mini.open) mini.close();
     if (dialog.open) dialog.close();
     motionQuery.removeEventListener('change', motionChange);
@@ -491,7 +479,14 @@ export async function openLifeTour(initialStoryId, trigger, { overview: showOver
     else if ('lifeEnter' in d) street(marketId,true);
     else if ('lifeReturn' in d) street(selected,true);
     else if ('lifeStop' in d) choose(d.lifeStop);
-    else if ('lifePin' in d) choose(d.lifePin);
+    else if ('lifePin' in d) street(d.lifePin,true);
+    else if ('lifeNeighbor' in d) {
+      const id = d.lifeNeighbor;
+      const next = stopById.get(id);
+      if (next) live.textContent = hint.textContent = `前往${next.name} · ${next.title}`;
+      if (!world?.walkToExit?.(id)) travelTo(id);
+    }
+    else if ('lifeBacktrack' in d) travelBack();
     else if ('lifeInvite' in d) choose(selected);
     else if ('lifePause' in d) { paused = !paused; updatePause(); live.textContent = paused ? '街景動畫已暫停。' : '街景動畫播放中。'; }
     else if ('lifePeople' in d) people();
@@ -534,18 +529,22 @@ export async function openLifeTour(initialStoryId, trigger, { overview: showOver
       talk.scrollTop = 0;
     }
   });
-  activeTour = {choose, overview};
-  if (stopById.has(initialStoryId)) choose(initialStoryId,false);
+  activeTour = {choose, overview, street};
+  if (stopById.has(initialStoryId)) {
+    const resumed = restoreTrail(initialStoryId);
+    if (arriveStreet) street(initialStoryId,false,false,resumed);
+    else choose(initialStoryId,false,'resident',resumed);
+  }
   else if (showOverview) overview(false,false);
   else street(marketId,false,false);
   updatePause();
   dialog.showModal();
   dialog.querySelector('#lt-title').focus({preventScroll:true});
   try {
-    const {createLifeWorld} = await import('./life-world.js?v=28.0.0');
+    const {createLifeWorld} = await import('./life-world.js?v=29.0.0');
     if (disposed) return;
     const initialStreet = dialog.dataset.view === 'street' ? selected : null;
-    const created = await createLifeWorld({canvas,initialStreet,onChoose:id => choose(id),onResident:(id,key) => choose(id,true,key),onArrive:arrive,onError:fallback,
+    const created = await createLifeWorld({canvas,initialStreet,onChoose:id => street(id,true),onExit:id => travelTo(id),onResident:(id,key) => choose(id,true,key),onArrive:arrive,onError:fallback,
       onSelectLabels:(rows, protectedAreas = []) => {
         if (!disposed && !textMode && dialog.dataset.view === 'overview') {
           labelRows = rows;

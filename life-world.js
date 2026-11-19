@@ -3,10 +3,11 @@ import { OrbitControls } from './vendor/OrbitControls.js';
 import { districtShapes } from './atlas/geometry.js';
 import { createModelKit, makeLandmark, makePerson } from './life-models.js?v=28.0.0';
 import { createAmenity } from './life-amenities.js';
-import { createCrowd, idlePose, stepPose } from './life-crowd.js?v=28.0.0';
+import { createCrowd, idlePose, stepPose } from './life-crowd.js?v=29.0.0';
 import { createOverviewWalkers, overviewTrails } from './life-overview-walkers.js?v=28.0.0';
 import { districtWalks } from './district-stories.js?v=27.0.0';
-import { makeDistrictMiniature, makeDistrictStreet } from './district-miniatures.js?v=27.0.0';
+import { makeDistrictMiniature } from './district-miniatures.js?v=27.0.0';
+import { makeStreetNeighborhood, planWalk, walkablePoint } from './street-scenery.js?v=29.0.0';
 
 // SVG label points are inside their districts. The small southern districts use
 // two other interior points so their neighbouring scenes can sit side by side.
@@ -251,55 +252,6 @@ function skyTexture(stops){
   return tex;
 }
 
-// Paint the distant rooftops and mountain ridges on a single quiet horizon.
-// The foreground and the street itself remain fully modelled in three dimensions.
-function hillsideTexture(time){
-  const canvas=document.createElement('canvas');canvas.width=2048;canvas.height=192;
-  const ctx=canvas.getContext('2d');
-  const colors=time==='evening'?['#d9c8b6','#c7bba6','#aab4a0','#c5b69c','#c3af93']:['#d5dfcd','#c3d2be','#a9c3af','#d2c8af','#c3bba2'];
-  function ridge(base,heights,color){
-    ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(0,192);ctx.lineTo(0,base);
-    for(let x=0;x<=2048;x+=10){
-      const h=Math.sin(x*.011)*heights[0]+Math.sin(x*.029+.5)*heights[1]+Math.cos(x*.067)*heights[2];
-      ctx.lineTo(x,base-h);
-    }
-    ctx.lineTo(2048,192);ctx.fill();
-  }
-  ridge(95,[18,8,3],colors[0]);ridge(116,[11,5,2],colors[1]);
-  ridge(137,[6,3,2],colors[2]);
-  for(let i=0;i<55;i++){
-    const x=i*39+Math.sin(i*2.2)*14, w=13+(i*11)%22,h=5+(i*7)%13,base=145+Math.sin(i)*3;
-    ctx.fillStyle=colors[3];ctx.fillRect(x,base-h,w,h+2);
-    ctx.fillStyle=colors[4];ctx.beginPath();ctx.moveTo(x-2,base-h);ctx.lineTo(x+3,base-h-3);ctx.lineTo(x+w-3,base-h-3);
-    ctx.lineTo(x+w+2,base-h);ctx.fill();
-    for(let j=0;j<3;j++)ctx.fillRect(x+3+j*w*.27,base-h+3,2,2.7);
-  }
-  const tex=new THREE.CanvasTexture(canvas);tex.colorSpace=THREE.SRGBColorSpace;
-  return tex;
-}
-function streetSetting(){
-  const root=new THREE.Group(), backgrounds=new Map(),horizons=new Map();
-  const ground=new THREE.Mesh(new THREE.PlaneGeometry(180,38),new THREE.MeshLambertMaterial());
-  // The far edge tucks behind the horizon and the near edge stays beyond the
-  // camera's field, even on tall phones.
-  ground.rotation.x=-Math.PI/2;ground.position.set(0,-.18,11);ground.receiveShadow=true;root.add(ground);
-  const scenery=new THREE.Mesh(new THREE.PlaneGeometry(90,8.45),new THREE.MeshBasicMaterial({transparent:true,depthWrite:false,side:THREE.DoubleSide}));
-  scenery.position.set(0,2.48,-8.23);root.add(scenery);root.visible=false;
-  return {root, apply(scene,place){
-    root.visible=!!place;
-    if(!place) return;
-    const time=place.id.split('-').at(-1),palette=streetColors[time];
-    if(!backgrounds.has(time)){
-      backgrounds.set(time,skyTexture(palette.sky));
-      horizons.set(time,hillsideTexture(time));
-    }
-    root.position.copy(place.root.position);root.scale.copy(place.root.scale);
-    ground.material.color.setHex(palette.ground);
-    scenery.material.map=horizons.get(time);scenery.material.needsUpdate=true;
-    scene.background=backgrounds.get(time);
-  },dispose(){for(const tex of [...backgrounds.values(),...horizons.values()]) tex.dispose();}};
-}
-
 function addResident(k,group,style) {
   const resident=makePerson(k,style);
   resident.root.position.set(2.48,.174,2.24); resident.root.rotation.y=-.73;
@@ -321,7 +273,7 @@ function disposeObjects(group) {
   for(const material of materials) material.dispose();
 }
 
-export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError,onResident,initialStreet=null}) {
+export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError,onResident,onExit,initialStreet=null}) {
   const renderer = new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:'low-power'});
   renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.65));
   renderer.setClearColor(0x56969a);
@@ -354,7 +306,8 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
   coastalScenery(map,k,ground);
   const townsfolk=createOverviewWalkers(k,ground,mapX);
   map.add(townsfolk.root);picks.push(townsfolk.root);
-  const setting=streetSetting();scene.add(setting.root);
+  const skies=new Map();
+  const streetLens=new THREE.PerspectiveCamera(40,1,.09,550);
   const places=new Map();
   for(const spec of stops){
     const {district,altitude}=ground.get(spec.district);
@@ -395,15 +348,15 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
   const ray=new THREE.Raycaster(),pointer=new THREE.Vector2();
   let width=1,height=1,span=100,frame=0,previous=0,intersecting=true,covered=false,disposed=false,dirty=true;
-  let motion=null,selected=null,gesture=null,multitouch=false;
+  let stroll=null,motion=null,selected=null,gesture=null,multitouch=false;
   let streetPlace=null,crowd=null,crowdPlace=null,paused=reduced.matches,ambientTime=0,timer=0,conversation=null;
   const touching=new Set();
   const overviewAim=new THREE.Vector3(0,.22,0),overviewOffset=new THREE.Vector3(0,100,82);
-  const localOffset=new THREE.Vector3(18,37,117);
+  const localOffset=new THREE.Vector3(21,54,118);
   let regionBounds=null;
   function viewSpan(place){
     const aspect=width/height;
-    if(place) return Math.max(8.60,(aspect<1.08?9.9:11.7)/aspect)*place.scale;
+    if(place) return Math.max(9.65,(aspect<1.08?13.30:15.2)/aspect)*place.scale;
     if(regionBounds) return Math.max(34,regionBounds.height,regionBounds.width/aspect);
     return Math.max(83,111/aspect);
   }
@@ -427,7 +380,7 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
   }
   function endpoint(place,x,y,z){return new THREE.Vector3(x,y,z).multiplyScalar(place.scale).add(place.root.position);}
   function destination(place){
-    return place?endpoint(place,.25,1.99,.62):overviewAim.clone();
+    return place?endpoint(place,.0,1.04,.78):overviewAim.clone();
   }
   function newCameraMotion(place){
     const initialSpan=span/camera.zoom;
@@ -451,8 +404,17 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
     }
     onSelectLabels(result,streetPlace?[]:townsfolk.labelGaps(camera,width,height));
   }
+  function renderCamera(){
+    if(!streetPlace)return camera;
+    const distance=span/(camera.zoom*2*Math.tan(THREE.MathUtils.degToRad(streetLens.fov/2)));
+    streetLens.aspect=width/height;streetLens.updateProjectionMatrix();
+    scene.fog.near=distance+7*streetPlace.scale;scene.fog.far=distance+63*streetPlace.scale;
+    streetLens.position.copy(camera.position).sub(controls.target).normalize().multiplyScalar(distance).add(controls.target);
+    streetLens.lookAt(controls.target);streetLens.updateMatrixWorld();
+    return streetLens;
+  }
   function draw(){
-    renderer.render(scene,camera);
+    renderer.render(scene,renderCamera());
     if(dirty) labels();
     dirty=false;
   }
@@ -468,12 +430,13 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
   }
   function setStage(place){
     if(place===streetPlace) return;
-    const former=streetPlace;
+    const former=streetPlace;stroll=null;
     if(former){
       former.root.scale.copy(former.mapScale);
       if(former.detail){
         former.detail.removeFromParent();disposeObjects(former.detail);
-        former.detail=null;former.resident=null;
+        former.detail=null;
+        if(former.motif)former.resident=null;
         former.landmark.position.set(0,0,0);former.landmark.scale.setScalar(1);
       }
     }
@@ -487,24 +450,28 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
     if(crowd) crowd.root.visible=false;
     if(place){
       place.root.scale.setScalar(place.scale);
+      const localKit=createModelKit(),detail=makeStreetNeighborhood(localKit,place);
       if(place.motif){
-        const localKit=createModelKit(),detail=new THREE.Group();
-        detail.add(makeDistrictStreet(localKit,place));place.resident=addResident(localKit,detail,place.style);
-        localKit.releaseSources();shadows(detail);place.root.add(detail);place.detail=detail;
-        place.landmark.position.set(0,.07,-.90);place.landmark.scale.setScalar(1.36);
+        place.resident=addResident(localKit,detail,place.style);
+        place.landmark.position.set(0,.12,-.95);place.landmark.scale.setScalar(1.52);
       }
+      localKit.releaseSources();shadows(detail);place.root.add(detail);place.detail=detail;
+      const time=place.id.split('-').at(-1),palette=streetColors[time];
+      if(!skies.has(time))skies.set(time,skyTexture(palette.sky));
+      scene.background=skies.get(time);scene.fog=new THREE.Fog(shore.has(place.district)?0xb6d9d2:palette.haze,22*place.scale,74*place.scale);
+      controls.minZoom=.78;controls.maxZoom=2.6;
       if(crowdPlace!==place){
         crowd?.dispose();
-        crowd=createCrowd(place.style,place.index%originalStops.length);
+        crowd=createCrowd(place.style,place.index);
         crowdPlace=place;place.root.add(crowd.root);
       }
       crowd.root.visible=true;crowd.hold(null);
       sun.color.setHex(streetColors[place.id.split('-').at(-1)].sun);
     }else{
-      scene.background=overviewSky;
+      scene.background=overviewSky;scene.fog=null;controls.minZoom=.62;controls.maxZoom=7;
       sun.color.setHex(0xfff2df);
     }
-    setting.apply(scene,place);
+
   }
   function showPlayer(place,position){
     player.root.visible=true;
@@ -528,7 +495,9 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
     m.end=endpoint(p,g.x+side*.94,g.y,g.z+.12);
     m.face=Math.atan2(-side*.94,-.12);
     m.guest=guest;
-    m.walkMs=reduced.matches?0:Math.min(1950,Math.max(450,m.start.distanceTo(m.end)/p.scale*435));
+    const from=p.root.worldToLocal(m.start.clone()),to=p.root.worldToLocal(m.end.clone());
+    m.route=measuredWalk([from.x,from.z],[to.x,to.z]);
+    m.walkMs=(reduced.matches||paused)?0:Math.min(2150,Math.max(450,m.route.distance*395));
     showPlayer(p,m.start);m.approachStarted=true;
   }
   function ambientActive(){return !paused;}
@@ -538,12 +507,13 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
     const dt=previous?Math.min(250,now-previous):0;
     previous=now;
     const animated=ambientActive();
+    if(stroll)advanceStroll(dt);
     if(animated){
       ambientTime+=Math.min(dt,140)/1000;
       if(streetPlace){
         crowd.update(Math.min(dt,140)/1000,ambientTime);
         idlePose(streetPlace.resident,ambientTime+1.8);
-        if(player.root.visible&&!motion) idlePose(player,ambientTime+.5);
+        if(player.root.visible&&!motion&&!stroll) idlePose(player,ambientTime+.5);
       }else townsfolk.update(Math.min(dt,140)/1000);
     }
     let arrived=null;
@@ -560,10 +530,7 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
         else{
           if(!m.approachStarted) beginApproach(m);
           const f=m.walkMs?Math.min(1,(m.time-m.focusMs)/m.walkMs):1;
-          player.root.position.lerpVectors(m.start,m.end,f);
-          player.root.position.z+=Math.sin(Math.PI*f)*.12*p.scale;
-          player.root.rotation.y=Math.atan2(m.end.x-m.start.x,m.end.z-m.start.z+Math.cos(Math.PI*f)*Math.PI*.12*p.scale);
-          stepPose(player,f*Math.PI*2*Math.max(1,m.walkMs/330));
+          placeWalker(p,m.route,f);
           if(f>=1){
             idlePose(player,0);player.root.rotation.y=m.face;
             m.guest.rotation.y=Math.atan2(m.end.x-(p.root.position.x+m.guest.position.x*p.scale),m.end.z-(p.root.position.z+m.guest.position.z*p.scale));
@@ -572,9 +539,9 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
         }
       }
       draw();
-    }else if(dirty||animated) draw();
+    }else if(dirty||animated||stroll) draw();
     if(arrived) onArrive?.(arrived.place.id,arrived.key);
-    if(motion) schedule();
+    if(motion||stroll) schedule();
     else if(ambientActive()) schedule(streetPlace?24:43);
     else previous=0;
   }
@@ -582,7 +549,7 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
     const p=places.get(id);
     if(disposed||!p) return;
     const same=streetPlace===p;
-    motion=null;selected=id;conversation=null;controls.enabled=true;
+    stroll=null;motion=null;selected=id;conversation=null;controls.enabled=true;
     setStage(p);crowd.hold(null);
     p.resident.root.rotation.y=-.64;
     if(!same){
@@ -623,6 +590,7 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
   function walkTo(id,guestKey='resident'){
     const p=places.get(id);
     if(disposed||!p) return;
+    stroll=null;
     const key=['neighbor','visitor'].includes(guestKey)?guestKey:'resident';
     if(motion?.place===p&&motion.key===key) return;
     if(conversation===key&&streetPlace===p&&!motion){onArrive?.(id,key);return;}
@@ -639,7 +607,9 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
     previous=0;invalidate();
   }
   function setPaused(value){
-    paused=!!value;previous=0;invalidate();
+    paused=!!value;previous=0;
+    if(paused&&stroll)advanceStroll(stroll.duration);
+    invalidate();
   }
   function syncMotionPreference(){setPaused(reduced.matches);}
   function resize(){
@@ -680,7 +650,7 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
   function setPointerRay(e){
     const rect=canvas.getBoundingClientRect();
     pointer.set((e.clientX-rect.left)/rect.width*2-1,1-(e.clientY-rect.top)/rect.height*2);
-    ray.setFromCamera(pointer,camera);
+    ray.setFromCamera(pointer,renderCamera());
   }
   function up(e){
     const isTap=gesture&&gesture.id===e.pointerId&&!gesture.drag&&!multitouch&&Math.hypot(e.clientX-gesture.x,e.clientY-gesture.y)<=6;
@@ -696,10 +666,61 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
       return true;
     });
     if(!hit) return;
-    let obj=hit.object,guest=null;
-    while(obj&&!obj.userData.stopId){ guest=guest||obj.userData.guestKey;obj=obj.parent; }
-    if(guest&&obj&&streetPlace&&onResident) onResident(obj.userData.stopId,guest);
-    else if(obj) onChoose?.(obj.userData.stopId);
+    let obj=hit.object,guest=null,exit=null,overviewGuest=false;
+    while(obj){
+      guest ||= obj.userData.guestKey;exit ||= obj.userData.exitId;overviewGuest ||= !!obj.userData.overviewWalker;
+      if(obj.userData.stopId)break;
+      obj=obj.parent;
+    }
+    if(exit&&streetPlace){walkToExit(exit);return;}
+    if((guest||overviewGuest)&&obj&&onResident){onResident(obj.userData.stopId,guest||'resident');return;}
+    if(streetPlace){
+      if(!motion&&!conversation){
+        const local=streetPlace.root.worldToLocal(hit.point.clone());
+        if(local.y<.30&&walkablePoint(local.x,local.z))beginStroll([local.x,local.z]);
+      }
+      return;
+    }
+    if(obj)onChoose?.(obj.userData.stopId);
+  }
+  function measuredWalk(from,to){
+    const path=planWalk(from,to),cumulative=[0];
+    for(let i=1;i<path.length;i++)cumulative.push(cumulative[i-1]+Math.hypot(path[i][0]-path[i-1][0],path[i][1]-path[i-1][1]));
+    return {path,cumulative,distance:cumulative.at(-1)};
+  }
+  function placeWalker(place,route,fraction){
+    if(route.path.length<2)return;
+    const distance=fraction*route.distance;
+    let i=1;while(i+1<route.path.length&&route.cumulative[i]<distance)i++;
+    const a=route.path[i-1],b=route.path[i],t=(distance-route.cumulative[i-1])/(route.cumulative[i]-route.cumulative[i-1]);
+    player.root.position.copy(endpoint(place,lerp(a[0],b[0],t),.153,lerp(a[1],b[1],t)));
+    player.root.rotation.y=Math.atan2(b[0]-a[0],b[1]-a[1]);stepPose(player,distance*5.7);
+  }
+  function beginStroll(to,exitId=null){
+    const place=streetPlace,from=place.root.worldToLocal(player.root.position.clone()),route=measuredWalk([from.x,from.z],to);
+    if(route.path.length<2){if(exitId)onExit?.(exitId);return;}
+    stroll={place,route,elapsed:0,duration:Math.max(320,Math.min(exitId?1450:3100,route.distance*330)),exitId};
+    if(reduced.matches||paused)advanceStroll(stroll.duration);
+    previous=0;invalidate();
+  }
+  function advanceStroll(dt){
+    const s=stroll;
+    if(!s||s.place!==streetPlace){stroll=null;return;}
+    s.elapsed=Math.min(s.duration,s.elapsed+dt);
+    const fraction=s.elapsed/s.duration;
+    placeWalker(s.place,s.route,fraction);
+    if(fraction>=1){
+      stroll=null;idlePose(player,0);dirty=true;
+      if(s.exitId)onExit?.(s.exitId);
+    }
+  }
+  function walkToExit(id){
+    if(!streetPlace||!onExit)return false;
+    const post=streetPlace.detail.children.find(o=>o.userData.exitId===id);
+    if(!post)return false;
+    if(stroll?.exitId===id)return true;
+    conversation=null;motion=null;controls.enabled=true;crowd.hold(null);
+    beginStroll([post.position.x,post.position.z+.56],id);return true;
   }
   function cancel(e){
     touching.delete(e.pointerId); if(!touching.size) multitouch=false;
@@ -775,7 +796,7 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
   function destroy(){
     if(disposed) return;
     disposed=true; motion=null; cancelAnimationFrame(frame);clearTimeout(timer);
-    portraits.clear();crowd?.dispose();setting.dispose();reduced.removeEventListener('change',syncMotionPreference);
+    portraits.clear();crowd?.dispose();for(const sky of skies.values())sky.dispose();reduced.removeEventListener('change',syncMotionPreference);
     resizeObserver.disconnect(); observer.disconnect(); layers.disconnect();
     document.removeEventListener('visibilitychange',suspend);document.removeEventListener('visibilitychange',checkTopLayer);
     canvas.removeEventListener('pointerdown',down,true); canvas.removeEventListener('pointermove',move,true);
@@ -791,7 +812,7 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
   else { placeView(overviewAim,overviewOffset,viewSpan(null));lightAt(overviewAim,72);invalidate(); }
   function captureFrame(){
     if(disposed) return null;
-    renderer.render(scene,camera);return canvas;
+    renderer.render(scene,renderCamera());return canvas;
   }
-  return {walkTo,overview,focusRegion,zoomOverview,street,setPaused,captureFrame,portraitFor,destroy};
+  return {walkTo,walkToExit,overview,focusRegion,zoomOverview,street,setPaused,captureFrame,portraitFor,destroy};
 }

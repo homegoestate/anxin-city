@@ -1,0 +1,115 @@
+.lt-dialog .lt-labels .lt-pin[data-compact="false"],
+.lt-dialog .lt-pin-more {
+  position: absolute;
+  inset: 0 auto auto 0;
+  z-index: 1;
+  pointer-events: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  color: #173441;
+  background: transparent;
+  box-shadow: none;
+  font: 750 14px/1 var(--lt-sans);
+  letter-spacing: .04em;
+}
+.lt-dialog .lt-labels .lt-pin[data-compact="false"] span,
+.lt-dialog .lt-pin-more::before {
+  position: absolute;
+  inset: 50% 0 auto;
+  height: 27px;
+  transform: translateY(-50%);
+  border: 1px solid #647f81;
+  border-radius: 5px;
+  background: #fffaf0;
+  box-shadow: 0 1px 3px #17344130;
+}
+.lt-dialog .lt-labels .lt-pin[data-compact="false"] span {
+  display: grid;
+  place-items: center;
+}
+.lt-dialog .lt-labels .lt-pin[data-compact="false"][data-featured="true"] span {
+  color: #fffaf0;
+  background: #235665;
+  border-color: #fff4d8;
+}
+.lt-dialog .lt-labels .lt-pin[data-grouped="true"] span {
+  border-radius: 5px 0 0 5px;
+}
+.lt-dialog .lt-labels .lt-pin[data-grouped="true"][data-more-side="left"] span {
+  border-radius: 0 5px 5px 0;
+}
+.lt-dialog .lt-pin-more {
+  isolation: isolate;
+  color: #fffaf0;
+  font-size: 13px;
+}
+.lt-dialog .lt-pin-more::before {
+  content: '';
+  z-index: -1;
+  background: #34565b;
+  border-color: #fff4d8;
+  border-left: 0;
+  border-radius: 0 5px 5px 0;
+}
+.lt-dialog .lt-pin-more[data-side="left"]::before {
+  border-left: 1px solid #fff4d8;
+  border-right: 0;
+  border-radius: 5px 0 0 5px;
+}
+.lt-dialog .lt-labels .lt-pin[data-compact="false"]:is(:hover,:focus-visible) span,
+.lt-dialog .lt-pin-more:is(:hover,:focus-visible,[aria-expanded="true"])::before {
+  color: white;
+  background: var(--lt-coral);
+}
+.lt-map-neighbors {
+  position: absolute;
+  inset: 0 auto auto 0;
+  z-index: 5;
+  pointer-events: auto;
+  width: min(224px,calc(100% - 8px));
+  max-height: calc(100% - 8px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: var(--lt-paper);
+  color: var(--lt-ink);
+  border: 1px solid #587378;
+  border-radius: 8px;
+  box-shadow: 0 5px 18px #13354140;
+  padding: 4px 9px 9px;
+}
+.lt-labels:has(.lt-map-neighbors:not([hidden])) { z-index: 3; }
+.lt-map-neighbors strong {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  padding-right: 40px;
+  font-size: 15px;
+}
+.lt-dialog .lt-neighbors-close {
+  position: absolute;
+  right: 2px;
+  top: 0;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  font-size: 22px;
+  border: none;
+  color: var(--lt-ink);
+  background: transparent;
+}
+.lt-neighbors-list {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 4px;
+}
+.lt-dialog .lt-neighbors-list button {
+  min-height: 44px;
+  padding: 4px 7px;
+  border: 1px solid #9bada6;
+  border-radius: 4px;
+  background: #fffcf5;
+  font-weight: 700;
+  color: var(--lt-ink);
+}
+.lt-dialog .lt-neighbors-list button:hover { background: var(--lt-tint); }

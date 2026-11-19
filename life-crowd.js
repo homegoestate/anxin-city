@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 import { createModelKit, makePerson } from './life-models.js?v=28.0.0';
 
-// Both pavements stay clear of the door and of the player speaking to a resident.
+import { pedestrianCircuit } from './street-scenery.js?v=29.0.0';
+
 const lanes = [
-  {key:'neighbor',left:-3.85,right:.94,z:3.61,speed:.76,start:.12,scale:.94,pace:6.0,rest:2.65},
-  {key:'visitor',left:-.38,right:3.94,z:4.78,speed:.81,start:.61,scale:.85,pace:5.6,rest:2.25}
+  {key:'neighbor',speed:.83,scale:.92,pace:5.8,rest:1.6},
+  {key:'visitor',speed:1.06,scale:.84,pace:5.35,rest:1.18}
 ];
 const unit=x=>Math.min(1,Math.max(0,x));
 const smooth=x=>{const t=unit(x);return t*t*(3-2*t);};
@@ -36,40 +37,22 @@ export function stepPose(rig,phase,amount=1) {
   rig.body.rotation.set((rig.lean||0)+.020*amount,-swing*.051,swing*.019);
 }
 
-function strollingProgress(time,duration,ramp) {
-  // Integral of smoothstep speed. The feet slow down with the actual distance.
-  const end=time>duration/2;
-  const fromEnd=Math.min(time,duration-time);
-  const u=unit(fromEnd/ramp);
-  const distance=fromEnd<ramp?ramp*u**3*(1-u*.5):fromEnd-ramp*.5;
-  const portion=distance/(duration-ramp);
-  return end?1-portion:portion;
-}
-
 function updateWalker(walker,dt=0) {
-  const {lane,rig,elapsed,legTime,rest}=walker;
-  const segment=legTime+rest,pass=Math.floor(elapsed/segment),local=elapsed-pass*segment;
-  const facing=pass%2===0?1:-1,travel=Math.min(local,legTime);
-  const progress=strollingProgress(travel,legTime,walker.ramp);
-  const along=facing>0?progress:1-progress;
-  const bend=Math.sin(along*Math.PI*2+walker.phase);
-  const pause=unit((local-legTime)/rest);
-  // Look towards the street for a moment between arriving and setting off.
-  const angle=1.28+.075*bend;
-  let yaw=facing*angle*(1-smooth(pause/.36)-smooth((pause-.63)/.37));
-  rig.root.position.set(THREE.MathUtils.lerp(lane.left,lane.right,along),.146,lane.z+.095*bend);
-  if(local<legTime){
-    const pace=smooth(Math.min(local,legTime-local)/walker.ramp);
-    const phase=(pass+progress)*(lane.right-lane.left)*lane.pace+walker.phase;
-    stepPose(rig,phase,pace);
+  const {lane,rig,curve,run,rest,length}=walker;
+  const cycle=run+rest,clock=walker.elapsed%cycle;
+  const u=(Math.min(clock,run)/run+walker.start)%1;
+  curve.getPointAt(u,walker.point);curve.getTangentAt(u,walker.tangent);
+  rig.root.position.set(walker.point.x,.149,walker.point.z);
+  let yaw=Math.atan2(walker.tangent.x,walker.tangent.z);
+  if(clock<run){
+    stepPose(rig,walker.elapsed*length/run*lane.pace+walker.phase);
   }else{
-    idlePose(rig,elapsed+walker.phase);
-    if((pass+walker.greeting)%3===0){
-      const gesture=smooth((pause-.13)/.21)*(1-smooth((pause-.66)/.22));
-      const hand=rig.arms[rig.carried===1?0:1],side=rig.carried===1?-1:1;
-      hand.rotation.x-=gesture*.44;
-      hand.rotation.z+=side*gesture*(1.77+.155*Math.sin(pause*25+walker.phase));
-    }
+    idlePose(rig,walker.elapsed+walker.phase);
+    const t=(clock-run)/rest,gesture=Math.sin(t*Math.PI)**2;
+    yaw+=gesture*.49;
+    const hand=rig.arms[rig.carried===1?0:1];
+    hand.rotation.x-=gesture*.38;
+    hand.rotation.z+=(rig.carried===1?-1:1)*gesture*(1.33+.10*Math.sin(t*15));
   }
   if(walker.releasing>0){
     walker.releasing=Math.max(0,walker.releasing-dt);
@@ -87,12 +70,14 @@ export function createCrowd(id,index) {
     rig.root.userData.guestKey=lane.key;
     rig.root.name=lane.key;
     root.add(rig.root);
-    const legTime=(lane.right-lane.left)/(lane.speed*(1+index*.016));
-    const rest=lane.rest+(index%3)*.12;
+    const points=pedestrianCircuit(index,i===1).map(([x,z])=>new THREE.Vector3(x,0,z));
+    if((index+i)%2)points.reverse();
+    const curve=new THREE.CatmullRomCurve3(points,true,'centripetal');
+    curve.arcLengthDivisions=96;
+    const length=curve.getLength(),run=length/(lane.speed*(1+(index%5)*.025));
     const walker={
-      rig,lane,legTime,rest,ramp:Math.min(.69,.14*legTime),
-      elapsed:(lane.start+index*.017)*2*(legTime+rest),phase:i*1.64+index*.43,
-      greeting:(i+index)%3,releasing:0,releaseYaw:0
+      rig,lane,curve,length,run,rest:lane.rest+(index%3)*.17,point:new THREE.Vector3(),tangent:new THREE.Vector3(),
+      elapsed:0,start:i?.89:.02,phase:i*1.64+index*.43,releasing:0,releaseYaw:0
     };
     updateWalker(walker);
     return walker;
