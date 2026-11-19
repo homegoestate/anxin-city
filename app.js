@@ -121,7 +121,7 @@ async function showLifeTour(id, trigger, options = {}) {
   if (tourOpening) return;
   tourOpening = true;
   try {
-    const { openLifeTour } = await import('./life-tour.js?v=27.0.0');
+    const { openLifeTour } = await import('./life-tour.js?v=28.0.0');
     await openLifeTour(id, trigger, options);
   } catch (error) {
     console.error('台南街區載入失敗', error);
@@ -132,6 +132,19 @@ async function showLifeTour(id, trigger, options = {}) {
   }
 }
 const lifeEntry = $('#open-life-tour');
+async function openSeasonGuide(trigger, period, area) {
+  try {
+    const {openAlmanac} = await import('./city-almanac.js?v=28.0.0');
+    openAlmanac({trigger,period,area,walk:id=>showLifeTour(id,trigger)});
+  } catch (error) {
+    console.error('風味曆載入失敗',error);
+    toast('臺南風味曆載入未完成，可以再點一次。');
+  }
+}
+document.addEventListener('click',event=>{
+  const trigger=event.target.closest('[data-season-guide]');
+  if(trigger) openSeasonGuide(trigger,null,trigger.dataset.seasonGuide);
+});
 // Keep a chosen district shareable. Switching districts is one continuous map visit.
 window.addEventListener('life-tour-stop', event => {
   const url = new URL(location.href);
@@ -165,6 +178,10 @@ window.addEventListener('life-tour-close', () => {
 // Both historical city entrances now share this world, including when a LINE link opens a mission.
 async function enterCity(){
   await showLifeTour(entryParams.get('scene'),lifeEntry,{overview:entry==='life'||entryParams.get('view')==='city'});
+  if ((entry==='life'||!entry) && (entryParams.has('guideMonth') || entryParams.has('guideArea'))) {
+    await openSeasonGuide(document.querySelector('[data-season-guide]'),entryParams.get('guideMonth'),entryParams.get('guideArea'));
+    return;
+  }
   if(entry==='life'||!entry){activities.openFromUrl(entryParams);return;}
   if(entry==='culture')cultureWalk.open({placeId:entryParams.get('place')});
   else if(entry==='residents')residentChat.open(entryParams.get('resident'));

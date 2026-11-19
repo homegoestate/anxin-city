@@ -1,10 +1,19 @@
-// 官方活動日期快照；最新補充 2026-11-16，不是即時活動介接。
+// 官方活動日期快照。每筆資料保留各自的發布和查核日期。
 // 新增時須有當年度確定日期；已結束紀錄保留，由臺灣日期篩選狀態。
 // 日期範圍不保證每天有節目或開館；請一起呈現 dateLabel 與 caution。
 // 研究證據：work/seasons-v12/research/events.md；work/weekly-20261102；work/weekly-20261109；work/weekly-20261116。
-export const tainanEventsReviewedAt = '2026-11-16';
+export const tainanEventsReviewedAt = '2026-11-19';
 
 export const tainanEvents = [
+  {
+    id:'xigang-sesame-2026',title:'2026 臺南胡麻季・西港場',
+    startDate:'2026-12-05',endDate:'2026-12-06',dateLabel:'2026/12/5、12/6',
+    venue:'西港區農會後營倉庫',districtIds:['xigang'],category:'festival',
+    description:'想在西港認識胡麻，可以把十二月第一個週末留給後營。這是臺南胡麻季的西港場次。',
+    caution:'四個產區的場次不同。當天攤位及體驗時間請確認主辦單位公告。',
+    source:{title:'臺南市政府｜臺南胡麻季各產區場次',url:'https://info.tainan.gov.tw/News_Content.aspx?n=25742&s=8845672',publishedAt:'2026-11-07'},
+    reviewedAt:'2026-11-19'
+  },
   {
     "id": "guanziling-hot-spring-festival-2026",
     "title": "2026關子嶺溫泉美食節",
@@ -16,14 +25,14 @@ export const tainanEvents = [
       "baihe"
     ],
     "category": "festival",
-    "description": "主題周市集落幕後，白河還有夜間賞燈可走。從寶泉公園、嶺頂公園到大成殿，燈飾展至11月22日，每晚17:00點亮至午夜。想白天走訪水火同源與大仙寺，可查11月17、18日加開的小旅行梯次。",
+    "description": "想在山城散步，可以沿寶泉公園、嶺頂公園與大成殿看夜間燈飾。2026 年賞燈到 11 月 22 日，每晚 17:00 點燈至午夜。",
     "source": {
       "title": "臺南市政府觀光旅遊局｜關子嶺主題周、夜間燈飾與加開小旅行",
       "url": "https://info.tainan.gov.tw/News_Content.aspx?n=25742&s=8845359",
       "publishedAt": "2026-11-05"
     },
-    "reviewedAt": "2026-11-09",
-    "caution": "節期不代表每天有市集或演出。11/7–11/8 主題周已結束；11/17、11/18 小旅行須另行報名，餘額、費用與集合方式請查主辦公告。"
+    "reviewedAt": "2026-11-19",
+    "caution": "賞燈期間不代表每天都有市集或演出。11/7、11/8 主題周及 11/17、11/18 兩梯小旅行已結束。晚間賞燈請確認當日交通及現場安排。"
   },
   {
     "id": "kunshen-salt-festival-2026",

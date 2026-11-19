@@ -2,20 +2,20 @@
 #lantern-story .street-map-top{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 20px;font-size:11px;color:var(--ls-muted)}
 #lantern-story .street-map-top small{font-size:11px}
 #lantern-story .street-walk-status{max-width:55%;text-overflow:ellipsis;overflow:hidden;white-space:nowrap}
-#lantern-story .street-stage{position:relative;aspect-ratio:1000/620;overflow:hidden;background:#ece3ca;touch-action:pan-y;outline-offset:-4px}
+#lantern-story .street-stage{position:relative;aspect-ratio:1000/620;overflow:hidden;background:#eee3cb;touch-action:pan-y;outline-offset:-4px}
 #lantern-story .street-land{position:absolute;left:0;top:0;width:100%;height:100%}
 #lantern-story .street-map-svg{width:100%;height:100%;display:block;user-select:none;-webkit-user-select:none}
 #lantern-story .street-map-svg *{pointer-events:none}
-#lantern-story .street-scenery{filter:saturate(.85) contrast(1.03)}
+#lantern-story .street-scenery{filter:saturate(1.12) contrast(1.025)}
 #lantern-story .street-player-body{transform-origin:0 0}
 #lantern-story .street-player[data-facing=left] .street-player-body{transform:scaleX(-1)}
 #lantern-story .street-player.is-walking .ls-map-sprite{animation:ls-walking .28s ease-in-out infinite alternate;transform-origin:0 0}
 @keyframes ls-walking{from{transform:translateY(-2px) rotate(-2deg)}to{transform:translateY(1px) rotate(2deg)}}
 #lantern-story .street-player-ring{opacity:.75}
 #lantern-story .street-stop-layer{position:absolute;inset:0;pointer-events:none}
-#lantern-story .street-stop-button{position:absolute;transform:translate(-50%,-100%);display:flex;align-items:flex-start;justify-content:center;width:90px;height:calc(14.3cqw + 29px);padding:0;border:0;border-radius:0;background:transparent;color:#254d3d;pointer-events:auto}
+#lantern-story .street-stop-button{position:absolute;transform:translate(-50%,-100%);display:flex;align-items:flex-start;justify-content:center;width:90px;height:calc(14.3cqw + 29px);padding:0;border:0;border-radius:0;background:transparent;color:#214955;pointer-events:auto}
 #lantern-story .street-stop-button:hover{background:transparent}
-#lantern-story .street-stop-label{display:flex;align-items:center;gap:3px;border:1px solid #b7b898;border-radius:10px;padding:4px 8px;line-height:1.45;white-space:nowrap;font-size:12px;background:#fff9e8;box-shadow:0 3px 8px #284e3820}
+#lantern-story .street-stop-label{display:flex;align-items:center;gap:3px;border:1px solid #9bb7ac;border-radius:10px;padding:4px 8px;line-height:1.45;white-space:nowrap;font-size:12px;background:#fffaee;box-shadow:0 3px 8px #284e3820}
 #lantern-story .street-stop-label i{display:none}
 #lantern-story .street-stop-button.is-place{height:98px}
 #lantern-story .street-stop-button.is-place .street-stop-label{background:#f9e4b7}

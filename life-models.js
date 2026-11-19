@@ -13,10 +13,19 @@ export function createModelKit() {
   const tapered = new THREE.CylinderGeometry(.79, 1, 1, 14);
   const hoopShape = new THREE.TorusGeometry(1,.080,6,22);
   const letterPlane = new THREE.PlaneGeometry();
+  const farBall = new THREE.SphereGeometry(1, 8, 5);
+  const bead = new THREE.SphereGeometry(1, 10, 7);
+  const mouthShape = new THREE.Shape();
+  mouthShape.moveTo(-1,.26);
+  mouthShape.quadraticCurveTo(-.97,.50,-.78,.31);
+  mouthShape.quadraticCurveTo(.06,-.20,.81,.45);
+  mouthShape.quadraticCurveTo(1.06,.58,1,.29);
+  mouthShape.bezierCurveTo(.56,-.91,-.59,-.87,-1,.26);
+  const smileMark = new THREE.ShapeGeometry(mouthShape,5);
   const letterCells=new Map();
   let paper,pen,ink;
   const simpleMaterials = new Map();
-  const sources = new Set([cube, ball, crown, soft, cylinder, cone,tapered,hoopShape,letterPlane]);
+  const sources = new Set([cube, ball, crown, soft, cylinder, cone,tapered,hoopShape,letterPlane,farBall,bead,smileMark]);
   const surface = new THREE.MeshLambertMaterial({ vertexColors: true });
   const v = new THREE.Vector3(), normal = new THREE.Vector3(), transform = new THREE.Matrix4(), normalMatrix = new THREE.Matrix3();
   function part(parent, geometry, color, x, y, z, sx=1, sy=1, sz=1) {
@@ -112,7 +121,7 @@ export function createModelKit() {
     for(const source of sources) source.dispose();
     for(const material of simpleMaterials.values()) material.dispose();
   }
-  return {box,oval,rock,post,peak,taper,hoop,letters,rod,group,part,bake,releaseSources};
+  return {box,oval,rock,post,peak,taper,hoop,letters,rod,group,part,bake,releaseSources,bead,farBall,smileMark};
 }
 
 const wood=0x9b6440, darkwood=0x664334, cream=0xffe4ae, spruce=0x376d58;
@@ -390,148 +399,272 @@ export function makeLandmark(k,id) {
   return k.bake(p);
 }
 
-const outfits={
-  'shuixian-morning':[0xc06f5a,0x66775f,0x523b36,'bun'],
-  'yujing-morning':[0xe0af56,0x677f75,0x553d32,'brim'],
-  'anping-afternoon':[0xba6e5f,0x66827c,0x4f3b32,'bob'],
-  'dongshan-afternoon':[0xdbc6a2,0x567d68,0x554238,'bun'],
-  'yanshui-evening':[0xcbb48c,0x546e6d,0xb3aaa0,'silver'],
-  'beimen-evening':[0x80aaa4,0x707d65,0x4b4740,'brim'],
-  player:[0x29796f,0xc7a980,0x493f39,'cap']
+// Colours, hair and the item each person carries give them a readable silhouette
+// both in the street and from the map. Positions below are relative to the feet.
+const residents = {
+  'shuixian-morning':   [0xb8493f,0x284f52,0x453234,0xe9aa84,'bun','apron','greens'],
+  'yujing-morning':     [0xe39a35,0x315b59,0x483631,0xd79b70,'straw','overalls','mango'],
+  'anping-afternoon':   [0xac4845,0x35475b,0x3b3032,0xf2ba94,'bob','dress','tote'],
+  'dongshan-afternoon': [0xe7cfaa,0x3d5552,0x493530,0xdb9b75,'kerchief','apron','coffee'],
+  'yanshui-evening':    [0xe5cba6,0x435469,0xb9b8a9,0xdba380,'silver','vest','sketch'],
+  'beimen-evening':     [0x4c8f94,0x304b60,0x443a38,0xca8b68,'bucket','sailor','bottle'],
+  player:               [0x267d77,0xb99665,0x483633,0xedb38e,'cap','jacket','satchel']
 };
-const neighbors={
-  'shuixian-morning':[0x719aa6,0xd0b694,0x4c4138,'bob'],
-  'yujing-morning':[0xb58a61,0x638b91,0x524033,'cap'],
-  'anping-afternoon':[0xb19cb7,0x6e827b,0x593d34,'braid'],
-  'dongshan-afternoon':[0x799eab,0xa99970,0x674a3a,'wave'],
-  'yanshui-evening':[0xa89bb2,0x637e75,0x5d463b,'bob'],
-  'beimen-evening':[0x86a8b1,0xc1a67e,0x543d32,'cap'],
+const neighbors = {
+  'shuixian-morning':   [0x528291,0xad8564,0x423435,0xebaf8d,'bob','sailor','tote'],
+  'yujing-morning':     [0xca6d42,0x345e6e,0x493631,0xe6a27d,'cap','overalls','bottle'],
+  'anping-afternoon':   [0xba6e85,0x4c6074,0x4d3532,0xebae85,'braid','dress',null],
+  'dongshan-afternoon': [0x528c94,0xaa8459,0x563b33,0xd59974,'wave','sailor',null],
+  'yanshui-evening':    [0xad7887,0x3c6968,0x463436,0xedb591,'bob','dress','sketch'],
+  'beimen-evening':     [0x568394,0xa78e61,0x473633,0xe3a37e,'bucket','sailor',null]
 };
-export function makePerson(k,id,animated=false,appearance=0) {
-  const variant=typeof appearance==='number'?appearance:appearance?.variant||0;
-  const pedestrian=variant>0,player=id==='player',resident=!pedestrian&&!player;
-  const [shirt,trousers,hair,style]=variant===2?[0xc69448,0x63778a,0x685246,'wave']:variant===1?(neighbors[id]||outfits.player):(outfits[id]||outfits.player);
-  const skin=variant===2?0xc88d70:variant===1?0xf1bb98:id==='beimen-evening'?0xd8a17e:0xe6ad89;
-  const root=new THREE.Group(), body=new THREE.Group(), legs=[], arms=[];
-  const torso=new THREE.Group();
-  const overshirt=k.taper(torso,shirt,0,1.03,0,.348,.65,.232);
-  overshirt.rotation.z=Math.PI;
-  k.oval(torso,shirt,0,1.265,0,.343,.175,.224);
-  k.oval(torso,trousers,0,.704,0,.295,.131,.205);
-  k.oval(torso,skin,0,1.44,0,.137,.14,.12);
-  k.oval(torso,skin,0,1.79,0,.375,.419,.332);
+const traveler=[0xe0a042,0x3b536a,0x503a34,0xcc8d6b,'wave','overalls','pack'];
+const rice=0xffe9be, midnight=0x322d37, coral=0xb64b43, gold=0xf2b948, sea=0x356d72;
+const rounded = (k,far,p,c,x,y,z,w,h,d) => k.part(p,far?k.farBall:k.bead,c,x,y,z,w,h,d);
+
+function makeHead(k,head,look,far) {
+  const [, ,hair,skin,style]=look;
+  const oval=(...args)=>rounded(k,far,head,...args);
+  // A broad cheek and a short chin keep the expression legible from the pavement.
+  k.part(head,far?k.farBall:k.bead,skin,0,0,0,.462,.435,.367);
   for(const side of [-1,1]){
-    k.oval(torso,skin,side*.357,1.77,0,.067,.089,.065);
-    k.oval(torso,0xeb9f84,side*.373,1.765,.044,.035,.045,.024);
-    k.oval(torso,0x493d39,side*.136,1.833,.302,.041,.053,.029);
-    k.oval(torso,0xffebd7,side*.136-.012,1.852,.329,.013,.014,.009);
-    const brow=k.oval(torso,hair,side*.144,1.922,.282,.071,.018,.020);
-    brow.rotation.z=side*.13;
-    k.oval(torso,0xde937d,side*.235,1.70,.258,.059,.025,.020);
-    if(!player){
-      const collar=k.oval(torso,variant===2?0xf2d28b:0xf1dcba,side*.092,1.36,.176,.068,.079,.032);
-      collar.rotation.z=side*.56;
+    oval(skin,side*.438,-.028,-.026,.078,.102,.073);
+    if(!far) oval(0xcb806b,side*.465,-.025,.026,.038,.052,.024);
+    if(style==='kerchief'){
+      const lid=k.part(head,k.smileMark,midnight,side*.165,.036,.350,.060,.083,1);
+      lid.rotation.set(-.04,side*.28,Math.PI);
+    }else{
+      const eye=oval(midnight,side*.165,.034,.337,.051,.066,.032);
+      eye.rotation.y=side*.24;
+      if(!far) oval(0xfff3d9,side*.165-.013,.056,.362,.017,.019,.009);
     }
-  }
-  k.oval(torso,skin,0,1.75,.331,.06,.061,.053);
-  k.rod(torso,0x9f6550,[-.064,1.66,.317],[.00,1.645,.327],.012);
-  k.rod(torso,0x9f6550,[.00,1.645,.327],[.064,1.66,.317],.012);
-  k.oval(torso,hair,0,1.98,-.060,.389,.267,.329);
-  for(const [dx,dy,w,h,tilt] of [[-.24,1.974,.12,.136,-.60],[-.05,2.039,.208,.102,.31],[.173,2.014,.160,.109,.44],[.276,1.953,.096,.109,.47]]){
-    const lock=k.oval(torso,hair,dx,dy,.184,w,h,.131);
-    lock.rotation.z=tilt;
-  }
-  if(style==='bun'){
-    k.oval(torso,0xb7654c,.019,2.15,-.19,.184,.093,.17);
-    k.oval(torso,hair,.028,2.265,-.24,.204,.175,.19);
-    k.rod(torso,0xdeaa72,[-.13,2.19,-.13],[.24,2.31,-.13],.016);
-  }
-  if(style==='bob'||style==='braid'){
-    for(const side of [-1,1]) k.oval(torso,hair,.308*side,1.82,-.059,.094,.233,.203);
-    k.oval(torso,hair,0,1.81,-.179,.348,.24,.18);
-    if(style==='braid')for(const dx of [-.24,.24]){
-      for(let i=0;i<3;i++)k.oval(torso,hair,dx,1.71-i*.082,-.15,.075-i*.012,.065,.077);
-      k.oval(torso,0xb88789,dx,1.53,-.15,.059,.029,.059);
+    if(!far) {
+      const brow=oval(style==='silver'?0x726e60:hair,side*.167,.149,.315,.074,.021,.022);
+      brow.rotation.z=side*(style==='silver'?.20:.11)+(style==='straw'?.12:0);
     }
+    const cheek=oval(0xda776b,side*.292,-.075,.277,.095,.044,.026);
+    cheek.rotation.y=side*.57;
   }
-  if(style==='cap'){
-    const cap=player?0xedb546:0x698ba2;
-    k.oval(torso,cap,.01,2.099,-.010,.383,.176,.337);
-    k.oval(torso,cap,.029,2.060,.253,.306,.044,.236);
-    k.oval(torso,player?0xc98543:0x587682,.01,2.264,-.008,.042,.029,.046);
-    k.rod(torso,player?0xf2d07c:0x8eafbb,[.01,2.254,.035],[.012,2.106,.283],.009);
-  }
-  if(style==='brim'){
-    k.oval(torso,0xd5aa64,0,2.085,0,.52,.073,.449);
-    k.oval(torso,0xe3bd77,0,2.167,-.02,.36,.18,.30);
-    k.oval(torso,0x9c6a43,0,2.137,0,.36,.041,.308);
-  }
+  oval(skin,0,-.040,.356,.057,.054,.052);
+  const smile=k.part(head,k.smileMark,0x8c4a46,0,-.148,.345,style==='kerchief'?.115:.097,style==='wave'?.083:.066,1);
+  smile.rotation.set(.27,0,style==='straw'?.08:0);
   if(style==='silver'){
-    for(const s of [-1,1])k.hoop(torso,0x716857,s*.139,1.836,.329,.094,.072,.12);
-    k.rod(torso,0x716857,[-.046,1.846,.342],[.046,1.846,.342],.011);
-  }
-  if(player){
-    k.taper(torso,cream,0,1.036,.153,.164,.58,.092);
-    for(const yy of [.95,1.02,1.09])k.box(torso,0x97a99a,0,yy,.245,.20,.018,.019);
     for(const s of [-1,1]){
-      const lapel=k.oval(torso,0x579187,s*.128,1.296,.18,.072,.105,.038);
-      lapel.rotation.z=s*.44;
+      if(!far) k.hoop(head,0x445665,s*.164,.040,.367,.111,.094,.15);
+      const whisker=oval(0xd5cbb7,s*.045,-.103,.350,.061,.025,.016);
+      whisker.rotation.z=s*.16;
     }
-    k.rod(torso,0xaa7e4c,[.209,1.32,.176],[-.27,.76,.221],.043);
-    k.box(torso,0xb7854c,-.285,.745,.213,.31,.25,.12);
-    k.box(torso,0xe4b56f,-.285,.796,.28,.30,.064,.037);
-    k.box(torso,cream,-.285,.773,.304,.043,.041,.024);
-  }else if(resident&&['shuixian-morning','dongshan-afternoon'].includes(id)) {
-    const apron=id==='shuixian-morning'?0x87a181:0x547c69;
-    k.taper(torso,apron,0,.93,.135,.268,.50,.147);
-    for(const s of [-1,1])k.rod(torso,apron,[s*.118,1.15,.226],[s*.169,1.37,.145],.027);
-    k.box(torso,0xaeb793,0,.91,.276,.171,.113,.023);
-    k.box(torso,cream,0,.961,.295,.173,.018,.016);
-  }else{
-    for(let j=0;j<3;j++)k.oval(torso,cream,0,1.24-j*.13,.224,.015,.016,.013);
-    k.box(torso,variant===2?0xe1b773:shirt,-.167,1.16,.206,.115,.097,.020);
-    if(variant===2){
-      for(const s of [-1,1])k.rod(torso,0x687570,[s*.20,1.365,.14],[s*.22,1.04,.193],.032);
-      k.oval(torso,0x89928a,0,1.07,-.196,.268,.343,.144);
-    }
+    if(!far) k.rod(head,0x445665,[-.054,.045,.377],[.054,.045,.377],.013);
   }
-  if(pedestrian)body.scale.setScalar(variant===2?.92:id==='shuixian-morning'?.94:.82);
-  const torsoMesh=k.bake(torso); body.add(torsoMesh);
-  for(const s of [-1,1]){
-    const leg=new THREE.Group(), arm=new THREE.Group(), lower=new THREE.Group(), upper=new THREE.Group();
-    leg.position.set(s*.155,.70,0);
-    k.taper(lower,trousers,0,-.245,0,.124,.49,.121).rotation.z=Math.PI;
-    k.oval(lower,trousers,0,-.027,0,.134,.11,.137);
-    k.taper(lower,player||variant===1?0xc3af8e:trousers,0,-.464,0,.117,.071,.12);
-    k.oval(lower,cream,0,-.525,.014,.103,.078,.11);
-    const shoe=player?0xf3d9a7:variant===1?0xc49169:0x795d49;
-    k.oval(lower,shoe,0,-.598,.059,.132,.090,.194);
-    k.oval(lower,player?0xac8b6e:0x66564a,0,-.651,.057,.132,.041,.193);
-    for(const j of [0,1])k.box(lower,0xe6cdac,0,-.533,.105+j*.054,.094,.012,.017);
-    leg.add(k.bake(lower)); body.add(leg); legs.push(leg);
-    arm.position.set(s*.32,1.22,0);
-    const sleeve=k.oval(upper,shirt,s*.039,-.146,0,.121,.187,.125);sleeve.rotation.z=s*.15;
-    k.oval(upper,skin,s*.075,-.304,.021,.072,.143,.079);
-    k.oval(upper,skin,s*.082,-.432,.055,.084,.099,.088);
-    k.oval(upper,skin,s*.043,-.411,.105,.049,.057,.047);
-    if(s>0&&resident&&id==='dongshan-afternoon'){
-      k.post(upper,cream,.12,-.36,.15,.112,.163);
-      k.post(upper,darkwood,.12,-.273,.15,.087,.014);
-    }
-    if(s<0&&(resident||id==='shuixian-morning'&&variant===1)&&['shuixian-morning','yujing-morning','anping-afternoon'].includes(id)){
-      const basket=id!=='anping-afternoon', c=basket?0xc1985f:0xb78f62;
-      for(const dx of [-.128,.128]) k.rod(upper,c,[dx-.10,-.39,.09],[dx*1.26-.10,-.55,.09],.023);
-      k.box(upper,c,-.10,-.65,.10,.43,.25,.22);
-      if(basket){
-        for(const dx of [-.13,-.03,.07,.17]) k.box(upper,0xa27c4d,dx-.11,-.65,.22,.020,.21,.011);
-        for(let i=0;i<3;i++) k.oval(upper,id==='yujing-morning'?0xf2ac3a:0x688958,i*.095-.22,-.50,.13,.070,.085,.059);
+
+  oval(hair,0,.201,-.070,.474,.282,.366);
+  oval(hair,-.015,.014,-.232,.414,.333,.169);
+  if(style==='bob'||style==='braid'){
+    const fringe=oval(hair,-.036,.244,.226,.299,.086,.118);
+    fringe.rotation.z=style==='bob'?-.15:.09;
+    oval(hair,.189,.219,.222,.145,.083,.119);
+  }else{
+    const fringe=oval(hair,-.133,.239,.220,.243,.097,.108);
+    fringe.rotation.z=style==='kerchief'?.64:.37;
+  }
+  const sideLock=oval(hair,.248,.205,.170,.16,.111,.165);
+  sideLock.rotation.z=-.44;
+  if(style==='bob'||style==='braid'){
+    for(const side of [-1,1]){
+      const lock=oval(hair,side*.391,-.017,-.033,.116,.225,.228);
+      lock.rotation.z=-side*.12;
+      if(style==='braid'){
+        oval(hair,side*.424,-.212,.020,.096,.115,.100);
+        oval(gold,side*.424,-.293,.040,.082,.038,.084);
+        oval(hair,side*.439,-.342,.049,.063,.082,.066);
       }
     }
-    arm.add(k.bake(upper)); body.add(arm); arms.push(arm);
+    if(!far){
+      for(const d of [0,.048]){
+        const pin=oval(gold,-.347,.146+d,.222,.060,.014,.025);
+        pin.rotation.z=-.51;
+      }
+    }
+  }else if(style==='bun'||style==='kerchief'){
+    const side=style==='bun'?-1:1;
+    oval(hair,side*.229,.408,-.17,.202,.195,.164);
+    if(style==='bun'){
+      oval(coral,-.208,.329,-.131,.189,.060,.168);
+      k.rod(head,gold,[-.407,.405,-.121],[-.069,.500,-.075],.018);
+      oval(rice,-.408,.405,-.121,.037,.037,.037);
+    }else{
+      const band=oval(sea,0,.293,.015,.46,.114,.317);
+      band.rotation.z=-.16;
+      for(const sign of [-1,1]){
+        const knot=oval(gold,.35+sign*.060,.340,-.047,.092,.050,.047);
+        knot.rotation.z=sign*.55;
+      }
+    }
+  }else if(style==='wave'||style==='silver'){
+    for(const [x,y] of [[-.297,.268],[-.092,.365],[.116,.334]]){
+      const wave=oval(hair,x,y,.113,.174,.141,.208);
+      wave.rotation.z=-.48;
+    }
+  }else if(style==='cap'){
+    const cap=look===residents.player?gold:sea;
+    oval(cap,0,.344,-.020,.464,.207,.379);
+    const brim=oval(cap,.032,.275,.259,.370,.052,.248);
+    brim.rotation.z=-.055;
+    oval(look===residents.player?coral:rice,0,.543,-.027,.046,.031,.043);
+    if(!far) oval(rice,-.11,.382,.345,.052,.050,.021);
+  }else if(style==='straw'){
+    oval(0xd09047,0,.277,.002,.586,.061,.494);
+    oval(0xe9b963,0,.298,.002,.581,.052,.490);
+    oval(0xe3ad5a,0,.386,-.027,.363,.183,.308);
+    oval(sea,0,.337,-.021,.366,.050,.314);
+  }else if(style==='bucket'){
+    k.taper(head,0x487e88,0,.358,-.008,.453,.246,.378);
+    k.taper(head,0x315b6b,0,.267,.017,.536,.108,.446);
+    if(!far) k.taper(head,0xeecb87,0,.315,-.006,.449,.040,.378);
   }
-  root.add(body);
-  if(!animated){
-    root.rotation.y=-.46;
+}
+
+function dressBody(k,p,look,far) {
+  const [shirt,trousers,,skin,,outfit,item]=look;
+  const oval=(...args)=>rounded(k,far,p,...args);
+  const cloth=outfit==='vest'?0x365568:shirt;
+  k.taper(p,cloth,0,1.025,0,.349,.587,.239).rotation.z=Math.PI;
+  oval(cloth,0,1.255,0,.359,.16,.237);
+  oval(trousers,0,.717,-.007,.301,.132,.215);
+  oval(skin,0,1.394,.003,.14,.14,.14);
+  if(outfit==='dress'){
+    k.taper(p,shirt,0,.786,0,.391,.324,.259);
+    k.taper(p,0xe7be8d,0,.905,0,.328,.053,.235);
   }
-  return {root,body,legs,arms};
+  if(outfit==='apron'||outfit==='overalls'){
+    const fabric=outfit==='overalls'?trousers:item==='coffee'?0x356864:0x457667;
+    k.taper(p,fabric,0,.899,.133,.284,.436,.148);
+    k.box(p,fabric,0,1.135,.216,.337,.212,.055);
+    for(const s of [-1,1]){
+      k.rod(p,fabric,[s*.136,1.214,.218],[s*.183,1.365,.14],.033);
+      if(!far) oval(gold,s*.133,1.217,.252,.022,.023,.012);
+    }
+    if(!far){
+      k.box(p,item==='coffee'?0xc49165:0x92aa85,0,.973,.285,.177,.112,.017);
+      k.box(p,rice,0,1.021,.299,.173,.014,.013);
+    }
+  }else if(outfit==='vest'){
+    k.peak(p,rice,0,1.242,.205,.139,.243,.055).rotation.z=Math.PI;
+    if(!far){
+      for(const y of [.870,.961,1.055]) oval(0xceab73,0,y,.226,.019,.020,.017);
+      k.box(p,0x809296,-.169,.902,.184,.120,.025,.031);
+    }
+  }else if(outfit==='jacket'){
+    k.box(p,rice,0,1.029,.167,.219,.514,.140);
+    for(const s of [-1,1]){
+      k.rod(p,0x398a7e,[s*.179,1.317,.176],[s*.109,1.095,.238],.034);
+    }
+    if(!far) for(const y of [.924,1.021,1.119]) k.box(p,sea,0,y,.242,.204,.028,.013);
+  }else if(!far&&outfit==='sailor'){
+    for(const y of [.976,1.082,1.186]) k.box(p,rice,0,y,.221,.343,.029,.020);
+  }
+  if(item==='satchel'||item==='bottle'){
+    k.rod(p,0xa26541,[.211,1.345,.172],[.011,1.114,.262],.032);
+    k.rod(p,0xa26541,[.011,1.114,.262],[-.276,.795,.219],.032);
+    if(item==='satchel'){
+      const bag=k.group(p,-.277,.757,.181);bag.rotation.z=-.12;
+      k.box(bag,0xb87940,0,0,0,.312,.229,.134);
+      k.box(bag,gold,0,.046,.073,.310,.093,.031);
+      if(!far) k.box(bag,rice,0,.020,.096,.040,.050,.021);
+    }else{
+      k.post(p,0x347f87,-.30,.825,.166,.086,.282);
+      k.post(p,rice,-.30,.982,.166,.075,.050);
+    }
+  }else if(item==='pack'){
+    oval(0x50746c,0,1.040,-.215,.287,.309,.180);
+    const roll=k.post(p,0xc69261,0,1.283,-.244,.087,.512);
+    roll.rotation.z=Math.PI/2;
+    for(const s of [-1,1]) k.rod(p,0xa16c49,[s*.203,1.358,.113],[s*.220,1.016,.192],.030);
+  }
+  if((outfit==='vest'||outfit==='dress'||outfit==='sailor')&&!far){
+    for(const side of [-1,1]){
+      const collar=oval(rice,side*.089,1.340,.179,.086,.065,.031);
+      collar.rotation.z=-side*.44;
+    }
+  }
+}
+
+function carriedItem(k,p,item,far) {
+  const oval=(...args)=>rounded(k,far,p,...args);
+  if(item==='greens'||item==='mango'||item==='tote'){
+    const x=-.205,y=-.616,z=.057,tote=item==='tote';
+    const basket=k.group(p,x,y,z);
+    const loop=k.hoop(basket,tote?0x895d45:0x9e6c42,.015,.106,0,.178,.157,.27);
+    loop.rotation.z=-.1;
+    if(tote){
+      k.box(basket,0xcf9569,0,-.086,0,.376,.318,.177);
+      k.box(basket,0xae624a,0,-.165,.093,.372,.094,.018);
+    }else{
+      k.taper(basket,0xbe884f,0,-.079,0,.268,.231,.157).rotation.z=Math.PI;
+      rounded(k,far,basket,0xe5b76f,0,.029,0,.270,.039,.155);
+      if(!far) for(const x of [-.16,-.06,.055,.153]){
+        k.rod(basket,0xe2b16d,[x*.86,-.166,.123],[x,-.02,.142],.011);
+      }
+      if(item==='mango'){
+        for(const [dx,dy] of [[-.116,.077],[.05,.095],[.132,.066]]) oval(0xf8ae37,x+dx,y+dy,z,.083,.104,.076).rotation.z=-.36;
+        oval(0x537b4f,x+.113,y+.181,z,.074,.034,.047).rotation.z=.62;
+      }else{
+        oval(rice,x-.057,y+.071,z,.094,.061,.080);
+        for(const [dx,dy,a] of [[.093,.18,-.43],[.018,.206,.13],[-.080,.18,.58]]){
+          oval(0x548251,x+dx,y+dy,z,.052,.164,.041).rotation.z=a;
+          if(!far) oval(0x91a758,x+dx-.018,y+dy,z+.016,.022,.134,.027).rotation.z=a;
+        }
+      }
+    }
+  }else if(item==='coffee'){
+    k.post(p,rice,.112,-.338,.16,.12,.175);
+    k.post(p,0x674335,.112,-.248,.16,.097,.013);
+    k.hoop(p,rice,.235,-.33,.159,.066,.063,.19);
+  }else if(item==='sketch'){
+    const book=k.group(p,-.086,-.387,.137);book.rotation.z=-.25;book.rotation.x=-.29;
+    k.box(book,0x936449,0,0,0,.214,.285,.050);
+    k.box(book,rice,.009,0,.026,.193,.267,.017);
+    if(!far) k.rod(book,coral,[-.066,-.072,.045],[.070,.081,.045],.013);
+  }
+}
+
+export function makePerson(k,id,animated=false,appearance=0) {
+  const variant=typeof appearance==='number'?appearance:appearance?.variant||0;
+  const far=appearance?.detail==='far';
+  const look=variant===2?traveler:variant===1?(neighbors[id]||traveler):(residents[id]||residents.player);
+  const [shirt,trousers,,skin,style,,item]=look;
+  const child=variant===1&&(id==='anping-afternoon'||id==='yujing-morning');
+  const elder=style==='silver';
+  const root=new THREE.Group(), body=k.group(root),legs=[],arms=[];
+  const torso=new THREE.Group();
+  const height=child?.825:elder?.92:variant===2?1.01:.98;
+  body.scale.set(child?.91:elder?1.045:1,height,1);
+  dressBody(k,torso,look,far);
+  const head=k.group(torso,0,child?1.726:1.766,elder?.032:.004);
+  head.scale.setScalar(child?1.105:far?1.055:1);
+  makeHead(k,head,look,far);
+  body.add(k.bake(torso));
+
+  const carried=item==='coffee'?1:['greens','mango','tote','sketch'].includes(item)?0:-1;
+  for(const [i,s] of [-1,1].entries()){
+    const leg=k.group(body,s*.158,.698,-.005),lower=new THREE.Group();
+    k.taper(lower,trousers,0,-.242,0,.132,.511,.129).rotation.z=Math.PI;
+    if(!far) k.taper(lower,look===residents.player?0xd2b58d:trousers,0,-.464,0,.125,.086,.129);
+    rounded(k,far,lower,rice,0,-.529,.016,.106,.095,.106);
+    const shoe=look===residents.player?rice:variant===2?0x946847:child?coral:0x694d41;
+    rounded(k,far,lower,shoe,0,-.595,.067,.145,.092,.193);
+    if(!far) rounded(k,false,lower,0x70574b,0,-.652,.061,.143,.041,.188);
+    leg.add(k.bake(lower)); legs.push(leg);
+
+    const arm=k.group(body,s*.320,1.236,0),upper=new THREE.Group();
+    const sleeve=rounded(k,far,upper,shirt,s*.054,-.125,0,.133,.176,.139);
+    sleeve.rotation.z=s*.22;
+    if(!far) rounded(k,false,upper,skin,s*.094,-.281,.025,.077,.153,.083);
+    rounded(k,far,upper,skin,s*.098,far?-.307:-.391,.072,.092,far?.156:.103,.096);
+    if(!far) rounded(k,false,upper,skin,s*.051,-.360,.123,.046,.056,.036);
+    if(i===carried) carriedItem(k,upper,item,far);
+    arm.add(k.bake(upper));arms.push(arm);
+  }
+  if(!animated) root.rotation.y=-.46;
+  return {root,body,legs,arms,carried,lean:elder?.033:0};
 }

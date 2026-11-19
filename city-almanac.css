@@ -1,0 +1,67 @@
+#city-almanac {
+  --alm-ink:#203f39; --alm-muted:#4e675e; --alm-line:#d8dbc7;
+  box-sizing:border-box; position:fixed; inset:0; margin:auto; padding:0;
+  width:min(880px,calc(100% - 36px)); max-width:100%; height:min(87dvh,910px);
+  max-height:100%; color:var(--alm-ink); background:#faf8ed; border:1px solid #b7c6b6;
+  border-radius:22px; box-shadow:0 18px 85px #14352c55; font: 16px/1.6 system-ui,"PingFang TC","Microsoft JhengHei",sans-serif;
+}
+#city-almanac[open]{display:flex;flex-direction:column}
+#city-almanac::backdrop {background:rgba(24,54,54,.52)}
+#city-almanac *,#city-almanac *::before{box-sizing:border-box}
+#city-almanac :is(h2,h3,h4,p){margin:0;letter-spacing:normal;color:inherit}
+#city-almanac button,#city-almanac select,#city-almanac summary{font:inherit;color:inherit;cursor:pointer}
+#city-almanac button,#city-almanac select{min-height:44px;line-height:1.35}
+#city-almanac :focus-visible{outline:3px solid #a94e32;outline-offset:2px}
+#city-almanac a{color:#315f52;text-underline-offset:3px}
+.alm-bar,.alm-foot{display:flex;align-items:center;gap:12px;flex:none;padding:10px clamp(12px,3vw,28px);background:#fbfaf2}
+.alm-bar{justify-content:space-between;border-bottom:1px solid var(--alm-line)}
+#city-almanac .alm-bar h2 {font:700 clamp(21px,3vw,28px)/1.25 "Songti TC","PMingLiU",serif}
+.alm-bar button,.alm-foot button{border:1px solid #aab9a6;border-radius:12px;background:#fffdf6;padding:8px 15px;white-space:nowrap}
+.alm-foot{border-top:1px solid var(--alm-line);flex-wrap:wrap;padding-bottom:max(10px,env(safe-area-inset-bottom));}
+.alm-feedback{font-size:.9rem;color:var(--alm-muted);min-width:0}
+.alm-feedback input{width:100%;min-height:40px;color:inherit;font:inherit}
+.alm-scroll{min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding:16px clamp(12px,3vw,28px) 22px}
+.alm-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.alm-filters label{display:grid;gap:4px;font-size:.84rem;color:var(--alm-muted);font-weight:650}
+.alm-filters select{background:#fffdf6;border:1px solid #9cb09e;border-radius:10px;width:100%;padding:7px 10px}
+.alm-hero{background:#f3ead6;display:grid;grid-template-columns:minmax(140px,28%) 1fr;align-items:center;border-radius:16px;overflow:hidden}
+.alm-illustration{height:100%;min-height:160px;background-image:url('./assets/tainan-seasonal-table.webp?v=28');background-size:200% 200%;background-position:0 0}
+.alm-hero[data-season=summer] .alm-illustration{background-position:100% 0}
+.alm-hero[data-season=autumn] .alm-illustration{background-position:0 100%}
+.alm-hero[data-season=winter] .alm-illustration{background-position:100% 100%}
+.alm-heading{padding:clamp(12px,2.5vw,25px)}
+.alm-meta{font-weight:700;font-size:.83rem;letter-spacing:.05em;color:#665436}
+#city-almanac .alm-heading h3{font:700 clamp(21px,3vw,30px)/1.4 "Songti TC","PMingLiU",serif;margin:.2em 0}
+#city-almanac p{line-height:1.65;overflow-wrap:anywhere}
+.alm-walk{background:#205d50;color:#fff!important;border:0;border-radius:10px;padding:8px 14px;margin-top:12px}
+.alm-section{margin-top:22px}
+.alm-shortcuts{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.alm-shortcuts button{flex:1 1 auto;padding:5px 8px;color:#325d4d!important;background:#eef0e3;border:1px solid #c4ceb8;border-radius:8px;font-size:.88rem!important}
+#city-almanac .alm-section>h3{font-size:1.2em;margin-bottom:8px}
+.alm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,205px),1fr));gap:10px;align-items:start}
+.alm-entry{background:#fffdf6;padding:14px 16px;border:1px solid var(--alm-line);border-radius:12px;min-width:0}
+#city-almanac .alm-entry h4{font-size:1.1em;margin:3px 0 5px}
+.alm-time{display:block;color:var(--alm-muted);font-size:.9em;margin-bottom:6px}
+#city-almanac small{font-size:.83rem;color:var(--alm-muted);display:block;margin-top:8px}
+.alm-more>summary,.alm-ref>summary{padding:10px 0;min-height:44px;color:#34594d}
+.alm-more .alm-grid{margin-top:6px}
+.alm-link{padding:4px 6px;border:0;border-radius:5px;background:transparent;text-decoration:underline;text-underline-offset:3px}
+.alm-harvest{display:flex;flex-flow:row wrap;gap:7px;align-items:start}
+.alm-harvest details{padding:0 12px;background:#eef0d9;border-radius:10px;max-width:100%}
+.alm-harvest summary{padding:9px 0;min-height:44px}
+.alm-harvest details[open]{flex:1 0 100%;padding-bottom:8px}
+.alm-festivals>button{display:flex;justify-content:space-between;width:100%;border:1px solid #b6c1a6;border-radius:12px;background:#e8eedf;padding:12px 15px;text-align:left;font-weight:700!important}
+#alm-fests>p{padding:12px 0}
+@media(max-width:550px){
+ #city-almanac{height:min(94dvh,920px);width:calc(100% - 12px);border-radius:15px}
+ .alm-scroll{padding:12px;scrollbar-gutter:auto}
+ .alm-grid{grid-template-columns:1fr}
+ .alm-hero{grid-template-columns:1fr}
+ .alm-illustration{min-height:0;height:auto;aspect-ratio:1;background-size:200% 200%;width:104px;max-width:32%;float:left;position:absolute;border-radius:12px}
+ .alm-hero{display:block;position:relative;padding:12px}
+ .alm-heading{padding:0;min-height:104px}
+ .alm-heading>.alm-meta,.alm-heading>h3{display:block;margin-left:min(36%,118px)!important}
+ .alm-heading>h3{min-height:82px}
+ .alm-filters{gap:6px;margin-bottom:12px}
+ .alm-foot{padding-top:5px;padding-bottom:max(5px,env(safe-area-inset-bottom))}
+}
