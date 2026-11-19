@@ -3,7 +3,7 @@ import {mountStreetWorld,projectToStreet} from './walk-world.js?v=17.0.0';
 import {CAST,STOPS,dialoguePages,sceneCast,nextDestination} from './presentation.js';
 const root=document.getElementById('lantern-story');
 import {CHARACTER_ASSETS} from './character-assets.js';
-import {mountMissions} from './mission-ui.js';
+import {mountMissions} from './mission-ui.js?v=27.0.0';
 const q=id=>root.querySelector('#'+id);
 const element=(tag,text,cls)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(cls)el.className=cls;return el;};
 const WALK_KEY='anxin-lantern-walk-v1';

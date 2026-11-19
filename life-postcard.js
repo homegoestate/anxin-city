@@ -89,7 +89,8 @@ export function openPostcard({source,stop,memory='',trigger}) {
     if(!dialog.isConnected||!dialog.open)return;
     if(!blob){fail();return;}
     url=URL.createObjectURL(blob);
-    img.src=url;img.alt=stop.name+'・'+stop.title+'，這次散步拍下的立體街景';img.hidden=false;
+    const description = source?.dataset?.illustrated === 'true' ? '這次散步的行政區散步圖' : '這次散步拍下的立體街景';
+    img.src=url;img.alt=stop.name+'・'+stop.title+'，'+description;img.hidden=false;
     link.href=url;link.download='安心城-'+stop.name+'-'+stop.title+'.jpg';link.hidden=false;
     status.hidden=true;
   },'image/jpeg',.93);

@@ -29,7 +29,11 @@ export function mountMissions({root,storage,onOpen,onClose}){
  saved=parse(MISSION_SAVE_KEY);sourceSaved={...parse('anxin-missions-v3'),...parse('anxin-missions-v5')};
  const persist=()=>{if(!state)return;saved[state.id]={answers:state.answers,profile:state.profile,step:state.step,phase:state.phase};try{storage?.setItem(MISSION_SAVE_KEY,JSON.stringify(saved));}catch{saveFailed=true;}};
  const close=()=>{settings=false;onClose();returnFocus?.focus({preventScroll:true});};
- function open(id){if(!MISSION_IDS.includes(id))return;returnFocus=document.activeElement;state=restoreMission(id,saved[id]??sourceSaved[id]);settings=false;onOpen();render();host.scrollIntoView({block:'start'});}
+ function open(id){
+  if(!MISSION_IDS.includes(id))return;
+  if(window.frameElement && !window.frameElement.dispatchEvent(new CustomEvent('city-chapter-mission',{detail:id,bubbles:true,cancelable:true})))return;
+  returnFocus=document.activeElement;state=restoreMission(id,saved[id]??sourceSaved[id]);settings=false;onOpen();render();host.scrollIntoView({block:'start'});
+ }
  function update(next){state=next;persist();render();host.scrollIntoView({block:'start'});}
  for(const id of MISSION_IDS){const b=button('',()=>open(id),'ls-resident-card');b.dataset.mission=id;b.append(portrait(id),el('strong',getMission(id).character.name),el('span',themes[id].tag));roster.append(b);}
  function renderSettings(body){

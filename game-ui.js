@@ -30,7 +30,9 @@ export function createMissionGame({getScene,onExploreTainan,onReadGuide,onFeedba
  const dialog=document.createElement('dialog'); dialog.id='mission-dialog'; dialog.className='mission-dialog'; dialog.setAttribute('aria-label','安心城人生任務');document.body.append(dialog);
  let id=null,step=0,answers=[],phase='question',baseline=null,saveWarning=false,profile={},returnFocus=null,focusFrame=null;
  const settings=document.createElement('dialog');settings.id='scenario-dialog';settings.className='scenario-dialog';settings.setAttribute('aria-label','調整練習情境');document.body.append(settings);
- let saved={};try{const parsed=JSON.parse(localStorage.getItem(storedKey)||localStorage.getItem('anxin-missions-v3')||'{}');if(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))saved=parsed;}catch{}
+ function readProgress(key){try{const v=JSON.parse(localStorage.getItem(key)||'{}');return v&&typeof v==='object'&&!Array.isArray(v)?v:{};}catch{return {};}}
+ // People who only played the earlier lantern chapter can also resume that character here.
+ let saved={...readProgress('anxin-lantern-missions-v1'),...readProgress('anxin-missions-v3'),...readProgress(storedKey)};
  function save(){if(!id)return;saved[id]={answers:[...answers],step,phase,profile:{...profile}};try{localStorage.setItem(storedKey,JSON.stringify(saved));}catch{saveWarning=true;}}
  function mood(tone){return tone==='caution'||tone==='warning'||tone==='danger'?'caution':tone==='positive'||tone==='steady'||tone==='good'?'steady':'thinking';}
  function queueContentFocus(){if(focusFrame!==null)cancelAnimationFrame(focusFrame);focusFrame=requestAnimationFrame(()=>{focusFrame=null;if(dialog.open&&!settings.open)focusMissionContent(dialog,phase);});}

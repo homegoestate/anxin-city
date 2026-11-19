@@ -4,10 +4,12 @@ import { districtShapes } from './atlas/geometry.js';
 import { createModelKit, makeLandmark, makePerson } from './life-models.js?v=26.0.0';
 import { createAmenity } from './life-amenities.js';
 import { createCrowd, idlePose, stepPose } from './life-crowd.js?v=26.0.0';
+import { districtWalks } from './district-stories.js?v=27.0.0';
+import { makeDistrictMiniature, makeDistrictStreet } from './district-miniatures.js?v=27.0.0';
 
 // SVG label points are inside their districts. The small southern districts use
 // two other interior points so their neighbouring scenes can sit side by side.
-const stops = [
+const originalStops = [
   {id:'shuixian-morning',district:'中西區',scale:.84,point:[178.8,453.6]},
   {id:'yujing-morning',district:'玉井區',scale:1.44},
   {id:'anping-afternoon',district:'安平區',scale:.76,point:[133.4,450.5]},
@@ -15,6 +17,7 @@ const stops = [
   {id:'yanshui-evening',district:'鹽水區',scale:1.34},
   {id:'beimen-evening',district:'北門區',scale:1.32}
 ];
+const stops=[...originalStops,...districtWalks.map(stop=>({...stop,district:stop.name,scale:1}))];
 const regionFor = new Map(stops.map(s=>[s.district,s]));
 const mapX = u => (u-300)/5.3;
 const mapZ = v => (v-300)/5.3;
@@ -28,8 +31,6 @@ const palettes={east:[0x98b878,0xb1bf81,0x9eb678], coast:[0xc4c9a1,0xbcc9a0,0xb5
 
 function terrain(scene) {
   const ground=new Map(), picks=[], lines=[];
-  const material=new THREE.MeshLambertMaterial({vertexColors:true});
-  const allPositions=[],allColors=[],allIndices=[];
   districtShapes.forEach((district,index)=>{
     const coast=shore.has(district.name),city=metro.has(district.name),hills=east.has(district.name);
     const palette=hills?palettes.east:city?palettes.urban:coast?palettes.coast:palettes.plain;
@@ -54,85 +55,23 @@ function terrain(scene) {
       lines.push(a.x,altitude+.024,a.y,b.x,altitude+.024,b.y);
     }
     const stop=regionFor.get(district.name);
-    if(stop){
-      const geo=new THREE.BufferGeometry();
-      geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
-      geo.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
-      geo.setIndex(ind); geo.computeVertexNormals();
-      const mesh=new THREE.Mesh(geo,material); mesh.userData.stopId=stop.id; mesh.receiveShadow=true;
-      mesh.name=district.name; scene.add(mesh); picks.push(mesh);
-    }else{
-      const first=allPositions.length/3;
-      allPositions.push(...pos); allColors.push(...col);
-      for(const i of ind) allIndices.push(i+first);
-    }
-    ground.set(district.name,{district,altitude,ring});
+    const geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+    geo.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
+    geo.setIndex(ind); geo.computeVertexNormals();
+    const mesh=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({vertexColors:true}));
+    mesh.userData.stopId=stop.id; mesh.receiveShadow=true;
+    mesh.name=district.name; scene.add(mesh); picks.push(mesh);
+    ground.set(district.name,{district,altitude,mesh});
   });
-  const geo=new THREE.BufferGeometry();
-  geo.setAttribute('position',new THREE.Float32BufferAttribute(allPositions,3));
-  geo.setAttribute('color',new THREE.Float32BufferAttribute(allColors,3));
-  geo.setIndex(allIndices); geo.computeVertexNormals();
-  const land=new THREE.Mesh(geo,material); land.receiveShadow=true; scene.add(land);
   const outline=new THREE.BufferGeometry();
   outline.setAttribute('position',new THREE.Float32BufferAttribute(lines,3));
-  scene.add(new THREE.LineSegments(outline,new THREE.LineBasicMaterial({color:0x8c9972,transparent:true,opacity:.48})));
+  scene.add(new THREE.LineSegments(outline,new THREE.LineBasicMaterial({color:0x728269,transparent:true,opacity:.70})));
   return {ground,picks};
 }
 
-function landscape(scene,k,ground) {
+function coastline(scene,k) {
   const decor=new THREE.Group();
-  function home(g,x,z,w,h,d,wall,roof){
-    k.box(g,wall,x,h/2,z,w,h,d);
-    const tiles=k.group(g,x,h,z);
-    for(const s of [-1,1]){
-      const panel=k.box(tiles,roof,0,.11,s*d*.26,w+.19,.09,d*.59+.08); panel.rotation.x=s*.37;
-    }
-    k.box(g,0x8a8170,x-.14*w,.28*h,z+d*.51,w*.18,h*.56,.035);
-    k.box(g,0x7d9890,x+.22*w,.55*h,z+d*.51,w*.24,h*.31,.04);
-  }
-  function pine(p,x,z,s) {
-    k.post(p,0x856e4c,x,.45*s,z,.115*s,.9*s);
-    k.peak(p,0x628b63,x,1.30*s,z,.80*s,1.65*s,.75*s);
-    k.peak(p,0x729b6a,x,1.91*s,z,.62*s,1.44*s,.58*s);
-  }
-  for(const {district:d,altitude} of ground.values()){
-    if(regionFor.has(d.name)) continue;
-    // East District neighbours the market. Its southern block leaves the market's hospital entrance visible.
-    const x=mapX(d.name==='東區'?207:d.x),z=mapZ(d.name==='東區'?468:d.y),g=k.group(decor,x,altitude,z);
-    if(east.has(d.name)||['六甲區','大內區','山上區'].includes(d.name)){
-      // Relief and vegetation are illustrative. They do not encode surveyed elevations.
-      const size=east.has(d.name)?1:.59;
-      for(const [dx,dz,s] of [[-1,-.64,1.04],[1.62,.30,.77],[-2.74,1.35,.53]]){
-        const hill=k.rock(g,dx>0?0x83a977:0x92ae77,dx*size,-.15,dz*size,2.45*s*size,2.95*s*size,2.08*s*size);
-        hill.rotation.y=dx*.7;
-      }
-      pine(g,-2.9*size,1.8*size,.76*size); pine(g,2.61*size,.99*size,.65*size);
-    }else if(metro.has(d.name)){
-      const street=k.group(g); street.rotation.y=d.name==='東區'?-.37:.21;
-      const large=['新營區','永康區'].includes(d.name);
-      street.scale.setScalar(large?1:.73);
-      k.box(street,0xd2be9e,0,.032,0,3.54,.06,1.07);
-      home(street,-1,-1.05,1.07,.89,1.04,0xe0c49e,0xae8266);
-      home(street,.18,-1.0,.91,1.16,1.07,0xdac9a6,0x7e978a);
-      home(street,1.25,-1.04,1.10,.77,.94,0xddc8a3,0xbe8669);
-      if(large){
-        home(street,.69,1.12,1.12,.95,.91,0xe2c5a6,0xa89275);
-        home(street,-.60,.99,.92,.76,1.04,0xd5bb99,0x93988b);
-        pine(street,-1.77,-.31,.56);
-      }
-    }else{
-      const field=k.group(g); field.rotation.y=(d.x%5-2)*.13;
-      for(let i=0;i<3;i++){
-        const c=shore.has(d.name)?[0x92b6ad,0xa6c1b1,0xb0c5ae]:[0xabc178,0xc4be74,0xa5bb78];
-        k.box(field,c[i],(i-1)*1.05,.038,0,1,.075,2.91-i*.21);
-        if(!shore.has(d.name)) for(let line=0;line<2;line++) k.box(field,0xbcc587,(i-1)*1.05-.29+line*.42,.086,0,.035,.023,2.62-i*.2);
-      }
-      if(!shore.has(d.name)){
-        for(const [x,z,s] of [[1.86,-.87,.58],[2.32,-.12,.46],[2.54,.65,.43]]) pine(g,x,z,s);
-        if(['麻豆區','善化區','關廟區','佳里區','學甲區'].includes(d.name)) home(field,-2.29,-.43,.98,.74,1.03,0xd6be97,0xad7f64);
-      }
-    }
-  }
   const westWater=k.group(decor,0,-1.53,0);
   for(let i=0;i<91;i++){
     const u=(i*109+39)%550,w=(i*73+17)%570;
@@ -210,7 +149,7 @@ function streetSetting(){
   return {root, apply(scene,place){
     root.visible=!!place;
     if(!place) return;
-    const time=place.id.split('-')[1],palette=streetColors[time];
+    const time=place.id.split('-').at(-1),palette=streetColors[time];
     if(!backgrounds.has(time)){
       backgrounds.set(time,skyTexture(palette.sky));
       horizons.set(time,hillsideTexture(time));
@@ -220,6 +159,27 @@ function streetSetting(){
     scenery.material.map=horizons.get(time);scenery.material.needsUpdate=true;
     scene.background=backgrounds.get(time);
   },dispose(){for(const tex of [...backgrounds.values(),...horizons.values()]) tex.dispose();}};
+}
+
+function addResident(k,group,style) {
+  const resident=makePerson(k,style);
+  resident.root.position.set(2.48,.174,2.24); resident.root.rotation.y=-.73;
+  resident.root.userData.guestKey='resident'; group.add(resident.root);
+  return resident;
+}
+function shadows(group) {
+  group.traverse(child=>{if(child.isMesh){child.castShadow=true;child.receiveShadow=true;}});
+}
+function disposeObjects(group) {
+  const geometries=new Set(),materials=new Set(),textures=new Set();
+  group.traverse(obj=>{
+    if(obj.geometry) geometries.add(obj.geometry);
+    for(const m of [].concat(obj.material||[])) materials.add(m);
+  });
+  for(const m of materials) for(const value of Object.values(m)) if(value?.isTexture) textures.add(value);
+  for(const tex of textures) tex.dispose();
+  for(const geo of geometries) geo.dispose();
+  for(const material of materials) material.dispose();
 }
 
 export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError,onResident,initialStreet=null}) {
@@ -233,7 +193,7 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
   scene.background=overviewSky;
   const camera=new THREE.OrthographicCamera(-75,75,50,-50,.5,370);
   const controls=new OrbitControls(camera,canvas);
-  controls.enableDamping=false; controls.enablePan=false;
+  controls.enableDamping=false; controls.enablePan=true;controls.zoomToCursor=true;
   controls.minPolarAngle=.23; controls.maxPolarAngle=1.37; controls.rotateSpeed=.65;
   controls.minAzimuthAngle=-1.04; controls.maxAzimuthAngle=1.04;
   controls.minZoom=.62; controls.maxZoom=7;
@@ -248,7 +208,7 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
   water.rotation.x=-Math.PI/2; water.position.y=-1.56; water.receiveShadow=true; map.add(water);
   const {ground,picks}=terrain(map);
   const k=createModelKit();
-  landscape(map,k,ground);
+  coastline(map,k);
   const setting=streetSetting();scene.add(setting.root);
   const places=new Map();
   for(const spec of stops){
@@ -256,21 +216,31 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
     const [u,v]=spec.point||[district.x,district.y], root=new THREE.Group();
     root.name=spec.district; root.userData.stopId=spec.id;
     root.position.set(mapX(u),altitude+.013,mapZ(v)); root.scale.setScalar(spec.scale);
-    const landmark=makeLandmark(k,spec.id);
+    const landmark=spec.motif?makeDistrictMiniature(k,spec):makeLandmark(k,spec.id);
     root.add(landmark);
-    const amenityGround=new THREE.Group();
-    k.oval(amenityGround,0xd7c89d,7.25,.043,-1.70,1.53,.12,1.59);
-    root.add(k.bake(amenityGround));
-    const amenity=createAmenity(spec.id); amenity.scale.setScalar(.83); amenity.position.set(7.25,.12,-1.70); root.add(amenity);
-    const resident=makePerson(k,spec.id);
-    resident.root.position.set(2.48,.174,2.24); resident.root.rotation.y=-.73;
-    resident.root.userData.guestKey='resident'; root.add(resident.root);
-    const shadowSketch=new THREE.Group();
-    k.oval(shadowSketch,0xc2ac83,2.49,.174,2.27,.52,.025,.30);
-    root.add(k.bake(shadowSketch));
-    root.traverse(child=>{if(child.isMesh){child.castShadow=true;child.receiveShadow=true;}});
+    let resident=null;
+    if(!spec.motif){
+      const amenityGround=new THREE.Group();
+      k.oval(amenityGround,0xd7c89d,7.25,.043,-1.70,1.53,.12,1.59);
+      root.add(k.bake(amenityGround));
+      const amenity=createAmenity(spec.id); amenity.scale.setScalar(.83); amenity.position.set(7.25,.12,-1.70); root.add(amenity);
+      resident=addResident(k,root,spec.id);
+      const shadowSketch=new THREE.Group();
+      k.oval(shadowSketch,0xc2ac83,2.49,.174,2.27,.52,.025,.30);
+      root.add(k.bake(shadowSketch));
+    }
+    shadows(root);
     scene.add(root); picks.push(root);
-    places.set(spec.id,{...spec,root,resident,index:places.size});
+    const style=spec.motif?originalStops[places.size%originalStops.length].id:spec.id;
+    places.set(spec.id,{...spec,root,resident,landmark,style,index:places.size});
+  }
+  // Size every model against its closest neighbour, especially the old city core.
+  // Street geometry uses its original local scale once the surrounding map is hidden.
+  for(const p of places.values()){
+    const gap=Math.min(...[...places.values()].filter(n=>n!==p).map(n=>Math.hypot(n.root.position.x-p.root.position.x,n.root.position.z-p.root.position.z)));
+    const size=p.motif?Math.min(2.04,gap*.80/5.40):Math.min(p.scale,gap*.79/16.8);
+    p.mapScale=new THREE.Vector3(size,Math.max(size,p.motif?.94:.82),size);
+    p.root.scale.copy(p.mapScale);
   }
   const player=makePerson(k,'player',true); player.root.visible=false; player.root.name='小安';
   player.root.traverse(child=>{if(child.isMesh){child.castShadow=true;child.receiveShadow=true;}});
@@ -279,7 +249,7 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
 
   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
   const ray=new THREE.Raycaster(),pointer=new THREE.Vector2();
-  let width=1,height=1,span=100,frame=0,previous=0,intersecting=true,disposed=false,dirty=true;
+  let width=1,height=1,span=100,frame=0,previous=0,intersecting=true,covered=false,disposed=false,dirty=true;
   let motion=null,selected=null,gesture=null,multitouch=false;
   let streetPlace=null,crowd=null,crowdPlace=null,paused=reduced.matches,ambientTime=0,timer=0,conversation=null;
   const touching=new Set();
@@ -324,7 +294,7 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
     if(!onSelectLabels) return;
     const result=[];
     for(const p of places.values()){
-      const point=endpoint(p,0,4.3,-.42);
+      const point=new THREE.Vector3(0,p.motif?2.85:4.3,-.42).multiply(p.root.scale).add(p.root.position);
       point.project(camera);
       const x=(point.x+1)*width/2, y=(1-point.y)*height/2;
       result.push({id:p.id,x,y,visible:(!selected||selected===p.id)&&point.z>-1&&point.z<1&&x>=0&&x<=width&&y>=0&&y<=height});
@@ -337,7 +307,7 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
     dirty=false;
   }
   function schedule(delay=0){
-    if(frame||timer||disposed||!intersecting||document.hidden||width<2||height<2) return;
+    if(frame||timer||disposed||covered||!intersecting||document.hidden||width<2||height<2) return;
     if(delay) timer=setTimeout(()=>{timer=0;schedule();},delay);
     else frame=requestAnimationFrame(tick);
   }
@@ -348,18 +318,36 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
   }
   function setStage(place){
     if(place===streetPlace) return;
+    const former=streetPlace;
+    if(former){
+      former.root.scale.copy(former.mapScale);
+      if(former.detail){
+        former.detail.removeFromParent();disposeObjects(former.detail);
+        former.detail=null;former.resident=null;
+        former.landmark.position.set(0,0,0);former.landmark.scale.setScalar(1);
+      }
+    }
     streetPlace=place;
     map.visible=!place;
+    controls.enablePan=!place;controls.zoomToCursor=!place;
+    clearHover();
     for(const p of places.values()) p.root.visible=!place||place===p;
     if(crowd) crowd.root.visible=false;
     if(place){
+      place.root.scale.setScalar(place.scale);
+      if(place.motif){
+        const localKit=createModelKit(),detail=new THREE.Group();
+        detail.add(makeDistrictStreet(localKit,place));place.resident=addResident(localKit,detail,place.style);
+        localKit.releaseSources();shadows(detail);place.root.add(detail);place.detail=detail;
+        place.landmark.position.set(0,.07,-.90);place.landmark.scale.setScalar(1.36);
+      }
       if(crowdPlace!==place){
         crowd?.dispose();
-        crowd=createCrowd(place.id,place.index);
+        crowd=createCrowd(place.style,place.index%originalStops.length);
         crowdPlace=place;place.root.add(crowd.root);
       }
       crowd.root.visible=true;crowd.hold(null);
-      sun.color.setHex(streetColors[place.id.split('-')[1]].sun);
+      sun.color.setHex(streetColors[place.id.split('-').at(-1)].sun);
     }else{
       scene.background=overviewSky;
       sun.color.setHex(0xfff0d6);
@@ -394,7 +382,7 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
   function ambientActive(){return !!streetPlace&&!paused;}
   function tick(now){
     frame=0;
-    if(disposed||!intersecting||document.hidden) return;
+    if(disposed||covered||!intersecting||document.hidden) return;
     const dt=previous?Math.min(250,now-previous):0;
     previous=now;
     const animated=ambientActive();
@@ -460,6 +448,11 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
     motion={place:null,camera:cameraState,time:0,focusMs:reduced.matches?0:580,approachStarted:false};
     previous=0;invalidate();
   }
+  function zoomOverview(factor){
+    if(disposed||streetPlace||motion||!Number.isFinite(factor)||factor<=0) return;
+    camera.zoom=THREE.MathUtils.clamp(camera.zoom*factor,controls.minZoom,controls.maxZoom);
+    camera.updateProjectionMatrix();invalidate();
+  }
   function walkTo(id,guestKey='resident'){
     const p=places.get(id);
     if(disposed||!p) return;
@@ -489,7 +482,7 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
     setSpan(viewSpan(places.get(selected))); invalidate();
   }
   function suspend(){
-    if(!intersecting||document.hidden){
+    if(covered||!intersecting||document.hidden){
       cancelAnimationFrame(frame);clearTimeout(timer);timer=0;frame=0;previous=0;return;
     }
     invalidate();
@@ -502,6 +495,25 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
   }
   function move(e){
     if(gesture&&e.pointerId===gesture.id&&Math.hypot(e.clientX-gesture.x,e.clientY-gesture.y)>6) gesture.drag=true;
+    if(e.pointerType==='mouse'&&!streetPlace&&!motion&&!gesture){
+      setPointerRay(e);
+      const surface=ray.intersectObjects(groundMeshes,false)[0]?.object;
+      if(surface!==hovered){
+        clearHover();hovered=surface;
+        if(hovered){hovered.material.emissive.setHex(0x2c2910);canvas.style.cursor='pointer';invalidate();}
+      }
+    }
+  }
+  const groundMeshes=[...ground.values()].map(entry=>entry.mesh);
+  let hovered=null;
+  function clearHover(){
+    if(hovered){hovered.material.emissive.setHex(0);hovered=null;invalidate();}
+    canvas.style.cursor='';
+  }
+  function setPointerRay(e){
+    const rect=canvas.getBoundingClientRect();
+    pointer.set((e.clientX-rect.left)/rect.width*2-1,1-(e.clientY-rect.top)/rect.height*2);
+    ray.setFromCamera(pointer,camera);
   }
   function up(e){
     const isTap=gesture&&gesture.id===e.pointerId&&!gesture.drag&&!multitouch&&Math.hypot(e.clientX-gesture.x,e.clientY-gesture.y)<=6;
@@ -509,9 +521,7 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
     if(!gesture||gesture.id!==e.pointerId) return;
     gesture=null;
     if(!isTap||!controls.enabled||disposed) return;
-    const rect=canvas.getBoundingClientRect();
-    pointer.set((e.clientX-rect.left)/rect.width*2-1,1-(e.clientY-rect.top)/rect.height*2);
-    ray.setFromCamera(pointer,camera);
+    setPointerRay(e);
     const candidates=streetPlace?[streetPlace.root,player.root]:picks;
     const hit=ray.intersectObjects(candidates,true).find(row=>{
       let owner=row.object;
@@ -535,31 +545,49 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
   controls.addEventListener('change',invalidate);
   canvas.addEventListener('pointerdown',down,true);
   canvas.addEventListener('pointermove',move,true);
+  canvas.addEventListener('pointerleave',clearHover);
   canvas.addEventListener('pointerup',up,true);
   canvas.addEventListener('pointercancel',cancel,true);
   canvas.addEventListener('webglcontextlost',lost);
   const resizeObserver=new ResizeObserver(resize); resizeObserver.observe(canvas);
   const observer=new IntersectionObserver(entries=>{intersecting=entries[entries.length-1].isIntersecting;suspend();});
   observer.observe(canvas); document.addEventListener('visibilitychange',suspend);
+  // A native modal can cover the renderer without changing canvas intersection.
+  // Check the top layer only on dialog transitions, preserving the user's pause
+  // setting and the current walk while a chapter or mission has focus.
+  const tourDialog=canvas.closest('dialog');
+  function checkTopLayer(){
+    if(!tourDialog||!tourDialog.open||document.hidden)return;
+    const box=canvas.getBoundingClientRect();
+    const x=THREE.MathUtils.clamp(box.left+box.width/2,0,innerWidth-1);
+    const y=THREE.MathUtils.clamp(box.top+box.height/2,0,innerHeight-1);
+    const top=document.elementFromPoint(x,y)?.closest('dialog');
+    const next=!!top&&top!==tourDialog;
+    if(next!==covered){covered=next;suspend();}
+  }
+  const layers=new MutationObserver(records=>{
+    if(records.some(r=>r.type==='attributes'?r.target.tagName==='DIALOG':
+      [...r.addedNodes,...r.removedNodes].some(n=>n.nodeName==='DIALOG')))checkTopLayer();
+  });
+  if(tourDialog){
+    layers.observe(document.documentElement,{subtree:true,attributes:true,attributeFilter:['open']});
+    layers.observe(document.body,{childList:true});
+    document.addEventListener('visibilitychange',checkTopLayer);
+    checkTopLayer();
+  }
   reduced.addEventListener('change',syncMotionPreference);
   function destroy(){
     if(disposed) return;
     disposed=true; motion=null; cancelAnimationFrame(frame);clearTimeout(timer);
     crowd?.dispose();setting.dispose();reduced.removeEventListener('change',syncMotionPreference);
-    resizeObserver.disconnect(); observer.disconnect(); document.removeEventListener('visibilitychange',suspend);
+    resizeObserver.disconnect(); observer.disconnect(); layers.disconnect();
+    document.removeEventListener('visibilitychange',suspend);document.removeEventListener('visibilitychange',checkTopLayer);
     canvas.removeEventListener('pointerdown',down,true); canvas.removeEventListener('pointermove',move,true);
+    canvas.removeEventListener('pointerleave',clearHover);canvas.style.cursor='';
     canvas.removeEventListener('pointerup',up,true); canvas.removeEventListener('pointercancel',cancel,true);
     canvas.removeEventListener('webglcontextlost',lost);
     controls.removeEventListener('change',invalidate); controls.dispose();
-    const geometries=new Set(),materials=new Set(),textures=new Set();
-    scene.traverse(obj=>{
-      if(obj.geometry) geometries.add(obj.geometry);
-      for(const m of [].concat(obj.material||[])) materials.add(m);
-    });
-    for(const m of materials) for(const value of Object.values(m)) if(value?.isTexture) textures.add(value);
-    for(const tex of textures) tex.dispose();
-    for(const geometry of geometries) geometry.dispose();
-    for(const material of materials) material.dispose();
+    disposeObjects(scene);
     sun.shadow.dispose(); renderer.dispose(); renderer.forceContextLoss();
   }
   resize();
@@ -569,5 +597,5 @@ export function createLifeWorld({canvas,onChoose,onArrive,onSelectLabels,onError
     if(disposed) return null;
     renderer.render(scene,camera);return canvas;
   }
-  return {walkTo,overview,street,setPaused,captureFrame,destroy};
+  return {walkTo,overview,zoomOverview,street,setPaused,captureFrame,destroy};
 }

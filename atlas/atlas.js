@@ -5,6 +5,7 @@ import { tainanEvents } from '../tainan-events.js';
 import { filterSeasonEntries } from '../seasons-state.js';
 import { culturePlaces, cultureSources } from '../culture-data.js';
 import { dayStories } from '../first-day/daylife-data.js';
+import { districtWalks } from '../district-stories.js?v=27.0.0';
 import { districtShapes, geometrySource } from './geometry.js';
 import { servicesFor, nextStopsFor } from './civic.js';
 
@@ -148,7 +149,12 @@ function showDistrict(district) {
   element('content-title').textContent = district.name + '走讀';
   const links = [];
   const scene = dayStories.find(story => story.district.split('・').at(-1) === district.name);
-  if (scene) links.push(districtLink('../?start=life&scene=' + encodeURIComponent(scene.id), '在立體城找' + scene.speaker.split('｜')[0]));
+  const walk = districtWalks.find(story => story.districtId === district.id);
+  const stopId = scene?.id || walk?.id;
+  if (stopId) {
+    const resident = scene ? scene.speaker.split('｜')[0] : walk.resident;
+    links.push(districtLink('../?start=life&scene=' + encodeURIComponent(stopId), '在立體城找' + resident));
+  }
   if (scene) links.push(districtLink('../first-day/?walk=1&scene=' + encodeURIComponent(scene.id) + '#street', '走進街區・' + scene.title));
   links.push(districtLink('../?start=tainan&district=' + encodeURIComponent(district.id), '讀' + district.name + '故事，收集風物章'));
   element('experience-links').innerHTML = links.join('');

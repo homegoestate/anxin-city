@@ -1,6 +1,7 @@
 import { createExperienceUI } from './experience-ui.js?v=24.0.0';
 import { createServiceHub } from './service-hub.js?v=11.0.0';
-import { createEnhancements } from './enhancements.js?v=16.0.0';
+import { createEnhancements } from './enhancements.js?v=27.0.0';
+import { connectActivities } from './city-activities.js?v=27.0.0';
 import { lazyFeature } from './lazy-feature.js?v=13.0.0';
 import { createCityGuide } from './city-guide.js?v=25.0.0';
 let enhancements, experienceUI, cityGuide;
@@ -69,7 +70,20 @@ function cityReady(){releaseLoading();cityStatus.hidden=true;document.body.class
 function setMode(mode){exploreMode=mode==='tainan'?'tainan':'homes';scene?.setExploreMode(exploreMode);experienceUI?.setExploreMode(exploreMode);if(exploreMode==='homes'){cityGuide?.close();experienceUI?.setRegionFocus(null);scene?.restoreView();}}
 function focusRegion(region){if(currentId)resetView();else cityGuide?.close();setMode('tainan');const key=region==='plain'?'plains':region;scene?.focusRegion(key);experienceUI?.setRegionFocus(key);cityGuide.open(key);}
 function returnOverview(){cityGuide?.close();experienceUI?.setRegionFocus(null);scene?.restoreView();}
-enhancements=createEnhancements({onExploreTainan:()=>tainanExplorer.open(),getScene:()=>scene,selectScene,getCurrentScene:()=>currentId,openJourneyChecklist:id=>{selectScene(id);currentTab='ready';renderPanel();},toast});
+function openReadingSheet(){
+ if(!$('#life-tour[open]'))return;
+ const panel=$('#detail-panel');
+ let sheet=$('#city-guide-sheet');
+ if(sheet?.open)return;
+ sheet=document.createElement('dialog');sheet.id='city-guide-sheet';sheet.setAttribute('aria-label','政策與準備小抄');
+ sheet.innerHTML='<header><strong>政策與準備小抄</strong><button type="button">回到街上</button></header>';
+ const marker=document.createComment('detail panel');panel.before(marker);sheet.append(panel);document.body.append(sheet);
+ sheet.querySelector('header button').onclick=()=>sheet.close();
+ sheet.addEventListener('click',e=>{if(e.target.closest('.panel-close') && panel.hidden)sheet.close();});
+ sheet.addEventListener('close',()=>{marker.replaceWith(panel);sheet.remove();},{once:true});
+ sheet.showModal();
+}
+enhancements=createEnhancements({onExploreTainan:()=>tainanExplorer.open(),onReadGuide:openReadingSheet,getScene:()=>scene,selectScene,getCurrentScene:()=>currentId,openJourneyChecklist:id=>{selectScene(id);currentTab='ready';renderPanel();},toast});
 for(const [id,label,open] of [['resident-button','街坊聊聊',()=>residentChat.open()],['tainan-button','台南散步',()=>tainanExplorer.open()]]){
  const button=document.createElement('button');button.id=id;button.type='button';button.textContent=label;button.setAttribute('aria-haspopup','dialog');button.onclick=open;$('.header-nav').insertBefore(button,$('#open-checklist'));
 }
@@ -100,13 +114,14 @@ updateCount();
 
 
 const entryParams=new URLSearchParams(location.search),entry=entryParams.get('start');
+const activities=connectActivities({onMission:id=>enhancements.showPersona(id),onStop:id=>showLifeTour(id,lifeEntry),onService:()=>serviceHub.open(),onFeedback:()=>enhancements.openFeedback(),onChecklist:openChecklist,onSeasons:()=>tainanExplorer.openTarget({tab:'seasons'}),onCulture:()=>cultureWalk.open({})});
 // Other established deep links open their own experience immediately.
 let tourOpening = false;
 async function showLifeTour(id, trigger, options = {}) {
   if (tourOpening) return;
   tourOpening = true;
   try {
-    const { openLifeTour } = await import('./life-tour.js?v=26.0.0');
+    const { openLifeTour } = await import('./life-tour.js?v=27.0.0');
     await openLifeTour(id, trigger, options);
   } catch (error) {
     console.error('台南街區載入失敗', error);
@@ -147,9 +162,16 @@ window.addEventListener('life-tour-close', () => {
     history.replaceState(history.state, '', url);
   }
 });
-if (entry === 'life' || (!entry && !location.hash && entryParams.get('view') !== 'city')) {
-  showLifeTour(entryParams.get('scene'), lifeEntry, {overview: entry === 'life'});
-} else {
-  startCity();
+// Both historical city entrances now share this world, including when a LINE link opens a mission.
+async function enterCity(){
+  await showLifeTour(entryParams.get('scene'),lifeEntry,{overview:entry==='life'||entryParams.get('view')==='city'});
+  if(entry==='life'||!entry){activities.openFromUrl(entryParams);return;}
+  if(entry==='culture')cultureWalk.open({placeId:entryParams.get('place')});
+  else if(entry==='residents')residentChat.open(entryParams.get('resident'));
+  else if(entry==='tainan'){const districtId=entryParams.get('district');if(districtId)tainanExplorer.openTarget({districtId});else tainanExplorer.open();}
+  else if(entry==='seasons'||entry==='events')tainanExplorer.openTarget({tab:'seasons',month:Number(entryParams.get('month')||0),seasonMode:entry});
+  else if(entry==='policy')enhancements.openGuide('first-home');
+  else if(entry==='services')serviceHub.open();
+  else if(['first-home','move-home','seller','legacy-family'].includes(entry))enhancements.showPersona(entry);
 }
-if(['first-home','move-home','seller','legacy-family','tainan','policy','services','residents','culture','seasons','events'].includes(entry))requestAnimationFrame(()=>{if(entry==='culture')cultureWalk.open({placeId:entryParams.get('place')});else if(entry==='residents')residentChat.open(entryParams.get('resident'));else if(entry==='tainan'){const districtId=entryParams.get('district');if(districtId)tainanExplorer.openTarget({districtId});else tainanExplorer.open();}else if(entry==='seasons'||entry==='events')tainanExplorer.openTarget({tab:'seasons',month:Number(entryParams.get('month')||0),seasonMode:entry});else if(entry==='policy')enhancements.openGuide('first-home');else if(entry==='services')serviceHub.open();else enhancements.showPersona(entry);});
+enterCity();

@@ -3,7 +3,7 @@ import { createFeedbackDialog } from './feedback-client.js?v=11.0.0';
 import { policyTopics, policySources, policyReviewedAt } from './policy-data.js?v=8.0.0';
 import { nextServiceHtml, readingButtonHtml } from './service-hub.js?v=11.0.0';
 
-import { createMissionGame } from './game-ui.js?v=13.0.0';
+import { createMissionGame } from './game-ui.js?v=27.0.0';
 
 export const SITE_VERSION='16.0.0';
 const FEEDBACK_URL='https://hongguo-anxin-feedback-20261024.yang-ceo.chatgpt.site/api/feedback';
@@ -16,7 +16,7 @@ const people={
 const escapeHtml=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=v=>new Intl.NumberFormat('zh-TW',{maximumFractionDigits:0}).format(v);
 
-export function createEnhancements({onExploreTainan,getScene,selectScene,getCurrentScene,openJourneyChecklist,toast}) {
+export function createEnhancements({onExploreTainan,onReadGuide,getScene,selectScene,getCurrentScene,openJourneyChecklist,toast}) {
  const $=s=>document.querySelector(s);
  let currentPersona=null,topicIndex=0,view='story';
  const nav=$('.header-nav');
@@ -35,9 +35,10 @@ export function createEnhancements({onExploreTainan,getScene,selectScene,getCurr
  function renderPersona(){const p=people[currentPersona],panel=$('#detail-panel');panel.innerHTML=`<div class="panel-top"><span class="eyebrow">MEET YOUR NEIGHBOR · 居民故事</span><button class="icon-button panel-close" aria-label="返回服務旅程">×</button></div><div class="persona-heading" style="--person-color:${p.color}"><span class="resident-art resident-${currentPersona}" aria-hidden="true"></span><div><h2>${p.name}</h2><span>${p.role}</span></div></div><blockquote class="speech-bubble">${p.line}</blockquote>${readingButtonHtml()}<button class="mission-launch">進入人生任務，試試我的選擇 <span>↗</span></button><div class="panel-tabs" role="tablist" aria-label="角色內容"><button class="panel-tab" role="tab" aria-selected="${view==='story'}" data-person-view="story">他的問題</button>${p.loan?`<button class="panel-tab" role="tab" aria-selected="${view==='loan'}" data-person-view="loan">每月負擔試算</button>`:''}</div>${view==='story'?`<div class="topic-options">${p.topics.map(([key,label],i)=>`<button class="topic-choice" aria-pressed="${i===topicIndex}" data-topic="${i}">${label}</button>`).join('')}</div><div class="topic-content">${topicHtml(p.topics[topicIndex][0])}</div>`:loanHtml(p)}${nextServiceHtml(currentPersona)}<p class="panel-note policy-review">角色為虛構情境。政策核對：${policyTopics[p.topics[topicIndex][0]]?.reviewedAt||policyReviewedAt}。政策資格不等於銀行核貸承諾；實際適用以主管機關與承作銀行確認為準。</p><button class="panel-action persona-checklist">我的下一步準備 <span>↗</span></button>`;panel.querySelector('.mission-launch').onclick=()=>game.open(currentPersona);panel.querySelector('.panel-close').onclick=()=>selectScene(p.scene);panel.querySelectorAll('[data-person-view]').forEach(b=>b.onclick=()=>{view=b.dataset.personView;renderPersona();});panel.querySelectorAll('[data-topic]').forEach(b=>b.onclick=()=>{topicIndex=Number(b.dataset.topic);renderPersona();});panel.querySelector('.persona-checklist').onclick=()=>openJourneyChecklist(p.scene);panel.scrollTop=0;if(view==='loan')wireCalculator();}
  function wireCalculator(){const form=$('#loan-form'),out=$('#loan-result');function calculate(){try{const input=Object.fromEntries(['principalWan','annualRate','years','income','otherDebt'].map(name=>[name,form.elements[name].value===''?NaN:Number(form.elements[name].value)]));const value=calculateLoan(input);out.innerHTML=`<div class="loan-results"><div><small>預估每月房貸</small><strong>NT$ ${money(value.monthly)}</strong></div><div class="ratio-result"><span>月債務支出 ÷ 月收入</span><b>${value.ratio.toFixed(1)}%</b></div><p>房貸加其他貸款：NT$ ${money(value.monthlyDebt)}／月<br>扣除以上貸款後：NT$ ${money(value.remaining)}／月${value.remaining<0?'（本例貸款支出已超過填入的收入）':''}</p></div><p class="calculator-footnote">剩餘金額尚未扣除生活費、扶養、保險、稅費及其他必要支出。本試算不判定「可貸」或「通過」。</p>`;}catch(e){out.textContent=e.message;}}form.onsubmit=e=>{e.preventDefault();if(form.reportValidity())calculate();};calculate();}
  function decorateJourney(id){const panel=$('#detail-panel');if(!panel||panel.hidden)return;const ids=Object.keys(people).filter(key=>people[key].scene===id);const row=document.createElement('div');row.className='meet-neighbors';row.innerHTML=`<span>遇見這裡的居民</span>${ids.map(key=>`<button data-meet="${key}" style="--person-color:${people[key].color}"><i></i>${people[key].name} ↗</button>`).join('')}`;panel.querySelector('.panel-subtitle')?.after(row);row.querySelectorAll('[data-meet]').forEach(b=>b.onclick=()=>showPersona(b.dataset.meet));}
- const game=createMissionGame({getScene,onExploreTainan,onReadGuide:showPersonaInfo,onFeedback:openFeedback,toast});
+ function openGuide(id){showPersonaInfo(id);onReadGuide?.();}
+ const game=createMissionGame({getScene,onExploreTainan,onReadGuide:openGuide,onFeedback:openFeedback,toast});
  function showPersona(id){if(!people[id])return;showPersonaInfo(id);game.open(id);}
- return {showPersona,openGuide:showPersonaInfo,decorateJourney,clearPersonaState(){currentPersona=null;},openFeedback,openPeople:()=>peopleDialog.showModal()};
+ return {showPersona,openGuide,decorateJourney,clearPersonaState(){currentPersona=null;},openFeedback,openPeople:()=>peopleDialog.showModal()};
 }
 
 

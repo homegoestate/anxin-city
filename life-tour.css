@@ -247,3 +247,43 @@
 .six-region-links { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
 .six-region-links :is(a, button) { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 6px 11px; border-radius: 7px; border: 1px solid #b6c9b6; background: #eff4e7; color: #214f3e; font: 650 14px/1.4 "Microsoft JhengHei", sans-serif; text-decoration: none; }
 .six-region-links :is(a, button):hover { background: #dce9d6; }
+
+.lt-map-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; max-width: calc(100% - 100px); }
+.lt-map-tools [data-life-districts] { background: #204c40; border-color: #f3e3b9; color: #fffae7; }
+.lt-map-tools [data-life-districts]:hover { background: #34644e; }
+.lt-region-filter select { min-height: 44px; max-width: 132px; padding: 0 6px; color: #305441; background: #fff8e7f7; border: 1px solid #8a987d; border-radius: 6px; font: 650 13px var(--lt-sans); cursor: pointer; }
+.lt-region-filter select:focus-visible, .lt-district-search input:focus-visible { outline: 3px solid #bd672b; outline-offset: 2px; }
+.lt-dialog:not([data-view="overview"]) .lt-region-filter, .lt-dialog[data-render="text"] .lt-region-filter { display: none; }
+.lt-dialog .lt-pin[data-compact="true"] { width: 20px; height: 20px; border: none; background: transparent; box-shadow: none; border-radius: 50%; z-index: 0; }
+.lt-pin[data-compact="true"]::before { content: ''; display: block; width: 10px; height: 10px; margin: auto; background: #325a4e; border: 2px solid #fff5d8; border-radius: 50%; box-shadow: 0 1px 3px #1b443d8c; }
+.lt-pin[data-compact="true"] span { position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); display: none; padding: 6px; background: #214f42; border: 1px solid #fff1d3; border-radius: 5px; white-space: nowrap; }
+.lt-dialog .lt-pin[data-compact="true"]:is(:hover,:focus-visible) { z-index: 3; }
+.lt-pin[data-compact="true"]:is(:hover,:focus-visible) span { display: block; }
+.lt-map-art { width: 100%; height: 100%; object-fit: contain; background: #f8f2dc; }
+.lt-exit[data-life-activities] .lt-icon { transform: none; }
+.lt-onward [data-life-activities] { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 0 9px; text-align: left; color: #fff8e4; background: #315d49; border: 1px solid #2a533f; border-radius: 5px; font-size: 14px; font-weight: 700; }
+.lt-onward [data-life-activities]:hover { background: #224d3c; }
+.lt-mini:is([data-kind="districts"],[data-kind="album"]) { width: min(665px,calc(100% - 24px)); overscroll-behavior: contain; }
+.lt-mini header { position: sticky; top: 0; z-index: 1; margin-top: -4px; padding-top: 4px; background: #fff9e8; }
+.lt-district-search { display: grid; gap: 4px; margin-top: 12px; color: #48644e; font-size: 13px; font-weight: 700; }
+.lt-district-search input { width: 100%; min-height: 44px; padding: 8px 10px; font: 16px var(--lt-sans); color: #193d33; background: #fffef7; border: 1px solid #95a689; border-radius: 6px; }
+.lt-district-group { margin-top: 16px; }
+.lt-district-group h3 { margin: 0 0 6px; color: #466c58; font: 700 16px/1.4 var(--lt-serif); }
+.lt-district-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,155px),1fr)); gap: 5px; }
+.lt-district-grid button { display: flex; align-items: center; justify-content: space-between; gap: 4px; min-height: 52px; padding: 6px 9px; text-align: left; border: 1px solid #bdc7ac; border-radius: 6px; color: #294836; background: #fffdf1; }
+.lt-district-grid button:is(:hover,[aria-current="location"]) { background: #e7efda; border-color: #668363; }
+.lt-district-grid :is(strong,small) { display: block; }
+.lt-district-grid strong { font-size: 15px; }
+.lt-district-grid small { color: #52614c; font-size: 12px; line-height: 1.4; }
+.lt-district-grid .lt-icon { width: 14px; color: #71866a; }
+.lt-directory-stamp { color: #396a4a; font-weight: 800; }
+.lt-directory-empty { padding: 8px 2px; font-size: 14px; }
+@media (min-width:550px) {
+  .lt-mini[data-kind="album"] .lt-album-grid { grid-template-columns: repeat(5,minmax(0,1fr)); }
+}
+@media (max-width:549px) {
+  .lt-map-tools { max-width: calc(100% - 80px); gap: 4px; }
+  .lt-district-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .lt-mini[data-kind="districts"] .lt-mini-inner { padding: 8px 12px 12px; }
+  .lt-region-filter select { max-width: 116px; font-size: 16px; }
+}
